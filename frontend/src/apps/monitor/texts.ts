@@ -118,6 +118,13 @@ const T = {
   noData: { tr: "Bu astronotun verisi yok.", en: "No data for this astronaut." },
   openDetailOf: { tr: "{id} ayrıntıları", en: "{id} details" },
   openDetail: { tr: "Ayrıntılar", en: "Details" },
+  lastActivity: { tr: "Son etkinlik", en: "Last activity" },
+  noActivity: { tr: "henüz yok", en: "none yet" },
+  active: { tr: "Aktif", en: "Active" },
+  activeHint: {
+    tr: "Son {min} dakikada etkinlik var (check-in, paylaşım veya öneri işareti)",
+    en: "Activity in the last {min} minutes (check-in, sharing or advice marked)",
+  },
 
   // astronot detayı (prototipin Earth görünümü)
   backToOverview: { tr: "Genel görünüm", en: "Overview" },

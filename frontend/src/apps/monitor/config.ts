@@ -35,3 +35,5 @@ export const HIGHLIGHT_MS = 4000;
 export const LINK_POLL_MS = 10_000;
 /** Mürettebat listesinin yedek yenilenme aralığı (asıl tetikleyici SSE olaylarıdır). */
 export const CREW_POLL_MS = 60_000;
+/** Mürettebat kartındaki "Aktif" rozeti: son etkinlik (gemi saati) bu süreden yeniyse. */
+export const ACTIVE_WINDOW_MS = 10 * 60_000;

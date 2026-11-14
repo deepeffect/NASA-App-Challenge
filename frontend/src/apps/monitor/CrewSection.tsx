@@ -1,17 +1,19 @@
 /**
  * Mürettebat: DEMO_CREW'daki astronotlar büyük kartlar halinde. Kart: durum (ikon + metin), kümülatif skor,
- * 30 günlük skor sparkline'ı, 5 alan ikon şeridi, son check-in zamanı ve paylaşım seviyesi.
+ * 30 günlük skor sparkline'ı, 5 alan ikon şeridi, son etkinlik ("2 dk önce"; son 10 dakikadaysa "Aktif" rozeti),
+ * son check-in zamanı ve paylaşım seviyesi.
  * Yeni olay gelince kart kısa süre vurgulanır (live.tsx). Karta veya kimliğe tıklanınca astronot detayı açılır.
  */
 import { Link } from "react-router";
 
 import { AreaLegend, AreaStrip } from "./AreaStrip";
-import { type MonitorCrewMember, type MonitorEvent, useCatalog, useCheckinTimes, useCrew, useMonitorDay, useOverview } from "./api";
-import { DEMO_CREW } from "./config";
+import { type MonitorCrewMember, type MonitorEvent, useCatalog, useCheckinTimes, useCrew, useLastActivity, useMonitorDay, useOverview } from "./api";
+import { ACTIVE_WINDOW_MS, DEMO_CREW } from "./config";
 import { detailPath, useOpenDetail } from "./Detail";
-import { flashClass, useLive } from "./live";
+import { ActivityIcon } from "./icons";
+import { flashClass, useLive, useNow } from "./live";
 import { Sparkline } from "./Sparkline";
-import { fmtTime, shareKey, useT } from "./texts";
+import { fmtAgo, fmtTime, shareKey, useT } from "./texts";
 import { SectionHead, StatusLabel } from "./ui";
 
 export function CrewSection() {
@@ -49,13 +51,15 @@ export function CheckinWhen({ share, today, checkin }: { share: string | null | 
 }
 
 function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: MonitorEvent | undefined }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const { flashFor } = useLive();
   const a = member.astronaut;
   const open = useOpenDetail(a.id);
   const overview = useOverview(a.id);
   const day = useMonitorDay(a.id, member.today);
   const catalog = useCatalog();
+  const activity = useLastActivity(a.id);
+  const clock = useNow(5_000);
   const hid = `card-${a.id}`;
   const v = day.data?.view.day === member.today ? day.data.view : undefined;
   const priv = v?.readings.filter((r) => r.private) ?? [];
@@ -63,13 +67,31 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
   const now = v
     ? { status: v.status, label: v.status_label, subtitle: v.subtitle, score: v.score_text, ground: v.ground, share: v.share ?? null }
     : { status: member.status, label: member.status_label, subtitle: member.subtitle, score: member.score_text, ground: member.ground, share: member.share ?? null };
+  // Son etkinlik gemi saatiyle (astronotun yaptığı an); "Aktif" = son ACTIVE_WINDOW_MS içinde
+  const last = activity.data ?? null;
+  const active = last !== null && clock - new Date(last.ship_time).getTime() <= ACTIVE_WINDOW_MS;
+  const activeMin = Math.round(ACTIVE_WINDOW_MS / 60_000);
 
   return (
-    <article className={`card ccard open-detail is-s${now.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id} onClick={open}>
+    <article
+      className={`card ccard open-detail is-s${now.status}${flashClass(flashFor(a.id))}`}
+      aria-labelledby={hid}
+      data-astronaut={a.id}
+      data-active={active ? "true" : "false"}
+      onClick={open}
+    >
       <div className="ccard-top">
-        <Link className="ccard-id" id={hid} to={detailPath(a.id)} aria-label={t("openDetailOf", { id: a.id })}>
-          {a.id}
-        </Link>
+        <span className="ccard-idrow">
+          <Link className="ccard-id" id={hid} to={detailPath(a.id)}>
+            {a.id}
+          </Link>
+          {active && (
+            <span className="active-badge" title={t("activeHint", { min: activeMin })}>
+              <ActivityIcon />
+              {t("active")}
+            </span>
+          )}
+        </span>
         <span className="ccard-meta">{t("cardDay", { age: a.age, sex: a.sex, day: member.mission_day })}</span>
       </div>
       <div className="ccard-head">
@@ -93,6 +115,12 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
       {overview.data ? <Sparkline strip={overview.data.strip} /> : <div style={{ height: 82 }} aria-busy="true" />}
       {v && catalog.data ? <AreaStrip view={v} catalog={catalog.data} /> : <div style={{ height: 52 }} aria-busy="true" />}
       <div className="ccard-foot">
+        <div className="row" data-last-activity={last?.ship_time ?? ""}>
+          <span>{t("lastActivity")}</span>
+          <span className="num" title={last ? t("shipTimeShort", { time: fmtTime(last.ship_time, locale, true) }) : undefined}>
+            {last ? fmtAgo(last.ship_time, clock, t) : activity.isPending ? "…" : t("noActivity")}
+          </span>
+        </div>
         <div className="row">
           <span>{t("lastCheckin")}</span>
           <span className="num">
