@@ -164,3 +164,59 @@ class CmoNotification(SQLModel, table=True):
     topic: str | None = None
     text: str
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class ActionDone(SQLModel, table=True):
+    """Astronotun to-do öğesini 'yaptım' olarak işaretlemesi (bugün)."""
+
+    astronaut_id: str = Field(foreign_key="crewprofile.id", primary_key=True)
+    day_index: int = Field(primary_key=True)
+    code: str = Field(primary_key=True)
+    done_at: datetime = Field(default_factory=utcnow)
+
+
+# =============================================================================
+# Downlink — gemi tarafı (outbox) ve Dünya tarafı (alınan, filtrelenmiş veri)
+# =============================================================================
+class OutboxEvent(SQLModel, table=True):
+    """Gemi → Dünya olayı. Payload gizlilik filtresinden GEÇMİŞ haliyle yazılır."""
+
+    seq: int | None = Field(default=None, primary_key=True)
+    type: str = Field(index=True)
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    payload: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    ship_time: datetime = Field(default_factory=utcnow)
+    publish_at: datetime = Field(index=True, description="ship_time + DOWNLINK_DELAY_SECONDS")
+
+
+class EarthAstronautRow(SQLModel, table=True):
+    """Dünya: downlink snapshot'ından astronot bilgisi (EarthAstronaut)."""
+
+    id: str = Field(primary_key=True)
+    data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+
+
+class EarthDayRow(SQLModel, table=True):
+    """Dünya: bir günün son alınan hali (EarthDay)."""
+
+    astronaut_id: str = Field(primary_key=True)
+    day_index: int = Field(primary_key=True)
+    data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    updated_seq: int = 0
+    received_at: datetime = Field(default_factory=utcnow)
+
+
+class EarthEvent(SQLModel, table=True):
+    """Dünya: alınan her olay (gemideki seq ile; tekrar gelen seq yok sayılır)."""
+
+    seq: int = Field(primary_key=True)
+    epoch: str
+    type: str = Field(index=True)
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    payload: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    ship_time: datetime
+    publish_time: datetime
+    earth_received_time: datetime = Field(default_factory=utcnow)
+    simulated_light_delay_minutes: float = 0.0

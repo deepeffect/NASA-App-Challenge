@@ -82,6 +82,9 @@ def ensure_dataset_loaded(engine: Engine, settings: Settings, force: bool = Fals
             return None
         ds = load_dataset_file(path)
         stats = store_dataset(s, ds)
+    from app.downlink.outbox import rebuild_outbox
+
+    rebuild_outbox(engine, settings)
     log.info("Veri seti yüklendi: %s (%s)", path, stats)
     return stats
 

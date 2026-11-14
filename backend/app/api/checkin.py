@@ -62,7 +62,7 @@ async def post_turn(req: CheckinTurnRequest, p: AstronautDep, request: Request, 
 async def post_reset(p: AstronautDep, request: Request, db: DBSession, lang: LangDep) -> CheckinState:
     series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
     async with _lock(request, p.subject):
-        return svc.reset(db, series, lang)
+        return svc.reset(db, station_settings(request), series, lang)
 
 
 @router.post(
@@ -74,4 +74,4 @@ async def post_reset(p: AstronautDep, request: Request, db: DBSession, lang: Lan
 async def post_share(req: CheckinShareRequest, p: AstronautDep, request: Request, db: DBSession, lang: LangDep) -> CheckinState:
     series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
     async with _lock(request, p.subject):
-        return svc.share(db, series, req.level, lang)
+        return svc.share(db, station_settings(request), series, req.level, lang)

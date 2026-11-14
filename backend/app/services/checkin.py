@@ -159,7 +159,7 @@ async def turn(db: Session, settings: Settings, series: AstronautSeries, answer:
     db.add(row)
     db.flush()
     if st.done and not was_done:
-        on_checkin_completed(db, series, row)
+        on_checkin_completed(db, settings, series, row)
     db.commit()
     db.refresh(row)
 
@@ -173,7 +173,7 @@ async def turn(db: Session, settings: Settings, series: AstronautSeries, answer:
     return CheckinTurnResponse(reply=reply, note=note, next=nxt, done=done, checkin=state_view(series, i, row, lang))
 
 
-def reset(db: Session, series: AstronautSeries, lang: Lang) -> CheckinState:
+def reset(db: Session, settings: Settings, series: AstronautSeries, lang: Lang) -> CheckinState:
     """'Baştan başla': sadece paylaşım private iken (prototip). CMO kayıtları silinmez."""
     i = series.today_index
     row = load_session(db, series.meta.id, i)
@@ -184,12 +184,12 @@ def reset(db: Session, series: AstronautSeries, lang: Lang) -> CheckinState:
         db.delete(row)
         db.flush()
         if was_done:
-            on_checkin_reset(db, series, i)
+            on_checkin_reset(db, settings, series, i)
         db.commit()
     return state_view(series, i, None, lang)
 
 
-def share(db: Session, series: AstronautSeries, level: str, lang: Lang) -> CheckinState:
+def share(db: Session, settings: Settings, series: AstronautSeries, level: str, lang: Lang) -> CheckinState:
     """Paylaşım seviyesi sadece artar (private → scores → full); geri alınamaz."""
     i = series.today_index
     row = load_session(db, series.meta.id, i)
@@ -206,20 +206,29 @@ def share(db: Session, series: AstronautSeries, level: str, lang: Lang) -> Check
         db.add(row)
         db.flush()
         if level != current:
-            on_checkin_shared(db, series, row)
+            on_checkin_shared(db, settings, series, row)
         db.commit()
         db.refresh(row)
     return state_view(series, i, row, lang)
 
 
 # ---------------------------------------------------------------- downlink kancaları (7. bölüm)
-def on_checkin_completed(db: Session, series: AstronautSeries, row: CheckinSession) -> None:
+def on_checkin_completed(db: Session, settings: Settings, series: AstronautSeries, row: CheckinSession) -> None:
     """Check-in tamamlandı: Dünya'ya gidecek olay (gizlilik filtresinden geçmiş) outbox'a yazılır."""
+    from app.downlink.outbox import emit_day_event
+
+    emit_day_event(db, settings, "checkin.completed", series, row.day_index, share=share_of(row))
 
 
-def on_checkin_reset(db: Session, series: AstronautSeries, day_index: int) -> None:
-    """Tamamlanmış (private) check-in silindi: Dünya görünümü güncellenir."""
+def on_checkin_reset(db: Session, settings: Settings, series: AstronautSeries, day_index: int) -> None:
+    """Tamamlanmış (private) check-in silindi: Dünya'daki gün güncellenir (check-in yok)."""
+    from app.downlink.outbox import emit_day_event
+
+    emit_day_event(db, settings, "day.snapshot", series, day_index)
 
 
-def on_checkin_shared(db: Session, series: AstronautSeries, row: CheckinSession) -> None:
+def on_checkin_shared(db: Session, settings: Settings, series: AstronautSeries, row: CheckinSession) -> None:
     """Paylaşım seviyesi arttı: Dünya'ya filtrelenmiş check-in ve gün görünümü gider."""
+    from app.downlink.outbox import emit_day_event
+
+    emit_day_event(db, settings, "checkin.shared", series, row.day_index, share=share_of(row))

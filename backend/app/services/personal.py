@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from app.config import Settings
 from app.errors import ApiError
 from app.i18n import Lang, t
 from app.models.schemas import (
@@ -16,6 +17,7 @@ from app.models.schemas import (
     PersonalCatalogResponse,
     PersonalOverview,
 )
+from app.models.tables import ActionDone
 from app.personal.catalog import PersonalCatalog, load_personal_catalog
 from app.personal.dataset import AstronautMeta, AstronautSeries
 from app.personal.store import PersonalData
@@ -114,3 +116,24 @@ def catalog_response(lang: Lang) -> PersonalCatalogResponse:
         verified=cat.verified,
         threshold_note=cat.threshold_note.get(lang),
     )
+
+
+def mark_action(db: Session, settings: Settings, series: AstronautSeries, code: str, done: bool, lang: Lang) -> None:
+    """Bugünün to-do öğesi: işaretle / kaldır → `action.done` olayı (Dünya'da maskeliyse kodsuz)."""
+    from app.downlink.outbox import current_earth_day, emit_day_event
+
+    i = series.today_index
+    if code not in series.days[i].self_care:
+        raise ApiError(400, "action_not_in_todo", t("action_not_in_todo", lang, code=code))
+    row = db.get(ActionDone, (series.meta.id, i, code))
+    if done == (row is not None):
+        return  # zaten bu durumda
+    if done:
+        db.add(ActionDone(astronaut_id=series.meta.id, day_index=i, code=code))
+    else:
+        db.delete(row)
+    db.flush()
+    visible = {x.code for x in current_earth_day(db, series, i).todo}
+    masked = code not in visible
+    emit_day_event(db, settings, "action.done", series, i, code=None if masked else code, masked=masked, done=done)
+    db.commit()

@@ -149,6 +149,16 @@ MESSAGES: dict[str, dict[Lang, str]] = {
         "en": "If an answer points to an urgent medical problem, the crew medical officer on board is told even "
         "when the entry is private. It is still not sent to Earth.",
     },
+    "downlink_disabled": {
+        "tr": "Downlink kapalı: gemide EARTH_LINK_TOKEN ayarlı değil.",
+        "en": "Downlink is off: EARTH_LINK_TOKEN is not set on the ship.",
+    },
+    "link_token_invalid": {"tr": "Downlink anahtarı geçersiz.", "en": "Invalid downlink token."},
+    "action_not_in_todo": {
+        "tr": "Bu kod bugünün yapılacaklar listesinde yok: {code}",
+        "en": "This code is not on today's to-do list: {code}",
+    },
+    "no_ship_data": {"tr": "Gemiden henüz veri gelmedi.", "en": "No data has arrived from the ship yet."},
     "cmo_title": {"tr": "Gemideki sağlık sorumlusu bilgilendirildi.", "en": "Crew medical officer told."},
     "cmo_text": {
         "tr": "Belirti cevabınız gemideki sağlık sorumlusuna iletildi. Dünya'ya gönderilmedi.",

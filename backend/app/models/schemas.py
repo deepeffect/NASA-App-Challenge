@@ -961,3 +961,122 @@ class EarthCheckinView(BaseModel):
 
 
 CheckinState.model_rebuild()
+
+
+# =============================================================================
+# /api/actions (gemi): to-do öğesini işaretle
+# =============================================================================
+class ActionDoneRequest(BaseModel):
+    code: str = Field(description="Bugünün to-do öğesinin self-care kodu")
+    done: bool = True
+
+
+class ActionDoneResponse(BaseModel):
+    code: str
+    done: bool
+    day: DayView
+
+
+# =============================================================================
+# /api/downlink (gemi → Dünya; EARTH_LINK_TOKEN ile korunur)
+# =============================================================================
+DownlinkEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot", "link.heartbeat"]
+
+
+class DownlinkPayload(BaseModel):
+    """Olay yükü: her olay ilgili günün filtrelenmiş güncel halini (`day`) taşır."""
+
+    day: EarthDay
+    share: ShareLevel | None = Field(None, description="checkin.*: paylaşım seviyesi")
+    code: str | None = Field(None, description="action.done: kod (Dünya'da maskeliyse null)")
+    masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
+    done: bool | None = Field(None, description="action.done: işaretlendi / kaldırıldı")
+
+
+class DownlinkEvent(BaseModel):
+    seq: int = Field(description="Gemideki sıra numarası (artan, boşluksuz yayın)")
+    type: DownlinkEventType
+    epoch: str = Field(description="Gemi DB dönemi; değişirse Dünya baştan senkronize olur")
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    ship_time: dt.datetime
+    publish_time: dt.datetime = Field(description="ship_time + DOWNLINK_DELAY_SECONDS")
+    earth_received_time: dt.datetime | None = Field(None, description="Dünya'nın aldığı an (Dünya doldurur)")
+    simulated_light_delay_minutes: float = Field(description="Gerçek ışık gecikmesi etiketi (simülasyon, bekletmez)")
+    payload: DownlinkPayload
+
+
+class DownlinkHeartbeat(BaseModel):
+    epoch: str
+    ship_time: dt.datetime
+    last_seq: int = Field(description="Yayınlanmış son seq")
+    pending: int = Field(description="Gecikme nedeniyle henüz yayınlanmamış olay sayısı")
+    delay_seconds: float
+    simulated_light_delay_minutes: float
+
+
+class DownlinkSnapshot(BaseModel):
+    epoch: str
+    seq: int = Field(description="Bu snapshot'ın içerdiği son seq; stream since=seq ile devam eder")
+    generated_at: dt.datetime
+    simulated_light_delay_minutes: float
+    astronauts: list[EarthAstronaut]
+    days: list[EarthDay]
+
+
+# =============================================================================
+# Dünya üssü: /api/link/status, /api/monitor/*, /api/stream/monitor
+# =============================================================================
+class LinkStatus(BaseModel):
+    configured: bool = Field(description="SHIP_URL ve EARTH_LINK_TOKEN ayarlı mı")
+    connected: bool
+    ship_url: str | None
+    epoch: str | None
+    last_contact: dt.datetime | None = Field(description="Gemiden son olay veya heartbeat")
+    last_event_at: dt.datetime | None
+    last_seq: int = Field(description="Dünya'nın işlediği son seq")
+    ship_last_seq: int | None = Field(description="Gemide yayınlanmış son seq (heartbeat)")
+    pending_on_ship: int | None = Field(description="Kuyruktaki olay: gemide gecikme nedeniyle bekleyen")
+    behind: int | None = Field(description="Yayınlanmış ama Dünya'ya henüz ulaşmamış olay sayısı")
+    events_received: int
+    snapshot_at: dt.datetime | None
+    last_error: str | None
+    delay_seconds: float | None
+    simulated_light_delay_minutes: float | None
+
+
+class MonitorCrewMember(BaseModel):
+    astronaut: CrewInfo
+    today: int
+    mission_day: int
+    status: int
+    status_label: str
+    subtitle: str
+    score: float
+    score_text: str
+    ground: bool
+    share: ShareLevel | None = Field(description="Bugünün check-in'i (tamamlandıysa)")
+    checkin_text: str
+
+
+class MonitorCrewResponse(BaseModel):
+    link: LinkStatus
+    astronauts: list[MonitorCrewMember]
+
+
+class MonitorDay(BaseModel):
+    view: DayView
+    checkin: EarthCheckinView
+    updated_seq: int
+    received_at: dt.datetime | None
+
+
+class MonitorStreamEvent(BaseModel):
+    kind: Literal["event", "link"]
+    type: str | None = None
+    seq: int | None = None
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    ship_time: dt.datetime | None = None
+    earth_received_time: dt.datetime | None = None
+    link: LinkStatus | None = None

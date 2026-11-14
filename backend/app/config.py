@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     auth_secret: str | None = None
     auth_token_ttl_hours: float = Field(24.0, gt=0)
 
+    # --- Downlink (gemi → Dünya) ---
+    # İki istasyonda aynı olmalı. Gemide boşsa downlink kapalıdır (Dünya bağlanamaz).
+    earth_link_token: str | None = None
+    # Olaylar gemide bu kadar bekletilip sonra yayınlanır (gecikme deneyi; varsayılan 0)
+    downlink_delay_seconds: float = Field(0.0, ge=0)
+    # Gerçek ışık gecikmesi için etiket (dakika): olaylarla taşınır ve gösterilir, BEKLETMEZ
+    downlink_simulated_light_delay_minutes: float = Field(20.0, ge=0)
+    downlink_heartbeat_seconds: float = Field(5.0, gt=0)
+    downlink_poll_seconds: float = Field(0.5, gt=0)
+
     # --- Check-in ---
     # scripted: prototipteki kural tabanlı akış | llm: LLM (Qwen) JSON şemalı | auto: LLM, olmazsa scripted
     checkin_mode: Literal["scripted", "llm", "auto"] = "scripted"

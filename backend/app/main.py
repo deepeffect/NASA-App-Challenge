@@ -4,6 +4,9 @@
 Dokümantasyon:                 http://localhost:8000/docs
 """
 
+import asyncio
+import contextlib
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,6 +17,8 @@ from app import __version__
 from app.api import router as legacy_router
 from app.api.auth import router as auth_router
 from app.api.checkin import router as checkin_router
+from app.api.downlink import router as downlink_router
+from app.api.monitor import router as monitor_router
 from app.api.personal import public_router as catalog_router
 from app.api.personal import router as personal_router
 from app.api.station import router as station_router
@@ -46,7 +51,22 @@ async def lifespan(app: FastAPI):
         from app.personal.store import ensure_dataset_loaded
 
         ensure_dataset_loaded(app.state.engine, settings)
+    task: asyncio.Task | None = None
+    if settings.station_role == "earth":
+        from app.downlink.broadcast import Broadcaster
+        from app.downlink.receiver import Receiver
+
+        app.state.broadcaster = Broadcaster()
+        if settings.ship_url and settings.earth_link_token:
+            app.state.receiver = Receiver(app.state.engine, settings, app.state.broadcaster)
+            task = asyncio.create_task(app.state.receiver.run_forever(), name="downlink-receiver")
+        else:
+            logging.getLogger(__name__).warning("Dünya üssü: SHIP_URL veya EARTH_LINK_TOKEN yok, downlink alıcısı çalışmıyor")
     yield
+    if task is not None:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await task
 
 
 def _custom_openapi(app: FastAPI):
@@ -97,6 +117,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.station_role == "ship" and settings.data_source == "astronaut_health":
         app.include_router(personal_router, prefix="/api")
         app.include_router(checkin_router, prefix="/api")
+        app.include_router(downlink_router, prefix="/api")
+    if settings.station_role == "earth":
+        app.include_router(monitor_router, prefix="/api")
     if settings.legacy_enabled:
         # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
         app.include_router(legacy_router, prefix="/api")
