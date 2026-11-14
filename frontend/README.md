@@ -32,7 +32,8 @@ cd ..\backend
 
 - `main` branch'inde backend tüm endpoint'lerde **stub** veri döner: 4 astronot, AST-02 kırmızı,
   tüm olay türleri (kural / model tespiti / changepoint / tahmin) ve tüm SSE olayları örneklenir.
-- `feat/backend-core` branch'inde gerçek sentetik veri gelir (`python -m app.cli seed`).
+- `feat/backend-core` branch'inde gerçek sentetik veri gelir (`python -m app.cli seed --seed 42`);
+  sohbet mock modda **gerçek tool çağrıları** yapar (tool_call/tool_result olayları gerçek veriyle).
   Changepoint/forecast katmanlarını görmek için backend `.env`'de örnek dedektörleri açın:
   `ANALYSIS_DETECTORS=threshold,baseline_deviation,trend,example_changepoint,example_forecast,system_pattern`
 - Sohbette acil durum bandını denemek için: "göğüs ağrısı var" yazın.

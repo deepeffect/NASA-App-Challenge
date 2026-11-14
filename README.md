@@ -38,27 +38,49 @@ uv pip install -e ".[rag]"
 
 ### Sentetik veriyi yükle ve çalıştır
 
-> `main` branch'inde endpoint'ler sözleşmeye uygun **stub** veri döner (arayüz geliştirmek için yeterli);
-> `seed` komutu ve gerçek analiz `feat/backend-core` ile gelir.
+> `main` branch'inde endpoint'ler sözleşmeye uygun **stub** veri döner; aşağıdakiler `feat/backend-core` içindir.
 
 ```powershell
-.venv\Scripts\python -m app.cli seed --seed 42            # 4 astronot × 180 gün (DB'yi sıfırlar)
-.venv\Scripts\python -m app.cli seed --seed 42 --spe-day 120   # + güneş parçacık olayı senaryosu
+.venv\Scripts\python -m app.cli seed --seed 42                 # 4 astronot × 180 gün (DB'yi sıfırlar, ~3 sn)
+.venv\Scripts\python -m app.cli seed --seed 42 --spe-day 120   # + güneş parçacık olayı (SPE) senaryosu
+.venv\Scripts\python -m app.cli analyze --as-of 2026-10-22     # ekip durumu ve aktif uyarılar konsolda
 .venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 - Swagger UI: <http://localhost:8000/docs>
 - Sağlık: <http://localhost:8000/api/health>
+- Windows'ta `curl http://localhost:...` IPv6 denemesi yüzünden ~200 ms gecikir; ölçüm için `127.0.0.1` kullanın.
 
-Demo senaryosu: **Astronot 2**'de 150. günden itibaren uyku süresi düşer → birkaç gün sonra stres
-artar ve HRV düşer → istirahat nabzı yükselir. Diğer astronotlar normaldir. Zaman kaydırıcısıyla
-(`?as_of=`) yeşil → sarı → kırmızı geçişi izlenebilir.
+**Demo senaryosu** (görev 2026-05-19'da başlar, gün 180 = 2026-11-14): **Astronot 2**'de 150. günden
+itibaren uyku süresi düşer → birkaç gün sonra stres artar, ruh hali ve HRV düşer, reaksiyon süresi uzar
+→ istirahat nabzı yükselir. Diğer astronotlar normaldir. Zaman kaydırıcısıyla (`?as_of=`):
+
+| Görev günü | AST-02 | Ne oluyor |
+|---|---|---|
+| 1–151 | 🟢 yeşil | kişisel baseline (ilk 14 gün), normal gürültü |
+| 152 | 🟡 sarı | uyku süresi alt uyarı eşiğinin altında |
+| 157 | 🔴 kırmızı | uyku sapması kritik; ardından davranışsal ve kardiyovasküler sistemler |
+| 180 | 🔴 kırmızı | 3 sistemde çok metrikli örüntü olayları |
+
+Arayüzde changepoint/forecast katmanlarını görmek için örnek dedektörleri açın (gerçek ML değildir):
+`ANALYSIS_DETECTORS=threshold,baseline_deviation,trend,example_changepoint,example_forecast,system_pattern`
+
+### RAG belgeleri
+
+Gerçek belgeleri `data/docs/` altına koyun (PDF için `uv pip install -e ".[rag]"`), sonra
+`.venv\Scripts\python -m app.cli reindex`. Varsayılan arama bağımlılıksız BM25'tir; embedding arka ucu
+(`RAG_BACKEND=embedding`) LLM ekibi tarafından tamamlanacak.
 
 ### Testler
 
 ```powershell
-.venv\Scripts\python -m pytest            # mock LLM + geçici DB; .env'den bağımsız
+.venv\Scripts\python -m pytest            # mock LLM + geçici DB; .env'den bağımsız (~140 test, ~10 sn)
+.venv\Scripts\python -m pytest tests/analysis   # sadece analiz motoru + demo senaryosu
 ```
+
+Gerçek LLM sunucusu testlerde kullanılmaz: agent loop kurgulanmış cevaplarla, `OpenAICompatClient`
+Ollama tarzı cevaplar veren sahte HTTP transport ile test edilir. Gerçek modelle ilk denemede
+`/api/health` → `llm.reachable`, `llm.model_available` kontrol edin, sonra sohbette "Bugün nasılım?" sorun.
 
 ## 2. LLM servisi (Ollama + Qwen3)
 

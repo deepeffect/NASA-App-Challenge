@@ -81,8 +81,32 @@ uv venv .venv && uv pip install -e ".[dev]"        # veya: python -m venv .venv 
 
 (Linux/macOS'ta `.venv/Scripts/python` yerine `.venv/bin/python`.)
 
-> **Durum:** `main` branch'inde endpoint'ler `services/stub.py`'den sözleşmeye uygun sahte veri döner;
-> `seed`, `analyze`, `reindex` ve gerçek servisler `feat/backend-core` ile gelir.
+> **Durum:** `main` branch'inde endpoint'ler stub (sözleşmeye uygun sahte) veri döner.
+> `feat/backend-core`'da her şey gerçek: veri katmanı, analiz motoru, LLM katmanı (mock + OpenAI uyumlu),
+> RAG iskeleti (BM25). Testler: `pytest` → ~140 test, ~10 sn.
+
+## Açık işler (kim, nerede)
+
+| Alan | İş | Nerede |
+|---|---|---|
+| LLM | Gerçek Ollama'ya karşı uçtan uca deneme (`LLM_PROVIDER=openai`); prompt ayarı | `app/llm/prompts/*.md` |
+| LLM | Embedder (bge-m3: CPU'da veya Ollama) + FAISS indeksi | `app/llm/rag/embedder.py`, `vector.py`, `retriever._build` |
+| Veri/ML | Isolation Forest / ruptures / tahmin dedektörleri (örnekleri değiştir) | `app/analysis/detectors/` (`examples.py` şablon) |
+| Veri/ML | NASA verisi gelince adaptör + katalog girişleri | `app/ingest/adapters.py`, `config/metrics.yaml` |
+| Herkes | Eşikleri NASA-STD-3001 ile doğrula (`verified: true` + `source`) | `config/metrics.yaml` |
+| UI | Ekranları `feat/ui-*` branch'lerinde geliştir; changepoint/forecast için örnek dedektörleri aç | `frontend/src/features/*` |
+
+## Analiz motoru — bilinmesi gerekenler
+
+- Günlük değer: katalogdaki `aggregation` (saatlik metrikler günlüğe indirgenir). Eşik kuralı ortalama
+  metriklerde günün **en kötü** ölçümüne bakar (tek bir düşük SpO2 saati yakalanır).
+- Baseline: astronotun ilk 14 günü (`rules.yaml`). Sapma/trend kuralları baseline penceresinden SONRA çalışır.
+- z7 = (7 günlük ortalama − baseline) / baseline_std. info ≥ 1,75 · warning ≥ 2 · critical ≥ 3,5 (kötü yönde).
+- Trend: "hızlı kötüleşme" erken uyarısı; aynı metrikte warning+ sapma varken bastırılır.
+- Demo zaman çizelgesi (seed 42): AST-02 gün 1–151 yeşil → 152 sarı → 157 kırmızı; diğerleri tüm görev yeşil.
+  `rules.yaml` değişince `pytest tests/analysis` ile bunu doğrula.
+- Analiz sonucu `(veri versiyonu, rules/metrics dosya zamanı, as_of)` ile önbellekli; YAML düzenlemesi
+  sunucu yeniden başlatılmadan etkili olur.
 
 Frontend (`frontend/` içinde):
 

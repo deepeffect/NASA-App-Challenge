@@ -1,7 +1,11 @@
-# API Sözleşmesi (v0)
+# API Sözleşmesi (v1)
 
 Arayüz ekibiyle backend arasındaki sözleşme budur. Makine tarafından okunur hali `docs/openapi.json`
 (çalışan sunucuda: `http://localhost:8000/docs` ve `/openapi.json`).
+
+> **Branch durumu:** `main`'de endpoint'ler şemaya uygun **stub** veri döner (v0, aynı şema).
+> `feat/backend-core`'da hepsi gerçek: SQLite + analiz motoru + LLM katmanı (mock veya gerçek model).
+> Aşağıdaki örnekler `feat/backend-core` + `seed --seed 42` çıktısıdır.
 
 - **Base URL:** `http://<backend-host>:8000/api`
 - **Format:** JSON, UTF-8. Tarihler `YYYY-MM-DD`, zaman damgaları ISO-8601 UTC (`2026-11-14T08:00:00Z`).
@@ -35,33 +39,48 @@ Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
 
 ```json
 {
-  "event_id": "evt_3f9a1c2b7d10",
+  "event_id": "evt_459a1592a142",
   "astronaut_id": "AST-02",
-  "detected_at": "2026-10-18T00:00:00Z",
+  "detected_at": "2026-10-19T00:00:00Z",
   "source": "rule",
   "system": "sleep",
   "severity": "critical",
-  "score": 0.92,
+  "score": 0.99,
   "title": "Uyku süresi kişisel normalin altında",
-  "window": { "start": "2026-10-18", "end": "2026-11-14" },
+  "window": { "start": "2026-10-19", "end": "2026-11-14" },
   "contributors": [
-    { "metric": "sleep_duration", "value": 5.1, "baseline": 7.2, "z": -2.6, "weight": 1.0, "threshold_verified": false }
+    { "metric": "sleep_duration", "value": 4.97, "baseline": 7.18, "z": -5.12, "weight": 1.0, "threshold_verified": false }
   ],
   "changepoint_date": null,
   "forecast": null,
   "share_with_ground": false,
   "status": "active",
   "detector": "rule.baseline_deviation",
-  "description": "Son 7 gün ortalaması 5,1 sa; kişisel baseline 7,2 ± 0,3 sa (z = -2,6).",
+  "description": "7 günlük ortalama 5,0 sa; kişisel normal 7,2 sa ± 0,4 sa (z = -5,1).",
   "feedback": null
 }
 ```
 
-Kullanıcının verdiği şemaya **eklenen** alanlar: `status` (`active`/`resolved`), `detector`
-(olayı üreten modül), `description` (kuralın ürettiği sayısal açıklama), `feedback` (son geri bildirim).
+Çok metrikli olay örneği (`rule.system_pattern` — ML dedektörleri de böyle katkı listesi döner):
 
-- `event_id` deterministiktir (astronot + kaynak + dedektör + metrik + başlangıç günü). Zaman kaydırıcısında aynı olay aynı ID'yi korur.
+```json
+"title": "Uyku: 2 göstergede eşzamanlı olumsuz değişim",
+"contributors": [
+  { "metric": "sleep_duration", "value": 4.97, "baseline": 7.18, "z": -5.12, "weight": 0.62, "threshold_verified": false },
+  { "metric": "sleep_quality",  "value": 2.57, "baseline": 4.14, "z": -3.14, "weight": 0.38, "threshold_verified": false }
+]
+```
+
+Kullanıcının verdiği şemaya **eklenen** alanlar: `status` (`active`/`resolved`), `detector`
+(olayı üreten modül), `description` (kuralın ürettiği sayısal açıklama, Türkçe), `feedback` (son geri bildirim).
+
+- `event_id` deterministiktir (astronot + kaynak + dedektör + metrik/sistem + başlangıç günü). Zaman kaydırıcısında aynı olay aynı ID'yi korur.
 - `contributors[].weight` toplamı 1'dir. Tek metrikli kural olaylarında tek katkı vardır (`1.0`).
+- `status`: olay bittikten sonra 2 gün daha `active` kalır (histerezis, `rules.yaml → episodes.merge_gap_days`).
+- `detector` değerleri: `rule.threshold` (eşik), `rule.baseline_deviation` (kişisel normalden sapma, z7),
+  `rule.trend` (hızlı kötüleşme), `rule.system_pattern` (aynı sistemde ≥2 metrik),
+  `ml.example_changepoint` / `ml.example_forecast` (örnek, varsayılan kapalı), ML ekibinin `ml.*` dedektörleri.
+- `score` kural olaylarında: eşik → doğrulanmamışsa 0,7 / doğrulanmışsa 0,95; sapma → z büyüklüğüyle artar.
 - `changepoint_date` → grafikte dikey kesikli çizgi. `forecast` → kesikli tahmin çizgisi:
 
 ```json
@@ -128,10 +147,10 @@ Metrik adları, birimleri, sistemleri, normal aralıkları ve eşikler. Grafik e
   "astronauts": [
     {
       "id": "AST-02", "name": "Astronot 2", "role": "Uçuş mühendisi",
-      "status": "red", "score": 35.0,
-      "active_events": { "critical": 2, "warning": 3, "info": 1 },
-      "attention_systems": ["sleep", "behavioral", "cardiovascular"],
-      "last_measurement_at": "2026-11-14T23:00:00Z"
+      "status": "red", "score": 10.0,
+      "active_events": { "critical": 8, "warning": 3, "info": 0 },
+      "attention_systems": ["cardiovascular", "sleep", "behavioral"],
+      "last_measurement_at": "2026-11-14T23:55:00Z"
     }
   ]
 }
