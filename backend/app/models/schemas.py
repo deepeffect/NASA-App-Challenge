@@ -603,3 +603,5 @@ class StationInfo(BaseModel):
     version: str
     home_path: str = Field(description="Bu istasyonun ana ekranı: ship → /me, earth → /monitor")
     read_only: bool = Field(description="true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)")
+    data_source: Literal["astronaut_health", "synthetic"]
+    legacy_enabled: bool = Field(description="true → eski ekranlar (/legacy) ve eski API açık (gemi + synthetic)")

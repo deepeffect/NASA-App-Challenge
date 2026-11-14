@@ -6,8 +6,12 @@ Aynı kod tabanı iki rolde çalışır. Rol `STATION_ROLE` ile seçilir; uygula
 
 from __future__ import annotations
 
-from fastapi import Request
+from collections.abc import Iterator
+from typing import Annotated
+
+from fastapi import Depends, Request
 from fastapi.responses import JSONResponse
+from sqlmodel import Session
 
 from app.config import Settings, get_settings
 from app.i18n import resolve_lang, t
@@ -21,6 +25,15 @@ SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 def station_settings(request: Request) -> Settings:
     """Uygulamanın kurulduğu ayarlar (create_app(settings=...)); yoksa global ayarlar."""
     return getattr(request.app.state, "settings", None) or get_settings()
+
+
+def get_db(request: Request) -> Iterator[Session]:
+    """Bu uygulamanın (istasyonun) DB oturumu."""
+    with Session(request.app.state.engine) as session:
+        yield session
+
+
+DBSession = Annotated[Session, Depends(get_db)]
 
 
 async def earth_read_only_middleware(request: Request, call_next):  # noqa: ANN001, ANN201

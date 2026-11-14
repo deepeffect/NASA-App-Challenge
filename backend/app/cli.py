@@ -29,9 +29,27 @@ def cmd_reset(args: argparse.Namespace) -> None:
     SQLModel.metadata.drop_all(get_engine())
     init_db()
     print(f"[{s.station_role}] veritabanı sıfırlandı: {s.database_url_resolved}")
+    if s.station_role == "ship" and s.data_source == "astronaut_health":
+        from app.personal.store import ensure_dataset_loaded
+
+        stats = ensure_dataset_loaded(get_engine(), s, force=True)
+        print(f"Veri seti yüklendi ({s.dataset_path.name}): {stats}")
+
+
+def _force_synthetic() -> None:
+    """Eski komutlar (seed/ingest/analyze) her zaman sentetik moddadır → DB: data/processed/health.db."""
+    import os
+
+    from app.config import get_settings
+    from app.db import reset_engine
+
+    os.environ["DATA_SOURCE"] = "synthetic"
+    get_settings.cache_clear()
+    reset_engine()
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
+    _force_synthetic()
     from app.data.seed import seed_database
     from app.data.synthetic import SyntheticConfig
 
@@ -52,6 +70,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
 def cmd_ingest(args: argparse.Namespace) -> None:
     from sqlmodel import Session
 
+    _force_synthetic()
     from app.db import get_engine, init_db
     from app.ingest.pipeline import ingest_bytes
 
@@ -64,6 +83,7 @@ def cmd_ingest(args: argparse.Namespace) -> None:
 
 def cmd_analyze(args: argparse.Namespace) -> None:
     """Konsolda ekip durumu ve aktif olaylar (veri/analiz sorumlusu için hızlı kontrol)."""
+    _force_synthetic()
     from sqlmodel import Session
 
     from app.db import get_engine, init_db

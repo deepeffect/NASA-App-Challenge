@@ -17,4 +17,6 @@ def get_station(request: Request) -> StationInfo:
         version=__version__,
         home_path=HOME_PATH[s.station_role],
         read_only=s.station_role == "earth",
+        data_source=s.data_source,
+        legacy_enabled=s.legacy_enabled,
     )

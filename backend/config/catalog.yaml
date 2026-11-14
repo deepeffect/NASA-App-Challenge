@@ -1,0 +1,603 @@
+# =============================================================================
+# KİŞİSEL SAĞLIK KATALOĞU (yeni mimari: DATA_SOURCE=astronaut_health)
+# =============================================================================
+# Kaynak: frontend/reference/personal-artifact.html (gömülü `indicators` ve `solutions`).
+# Sayılar ve İngilizce metinler prototipten BİREBİR alınmıştır; sıra da önemlidir
+# (ölçümler tabloda ve check-in bağlamında bu sırayla gelir).
+#
+# ⚠ ARALIKLAR SİMÜLE VERİ SETİNDEN GELİR, TIBBİ DOĞRULAMA YAPILMAMIŞTIR.
+#   threshold_source: dataset · verified: false. Doğrulanan aralıkta bu iki alanı güncelleyin.
+#   TODO: NASA-STD-3001 ile doğrula.
+# ⚠ SELF-CARE ADIMLARI PROTOTİP İÇİN TEMSİLİDİR, TIBBİ TAVSİYE DEĞİLDİR.
+#   TODO: Türkçe çeviriler (tr) ekip tarafından gözden geçirilmeli.
+#
+# Ölçüm alanları:
+#   col       veri setindeki kolon adı
+#   domain    exposure | immune | bone_muscle | cardiovascular | behavioral
+#   dec       gösterim ondalık sayısı
+#   healthy   sağlıklı aralık [min, max]  (sınırlar dahil; max: null → üst sınır yok)
+#   warning   uyarı aralığı   [min, max]  (sınırlar dahil; max: null → üst sınır yok)
+#             seviye: 0 = sağlıklı aralıkta · 1 = uyarı aralığında · 2 = uyarı aralığının dışında
+#   action    ilgili self-care çözüm kodu
+#   trig      to-do'da tetikleyici sayılması için gereken en düşük seviye
+#   private   true → Dünya bunu sadece o günün check-in'i en az `scores` paylaşıldıysa görür
+# Değerlendirme: exposure o günün değeriyle, diğerleri son 3 günün ortalamasıyla.
+# =============================================================================
+
+threshold_source: dataset
+verified: false
+threshold_note:
+  tr: "Aralıklar simüle veri setinden alınmıştır, tıbbi doğrulama yapılmamıştır."
+  en: "Ranges come from the simulated dataset and have not been medically validated."
+
+statuses:            # indeks = durum seviyesi (0, 1, 2)
+  - {tr: Normal, en: Normal}
+  - {tr: Dikkat, en: Needs attention}
+  - {tr: Rahatsız, en: Unwell}
+
+domains:             # sıra = okumalar tablosundaki grup sırası
+  exposure: {tr: Ortam, en: Environment}
+  immune: {tr: Bağışıklık sistemi, en: Immune system}
+  bone_muscle: {tr: Kemik ve kas, en: Bone and muscle}
+  cardiovascular: {tr: Kalp ve dolaşım, en: Heart and circulation}
+  behavioral: {tr: "Uyku, ruh hali ve stres", en: "Sleep, mood and stress"}
+
+areas: [immune, bone_muscle, cardiovascular, behavioral]   # alan skorları (0–100) ve sırası
+
+missions:
+  ISS_LEO: {tr: Uzay istasyonu, en: Space station}
+  Lunar_Surface: {tr: Ay yüzeyi, en: Moon surface}
+  Mars_Transit: {tr: Mars yolculuğu, en: Mars transit}
+  Mars_Surface: {tr: Mars yüzeyi, en: Mars surface}
+  Analog_HERA: {tr: Yer simülasyonu, en: Ground simulation}
+
+profiles:            # veri setindeki simülasyon deseni
+  healthy: {tr: Sağlıklı, en: Healthy}
+  mild_issue: {tr: Hafif sorun, en: Mild issue}
+  chronic_sick: {tr: Süreğen hastalık, en: Sick throughout}
+  getting_worse: {tr: Kötüleşiyor, en: Getting worse}
+  recovering: {tr: İyileşiyor, en: Recovering}
+  acute_episode: {tr: Akut atak, en: Acute episode}
+
+indicators:
+  - col: exp_radiation_mSv_day
+    domain: exposure
+    label: {en: Radiation dose, tr: Radyasyon dozu}
+    unit: {en: mSv/day, tr: mSv/gün}
+    dec: 2
+    healthy: {min: 0, max: 0.5}
+    warning: {min: 0, max: 2.5}
+    action: SEEK_RADIATION_SHELTER
+    trig: 2
+  - col: exp_cabin_co2_mmHg
+    domain: exposure
+    label: {en: Cabin CO2, tr: Kabin CO2}
+    unit: {en: mmHg, tr: mmHg}
+    dec: 2
+    healthy: {min: 0, max: 2.5}
+    warning: {min: 0, max: 3.0}
+    action: FIX_CABIN_AIR
+    trig: 1
+  - col: cv_ectopic_beats_per_h
+    domain: cardiovascular
+    label: {en: Irregular heartbeats, tr: Düzensiz kalp atımları}
+    unit: {en: per hour, tr: /saat}
+    dec: 1
+    healthy: {min: 0, max: 10}
+    warning: {min: 0, max: 30}
+    action: STOP_AND_RECORD_HEART
+    trig: 1
+  - col: imm_body_temp_C
+    domain: immune
+    label: {en: Body temperature, tr: Vücut sıcaklığı}
+    unit: {en: °C, tr: °C}
+    dec: 1
+    healthy: {min: 36.1, max: 37.5}
+    warning: {min: 35.5, max: 38.0}
+    action: REST_AND_ISOLATE
+    trig: 1
+  - col: imm_symptom_score
+    domain: immune
+    label: {en: Symptom score, tr: Belirti puanı}
+    unit: {en: 0-10, tr: 0-10}
+    dec: 1
+    healthy: {min: 0, max: 2}
+    warning: {min: 0, max: 5}
+    action: SYMPTOM_CARE
+    trig: 1
+  - col: imm_lymphocytes_e9L
+    domain: immune
+    label: {en: Lymphocytes, tr: Lenfositler}
+    unit: {en: ×10⁹/L, tr: ×10⁹/L}
+    dec: 2
+    healthy: {min: 1.0, max: 4.0}
+    warning: {min: 0.8, max: 4.5}
+    action: IMMUNE_SUPPORT
+    trig: 1
+  - col: cv_systolic_bp_mmHg
+    domain: cardiovascular
+    label: {en: Systolic blood pressure, tr: Sistolik kan basıncı}
+    unit: {en: mmHg, tr: mmHg}
+    dec: 0
+    healthy: {min: 90, max: 130}
+    warning: {min: 85, max: 140}
+    action: RECHECK_BLOOD_PRESSURE
+    trig: 1
+  - col: cv_resting_hr_bpm
+    domain: cardiovascular
+    label: {en: Resting heart rate, tr: İstirahat nabzı}
+    unit: {en: bpm, tr: atım/dk}
+    dec: 0
+    healthy: {min: 45, max: 90}
+    warning: {min: 40, max: 100}
+    action: HEART_RECOVERY_DAY
+    trig: 1
+  - col: cv_hrv_ms
+    domain: cardiovascular
+    label: {en: Heart-rate variability, tr: Kalp hızı değişkenliği}
+    unit: {en: ms, tr: ms}
+    dec: 0
+    healthy: {min: 25, max: null}
+    warning: {min: 15, max: null}
+    action: HEART_RECOVERY_DAY
+    trig: 1
+  - col: bone_urine_calcium_mg_day
+    domain: bone_muscle
+    label: {en: Urine calcium, tr: İdrar kalsiyumu}
+    unit: {en: mg/day, tr: mg/gün}
+    dec: 0
+    healthy: {min: 100, max: 250}
+    warning: {min: 50, max: 300}
+    action: HYDRATE_LOW_SODIUM
+    trig: 1
+  - col: bone_bmd_change_pct
+    domain: bone_muscle
+    label: {en: Bone density change, tr: Kemik yoğunluğu değişimi}
+    unit: {en: "%", tr: "%"}
+    dec: 2
+    healthy: {min: -2, max: null}
+    warning: {min: -5, max: null}
+    action: RESISTIVE_EXERCISE
+    trig: 1
+  - col: bone_muscle_strength_change_pct
+    domain: bone_muscle
+    label: {en: Muscle strength change, tr: Kas gücü değişimi}
+    unit: {en: "%", tr: "%"}
+    dec: 1
+    healthy: {min: -5, max: null}
+    warning: {min: -15, max: null}
+    action: RESISTIVE_EXERCISE
+    trig: 1
+  - col: bone_exercise_min
+    domain: bone_muscle
+    label: {en: Exercise, tr: Egzersiz}
+    unit: {en: min/day, tr: dk/gün}
+    dec: 0
+    healthy: {min: 90, max: 200}
+    warning: {min: 60, max: 240}
+    action: RESISTIVE_EXERCISE
+    trig: 1
+  - col: beh_attention_lapses
+    domain: behavioral
+    label: {en: Attention lapses, tr: Dikkat hataları}
+    unit: {en: per test, tr: /test}
+    dec: 1
+    healthy: {min: 0, max: 2}
+    warning: {min: 0, max: 5}
+    action: FATIGUE_SAFETY
+    trig: 1
+  - col: beh_sleep_h
+    domain: behavioral
+    label: {en: Sleep, tr: Uyku}
+    unit: {en: hours, tr: saat}
+    dec: 1
+    healthy: {min: 7, max: 9}
+    warning: {min: 6, max: 10}
+    action: PROTECT_SLEEP
+    trig: 1
+  - col: beh_mood_score
+    domain: behavioral
+    label: {en: Mood, tr: Ruh hali}
+    unit: {en: 1-10, tr: 1-10}
+    dec: 1
+    healthy: {min: 7, max: 10}
+    warning: {min: 5, max: 10}
+    action: MOOD_CONNECT
+    trig: 1
+    private: true
+  - col: beh_stress_score
+    domain: behavioral
+    label: {en: Stress, tr: Stres}
+    unit: {en: 0-10, tr: 0-10}
+    dec: 1
+    healthy: {min: 0, max: 4}
+    warning: {min: 0, max: 7}
+    action: STRESS_RESET
+    trig: 1
+    private: true
+  - col: imm_cortisol_nmolL
+    domain: immune
+    label: {en: Morning cortisol, tr: Sabah kortizolü}
+    unit: {en: nmol/L, tr: nmol/L}
+    dec: 1
+    healthy: {min: 4, max: 20}
+    warning: {min: 2.5, max: 28}
+    action: STRESS_RESET
+    trig: 1
+
+solutions:
+  - code: SEEK_RADIATION_SHELTER
+    domain: exposure
+    title:
+      en: Shelter from a radiation spike
+      tr: Radyasyon artışından korunun
+    when:
+      en: Daily radiation dose above 2.5 mSv (solar storm)
+      tr: Günlük radyasyon dozu 2,5 mSv'nin üzerinde (güneş fırtınası)
+    do_yourself:
+      en:
+        - Move to the most shielded part of the vehicle or the storm shelter
+        - Stack stowage bags and water containers around you for extra shielding
+        - Keep your personal dosimeter on and log the reading every hour
+        - Stay sheltered until the dose rate is back to its usual level
+      tr:
+        - Aracın en iyi korunan bölümüne veya fırtına sığınağına geçin
+        - Ek koruma için çevrenize istif çantaları ve su kapları dizin
+        - Kişisel dozimetrenizi takılı tutun ve okumayı her saat kaydedin
+        - Doz hızı olağan seviyesine dönene kadar sığınakta kalın
+    contact_ground_if:
+      en: Always report the event; call at once if you feel nauseous or vomit
+      tr: Olayı her zaman bildirin; mide bulantısı veya kusma olursa hemen arayın
+    basis:
+      en: "NASA: shielding, radiation monitoring and using stowage to cut exposure"
+      tr: "NASA: zırhlama, radyasyon izleme ve maruziyeti azaltmak için istif malzemesinin kullanımı"
+
+  - code: FIX_CABIN_AIR
+    domain: exposure
+    title:
+      en: Bring cabin CO2 down
+      tr: Kabin CO2'sini düşürün
+    when:
+      en: Cabin CO2 above 2.5 mmHg
+      tr: Kabin CO2'si 2,5 mmHg'nin üzerinde
+    do_yourself:
+      en:
+        - Move to a module with better airflow
+        - Check the CO2 scrubber and fan status
+        - Clear blocked vents and clean or change the air filter
+        - Postpone exercise until CO2 is below 2.5 mmHg
+        - Note any headache or trouble concentrating
+      tr:
+        - Hava akışı daha iyi olan bir modüle geçin
+        - CO2 temizleyicinin ve fanın durumunu kontrol edin
+        - Tıkalı menfezleri açın, hava filtresini temizleyin veya değiştirin
+        - CO2 2,5 mmHg'nin altına inene kadar egzersizi erteleyin
+        - Baş ağrısı veya konsantrasyon güçlüğü olursa not edin
+    contact_ground_if:
+      en: CO2 stays above 3 mmHg for more than an hour after your checks, or the headache does not ease
+      tr: Kontrollerinizden sonra CO2 bir saatten uzun süre 3 mmHg'nin üzerinde kalırsa veya baş ağrısı geçmezse
+    basis:
+      en: "NASA-STD-3001 CO2 limit; NASA: changing air filters"
+      tr: "NASA-STD-3001 CO2 sınırı; NASA: hava filtrelerinin değiştirilmesi"
+
+  - code: STOP_AND_RECORD_HEART
+    domain: cardiovascular
+    title:
+      en: Stop and record your heart rhythm
+      tr: Durun ve kalp ritminizi kaydedin
+    when:
+      en: More than 10 irregular beats per hour (3-day average)
+      tr: Saatte 10'dan fazla düzensiz atım (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Stop exercise and rest
+        - Record a 5-minute ECG now and again in one hour
+        - Skip caffeine today
+        - Drink water with electrolytes
+      tr:
+        - Egzersizi bırakın ve dinlenin
+        - Şimdi ve bir saat sonra 5 dakikalık EKG kaydedin
+        - Bugün kafein almayın
+        - Elektrolitli su için
+    contact_ground_if:
+      en: More than 30 irregular beats per hour, or any chest pain, dizziness or fainting - call immediately
+      tr: Saatte 30'dan fazla düzensiz atım ya da herhangi bir göğüs ağrısı, baş dönmesi veya bayılma olursa hemen arayın
+    basis:
+      en: General self-care (illustrative)
+      tr: Genel öz bakım (temsili)
+
+  - code: REST_AND_ISOLATE
+    domain: immune
+    title:
+      en: Rest and keep your distance
+      tr: Dinlenin ve mesafenizi koruyun
+    when:
+      en: Body temperature above 37.5 C (3-day average)
+      tr: Vücut sıcaklığı 37,5 °C'nin üzerinde (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Rest and hand off non-essential tasks
+        - Drink extra fluids
+        - Take your temperature every 4 hours
+        - Keep apart from crewmates where you can and wipe shared surfaces
+        - Use a fever reducer from the medical kit if your checklist allows it
+      tr:
+        - Dinlenin ve zorunlu olmayan görevleri devredin
+        - Fazladan sıvı alın
+        - Ateşinizi 4 saatte bir ölçün
+        - Mümkün olduğunca ekip arkadaşlarınızdan uzak durun ve ortak yüzeyleri silin
+        - Kontrol listeniz izin veriyorsa tıbbi setteki ateş düşürücüyü kullanın
+    contact_ground_if:
+      en: 38.0 C or higher on two readings, or fever lasting more than 24 hours
+      tr: İki ölçümde 38,0 °C veya üzeri ya da 24 saatten uzun süren ateş
+    basis:
+      en: "NASA: cleaning surfaces, onboard testing; general self-care"
+      tr: "NASA: yüzey temizliği, gemide test; genel öz bakım"
+
+  - code: SYMPTOM_CARE
+    domain: immune
+    title:
+      en: Treat and track symptoms
+      tr: Belirtileri tedavi edin ve izleyin
+    when:
+      en: Symptom score above 2 (3-day average)
+      tr: Belirti puanı 2'nin üzerinde (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Log each symptom; photograph any rash
+        - Clean your sleeping area and shared surfaces
+        - Use the medical-kit item your checklist lists for the symptom
+        - Take a lighter day and rest
+      tr:
+        - Her belirtiyi kaydedin; döküntü varsa fotoğrafını çekin
+        - Uyku alanınızı ve ortak yüzeyleri temizleyin
+        - Kontrol listenizin o belirti için gösterdiği tıbbi set malzemesini kullanın
+        - Günü hafif geçirin ve dinlenin
+    contact_ground_if:
+      en: Score of 6 or more, or symptoms getting worse over 3 days
+      tr: Puan 6 veya üzeriyse ya da belirtiler 3 gün boyunca kötüleşiyorsa
+    basis:
+      en: "NASA: cleaning surfaces, swabbing; general self-care"
+      tr: "NASA: yüzey temizliği, sürüntü örneği; genel öz bakım"
+
+  - code: IMMUNE_SUPPORT
+    domain: immune
+    title:
+      en: Support your immune system
+      tr: Bağışıklık sisteminizi destekleyin
+    when:
+      en: Lymphocyte count below 1.0 x10^9/L (3-day average)
+      tr: Lenfosit sayısı 1,0 ×10⁹/L'nin altında (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Sleep at least 7 hours for the next 3 nights
+        - Eat full meals and take your scheduled supplements
+        - Keep exercising but skip maximum-effort sessions
+        - Wash hands and wipe surfaces carefully
+        - Retest in 3 days
+      tr:
+        - Önümüzdeki 3 gece en az 7 saat uyuyun
+        - Öğünlerinizi tam yiyin ve planlanan takviyelerinizi alın
+        - Egzersize devam edin ama en yüksek eforlu seansları atlayın
+        - Ellerinizi yıkayın ve yüzeyleri dikkatle silin
+        - 3 gün sonra testi tekrarlayın
+    contact_ground_if:
+      en: Count below 0.8, or falling on two tests in a row
+      tr: Sayı 0,8'in altındaysa veya art arda iki testte düşüyorsa
+    basis:
+      en: "NASA: blood and saliva analysis for immune changes; general self-care"
+      tr: "NASA: bağışıklık değişiklikleri için kan ve tükürük analizi; genel öz bakım"
+
+  - code: RECHECK_BLOOD_PRESSURE
+    domain: cardiovascular
+    title:
+      en: Recheck your blood pressure
+      tr: Tansiyonunuzu yeniden ölçün
+    when:
+      en: Systolic pressure above 130 or below 90 mmHg (3-day average)
+      tr: Sistolik basınç 130 mmHg'nin üzerinde veya 90 mmHg'nin altında (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Sit quietly for 5 minutes, then measure twice one minute apart
+        - "If high: choose lower-salt food, skip caffeine, do 5 minutes of slow breathing"
+        - "If low: drink fluids, add salt, stand up slowly, wear compression cuffs"
+        - Measure again at the same time tomorrow
+      tr:
+        - 5 dakika sessizce oturun, sonra bir dakika arayla iki kez ölçün
+        - "Yüksekse: daha az tuzlu yiyecek seçin, kafein almayın, 5 dakika yavaş nefes alıştırması yapın"
+        - "Düşükse: sıvı alın, tuz ekleyin, yavaşça ayağa kalkın, kompresyon manşetleri takın"
+        - Yarın aynı saatte tekrar ölçün
+    contact_ground_if:
+      en: 140 or higher on two days, below 85, or headache, vision change or fainting
+      tr: İki gün 140 veya üzeri, 85'in altı ya da baş ağrısı, görme değişikliği veya bayılma
+    basis:
+      en: "NASA: compression cuffs for fluid shifts; general self-care"
+      tr: "NASA: sıvı kaymalarına karşı kompresyon manşetleri; genel öz bakım"
+
+  - code: HEART_RECOVERY_DAY
+    domain: cardiovascular
+    title:
+      en: Take a heart recovery day
+      tr: Kalbinize bir toparlanma günü verin
+    when:
+      en: Resting heart rate above 90 bpm or heart-rate variability below 25 ms (3-day average)
+      tr: İstirahat nabzı 90 atım/dk'nın üzerinde veya kalp hızı değişkenliği 25 ms'nin altında (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Swap the hard workout for light aerobic exercise
+        - Drink extra fluids
+        - Protect tonight's sleep
+        - Do 5 minutes of slow breathing
+        - Recheck tomorrow morning before getting up
+      tr:
+        - Ağır antrenmanın yerine hafif aerobik egzersiz yapın
+        - Fazladan sıvı alın
+        - Bu geceki uykunuzu koruyun
+        - 5 dakika yavaş nefes alıştırması yapın
+        - Yarın sabah kalkmadan önce yeniden ölçün
+    contact_ground_if:
+      en: Resting heart rate above 100 or variability below 15 ms for 2 days
+      tr: 2 gün boyunca istirahat nabzı 100'ün üzerinde veya değişkenlik 15 ms'nin altında
+    basis:
+      en: General self-care (illustrative)
+      tr: Genel öz bakım (temsili)
+
+  - code: HYDRATE_LOW_SODIUM
+    domain: bone_muscle
+    title:
+      en: Drink more, eat less salt
+      tr: Daha çok su için, daha az tuz yiyin
+    when:
+      en: Urine calcium above 250 mg/day (3-day average)
+      tr: İdrar kalsiyumu 250 mg/gün'ün üzerinde (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Drink at least 2.5 L of water today, spread through the day
+        - Pick lower-salt menu items
+        - Take potassium citrate if it is prescribed for you
+        - Retest urine in 3 days
+      tr:
+        - Bugün güne yayarak en az 2,5 L su için
+        - Menüden daha az tuzlu seçenekleri tercih edin
+        - Size reçete edildiyse potasyum sitrat alın
+        - 3 gün sonra idrar testini tekrarlayın
+    contact_ground_if:
+      en: Above 300 mg/day on two tests, or any flank pain or blood in urine - call immediately
+      tr: İki testte 300 mg/gün'ün üzerinde ya da herhangi bir böğür ağrısı veya idrarda kan olursa hemen arayın
+    basis:
+      en: "NASA: potassium citrate for kidney-stone risk; diet and water changes guided by urine analysis"
+      tr: "NASA: böbrek taşı riskine karşı potasyum sitrat; idrar analizine göre beslenme ve su ayarı"
+
+  - code: RESISTIVE_EXERCISE
+    domain: bone_muscle
+    title:
+      en: Get back to full resistive exercise
+      tr: Tam direnç egzersizine geri dönün
+    when:
+      en: Bone density below -2 %, strength below -5 %, or under 90 minutes of exercise (3-day average)
+      tr: Kemik yoğunluğu -%2'nin, kas gücü -%5'in altında ya da 90 dakikadan az egzersiz (3 günlük ortalama)
+    do_yourself:
+      en:
+        - "Complete the full daily session: resistive plus aerobic, about 2 hours"
+        - Put squats, deadlifts and heel raises first
+        - Check the load setting on the exercise device; add 5 % once all sets are done
+        - Take bone medication, vitamin D and calcium as scheduled
+      tr:
+        - "Günlük seansın tamamını yapın: direnç ve aerobik, yaklaşık 2 saat"
+        - Squat, deadlift ve topuk kaldırmayı başa alın
+        - Egzersiz cihazındaki yük ayarını kontrol edin; bütün setler bitince %5 artırın
+        - Kemik ilacınızı, D vitamini ve kalsiyumu plana göre alın
+    contact_ground_if:
+      en: "Bone density beyond -5 % or strength beyond -15 %: ask for a revised exercise prescription"
+      tr: "Kemik yoğunluğu -%5'in, kas gücü -%15'in ötesindeyse: yeni bir egzersiz reçetesi isteyin"
+    basis:
+      en: "NASA: aerobic and resistive exercise; bisphosphonates against bone loss"
+      tr: "NASA: aerobik ve direnç egzersizi; kemik kaybına karşı bifosfonatlar"
+
+  - code: FATIGUE_SAFETY
+    domain: behavioral
+    title:
+      en: Work safely while fatigued
+      tr: Yorgunken güvenle çalışın
+    when:
+      en: More than 2 attention lapses per test (3-day average)
+      tr: Test başına 2'den fazla dikkat hatası (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Take a 20 to 30 minute nap
+        - Postpone safety-critical tasks or ask a crewmate to double-check them
+        - Use caffeine early in the shift only
+        - Repeat the reaction test after resting
+      tr:
+        - 20–30 dakikalık bir şekerleme yapın
+        - Güvenlik açısından kritik görevleri erteleyin veya bir ekip arkadaşınızdan kontrol etmesini isteyin
+        - Kafeini sadece vardiyanın başında kullanın
+        - Dinlendikten sonra tepki testini tekrarlayın
+    contact_ground_if:
+      en: "More than 5 lapses on two tests: ask planners to move critical tasks"
+      tr: "İki testte 5'ten fazla hata: planlamacılardan kritik görevlerin kaydırılmasını isteyin"
+    basis:
+      en: "NASA: vigilance self-test to measure fatigue; general self-care"
+      tr: "NASA: yorgunluğu ölçen dikkat öz testi; genel öz bakım"
+
+  - code: PROTECT_SLEEP
+    domain: behavioral
+    title:
+      en: Protect your sleep
+      tr: Uykunuzu koruyun
+    when:
+      en: Less than 7 hours of sleep (3-day average)
+      tr: 7 saatten az uyku (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Keep a fixed sleep window tonight
+        - Dim cabin lights and stop screens one hour before sleep
+        - Use bright light after waking and warm light in the evening
+        - Wear earplugs and an eye mask
+        - No caffeine within 6 hours of sleep
+      tr:
+        - Bu gece sabit bir uyku aralığına uyun
+        - Uykudan bir saat önce kabin ışıklarını kısın ve ekranları bırakın
+        - Uyandıktan sonra parlak, akşam sıcak ışık kullanın
+        - Kulak tıkacı ve göz bandı takın
+        - Uykudan önceki 6 saat içinde kafein almayın
+    contact_ground_if:
+      en: "Under 6 hours for 3 nights: ask for a schedule change or a sleep aid"
+      tr: "3 gece 6 saatten az: program değişikliği veya uyku yardımcısı isteyin"
+    basis:
+      en: "NASA: LED lighting to align the body clock; sleep tracking"
+      tr: "NASA: biyolojik saati ayarlamak için LED aydınlatma; uyku takibi"
+
+  - code: MOOD_CONNECT
+    domain: behavioral
+    title:
+      en: Reconnect and recharge
+      tr: Bağ kurun ve enerji toplayın
+    when:
+      en: Mood score below 7 (3-day average)
+      tr: Ruh hali puanı 7'nin altında (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Send a message or video to family or friends
+        - Write in your journal
+        - "Spend 30 minutes on something meaningful: the garden, music, a language, the window"
+        - Talk with a crewmate
+        - Do your exercise session
+      tr:
+        - Ailenize veya arkadaşlarınıza bir mesaj ya da video gönderin
+        - Günlüğünüze yazın
+        - "Anlamlı bir şeye 30 dakika ayırın: bahçe, müzik, bir dil, pencere"
+        - Bir ekip arkadaşınızla konuşun
+        - Egzersiz seansınızı yapın
+    contact_ground_if:
+      en: "Mood below 5 for 3 days: request a private psychological conference"
+      tr: "3 gün boyunca ruh hali 5'in altında: özel bir psikolojik görüşme isteyin"
+    basis:
+      en: "NASA: journaling, space garden, meaningful activities"
+      tr: "NASA: günlük tutma, uzay bahçesi, anlamlı etkinlikler"
+
+  - code: STRESS_RESET
+    domain: behavioral
+    title:
+      en: Reset your stress level
+      tr: Stres seviyenizi sıfırlayın
+    when:
+      en: Stress score above 4 or morning cortisol above 20 nmol/L (3-day average)
+      tr: Stres puanı 4'ün veya sabah kortizolü 20 nmol/L'nin üzerinde (3 günlük ortalama)
+    do_yourself:
+      en:
+        - Do 10 minutes of slow breathing or a relaxation session (VR nature scene if on board)
+        - Write down what is weighing on you
+        - Move one non-critical task to tomorrow
+        - Exercise, then take a real break
+      tr:
+        - 10 dakika yavaş nefes alıştırması veya bir gevşeme seansı yapın (gemide varsa sanal gerçeklik doğa sahnesi)
+        - Sizi neyin zorladığını yazın
+        - Kritik olmayan bir görevi yarına alın
+        - Egzersiz yapın, sonra gerçek bir mola verin
+    contact_ground_if:
+      en: "Stress of 7 or more for 3 days: request a private psychological conference"
+      tr: "3 gün boyunca stres 7 veya üzeri: özel bir psikolojik görüşme isteyin"
+    basis:
+      en: "NASA: journaling, virtual-reality relaxation; general self-care"
+      tr: "NASA: günlük tutma, sanal gerçeklikle gevşeme; genel öz bakım"

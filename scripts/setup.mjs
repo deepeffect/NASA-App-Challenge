@@ -29,9 +29,9 @@ function fail(msg) {
 }
 
 /** Komutu çalıştır; hata olursa çık. npm/npx Windows'ta .cmd olduğu için shell gerekir. */
-function run(cmd, args, { cwd = ROOT, shell = false, allowFail = false } = {}) {
+function run(cmd, args, { cwd = ROOT, shell = false, allowFail = false, env = {} } = {}) {
   console.log(`${c.dim}$ ${cmd} ${args.join(" ")}  (${cwd})${c.off}`);
-  const r = spawnSync(cmd, args, { cwd, stdio: "inherit", shell, env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
+  const r = spawnSync(cmd, args, { cwd, stdio: "inherit", shell, env: { ...process.env, PYTHONIOENCODING: "utf-8", ...env } });
   if (r.error) {
     if (allowFail) return r;
     fail(`${cmd} çalıştırılamadı: ${r.error.message}`);
@@ -100,10 +100,10 @@ py(["-m", "app.cli", "export-openapi"]);
 npm(["run", "gen:api"], FRONTEND);
 
 // ---------------------------------------------------------------- 6) veri
-step("Veritabanı");
+step("Veritabanı (eski ekranlar için sentetik veri; gemi DB'si ilk açılışta veri setinden kendiliğinden dolar)");
 const hasData = py(
   ["-c", "import sys; from app.db import init_db; from app.services.health import check_db; init_db(); sys.exit(0 if check_db().measurements else 3)"],
-  { allowFail: true },
+  { allowFail: true, env: { DATA_SOURCE: "synthetic" } },
 );
 if (hasData.status === 0) {
   console.log(`${c.dim}DB'de veri var, seed atlandı (sıfırlamak için: npm run seed)${c.off}`);

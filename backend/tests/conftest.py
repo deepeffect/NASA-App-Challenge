@@ -7,6 +7,10 @@ import pytest
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["MOCK_STREAM_DELAY_MS"] = "0"
 os.environ["APP_ENV"] = "test"
+# Global ayarlar eski sentetik moddadır (eski testler buna bağlı). Yeni mimarinin testleri kendi
+# Settings(...) nesnelerini ve geçici DB'lerini kurar (tests/station/conftest.py).
+os.environ["DATA_SOURCE"] = "synthetic"
+os.environ["STATION_ROLE"] = "ship"
 
 
 @pytest.fixture(scope="session")

@@ -7,8 +7,8 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev": "concurrently --kill-others --names api,web --prefix-colors cyan.bold,magenta.bold \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "node scripts/backend-dev.mjs --host 127.0.0.1 --port 8000",
-    "dev:backend:lan": "node scripts/backend-dev.mjs --host 0.0.0.0 --port 8000",
+    "dev:backend": "node scripts/backend-dev.mjs --legacy --host 127.0.0.1 --port 8000",
+    "dev:backend:lan": "node scripts/backend-dev.mjs --legacy --host 0.0.0.0 --port 8000",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:ship": "node scripts/station.mjs dev ship",
     "dev:earth": "node scripts/station.mjs dev earth",

@@ -14,7 +14,7 @@ from app import __version__
 from app.api import router as legacy_router
 from app.api.station import router as station_router
 from app.config import Settings, get_settings
-from app.db import init_db
+from app.db import engine_for, init_db
 from app.models.schemas import SSE_MODELS
 from app.station import earth_read_only_middleware
 
@@ -34,8 +34,13 @@ veriyi tutar, `/monitor` ekranını servis eder ve salt okunurdur.
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
-    init_db()
+async def lifespan(app: FastAPI):
+    settings: Settings = app.state.settings
+    init_db(app.state.engine)
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        from app.personal.store import ensure_dataset_loaded
+
+        ensure_dataset_loaded(app.state.engine, settings)
     yield
 
 
@@ -69,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+    app.state.engine = engine_for(settings.database_url_resolved)
     if settings.station_role == "earth":
         # CORS'tan önce eklenir → CORS en dışta kalır, 403 cevabı da CORS başlığı taşır
         app.middleware("http")(earth_read_only_middleware)
@@ -80,7 +86,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(station_router, prefix="/api")
-    if settings.station_role == "ship":
+    if settings.legacy_enabled:
+        # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
         app.include_router(legacy_router, prefix="/api")
     app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
     return app

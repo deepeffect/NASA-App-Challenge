@@ -1,3 +1,5 @@
 * text=auto
 *.png binary
 *.pdf binary
+# Veri seti her makinede aynı bayt (parmak izi aynı kalsın)
+data/raw/*.json text eol=lf

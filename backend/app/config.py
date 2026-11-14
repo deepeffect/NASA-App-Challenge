@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # earth: gemi backend'inin adresi (downlink buradan alınır), örn. http://192.168.1.10:8000
     ship_url: str | None = None
 
+    # --- Veri kaynağı ---
+    # astronaut_health: data/raw/astronaut_health.json (yeni mimari, /me ve /monitor)
+    # synthetic: eski sentetik veri + eski analiz motoru (/legacy ekranları ve eski testler)
+    data_source: Literal["astronaut_health", "synthetic"] = "astronaut_health"
+    dataset_path: Path = REPO_ROOT / "data" / "raw" / "astronaut_health.json"
+
     # --- Genel ---
     app_env: Literal["dev", "demo", "test"] = "dev"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173", "http://127.0.0.1:5173"]
@@ -81,7 +87,7 @@ class Settings(BaseSettings):
             return [p.strip() for p in v.split(",") if p.strip()]
         return v
 
-    @field_validator("data_dir", "config_dir", "docs_dir", "rag_index_dir", mode="after")
+    @field_validator("data_dir", "config_dir", "docs_dir", "rag_index_dir", "dataset_path", mode="after")
     @classmethod
     def _resolve_path(cls, v: Path | None) -> Path | None:
         if v is None or v.is_absolute():
@@ -91,10 +97,19 @@ class Settings(BaseSettings):
     # --- Türetilmiş değerler ---
     @property
     def database_url_resolved(self) -> str:
-        """DATABASE_URL verilmediyse rol başına ayrı dosya: data/processed/ship.db | earth.db."""
+        """DATABASE_URL verilmediyse rol başına ayrı dosya: data/processed/ship.db | earth.db.
+
+        Eski sentetik mod (gemi + DATA_SOURCE=synthetic) eski dosyayı kullanmaya devam eder: health.db.
+        """
         if self.database_url:
             return self.database_url
-        return f"sqlite:///{(self.data_dir / 'processed' / f'{self.station_role}.db').as_posix()}"
+        name = "health" if self.legacy_enabled else self.station_role
+        return f"sqlite:///{(self.data_dir / 'processed' / f'{name}.db').as_posix()}"
+
+    @property
+    def legacy_enabled(self) -> bool:
+        """Eski ekranlar/API ve eski analiz motoru sadece gemide ve DATA_SOURCE=synthetic iken."""
+        return self.station_role == "ship" and self.data_source == "synthetic"
 
     @property
     def docs_path(self) -> Path:

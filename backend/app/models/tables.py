@@ -89,3 +89,44 @@ class LLMCache(SQLModel, table=True):
     kind: str = Field(index=True)
     payload: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utcnow)
+
+
+# =============================================================================
+# YENİ MİMARİ (DATA_SOURCE=astronaut_health) — veri seti tabloları
+# =============================================================================
+class StationKV(SQLModel, table=True):
+    """İstasyonun küçük durum değerleri: veri seti parmak izi, imza anahtarı, gemi dönemi vb."""
+
+    key: str = Field(primary_key=True)
+    value: Any = Field(default=None, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class CrewProfile(SQLModel, table=True):
+    """Veri setindeki astronot (A000 …). `first/last_mission_day`: verideki 30 günlük pencere."""
+
+    id: str = Field(primary_key=True)
+    age: int
+    sex: str
+    bmi: float
+    mission: str
+    profile: str = Field(description="Simülasyon deseni (healthy, acute_episode …)")
+    first_mission_day: int
+    last_mission_day: int
+    n_days: int
+
+
+class DayRecord(SQLModel, table=True):
+    """Bir astronotun bir günü. `day_index` 0'dan başlar; son indeks = "bugün"."""
+
+    astronaut_id: str = Field(foreign_key="crewprofile.id", primary_key=True)
+    day_index: int = Field(primary_key=True)
+    mission_day: int
+    values: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    area_scores: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    daily_score: float
+    cumulative_score: float
+    health_status: int
+    main_concern: str
+    self_care: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    needs_ground_support: bool

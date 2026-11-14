@@ -14,8 +14,14 @@ def make_client(role: str) -> TestClient:
 
 @pytest.mark.parametrize("role", ["ship", "earth"])
 def test_default_db_file_per_role(role: str) -> None:
-    s = Settings(station_role=role, database_url=None)
+    s = Settings(station_role=role, data_source="astronaut_health", database_url=None)
     assert s.database_url_resolved.endswith(f"data/processed/{role}.db")
+
+
+def test_legacy_synthetic_ship_keeps_old_db_file() -> None:
+    s = Settings(station_role="ship", data_source="synthetic", database_url=None)
+    assert s.legacy_enabled and s.database_url_resolved.endswith("data/processed/health.db")
+    assert not Settings(station_role="earth", data_source="synthetic").legacy_enabled
 
 
 def test_explicit_database_url_wins() -> None:

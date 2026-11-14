@@ -32,6 +32,7 @@ export function devBackendEnv(role) {
   const r = ROLES[role];
   const env = {
     STATION_ROLE: role,
+    DATA_SOURCE: "astronaut_health",
     DATABASE_URL: sqliteUrl(r.db),
     CORS_ORIGINS: `http://localhost:${r.web},http://127.0.0.1:${r.web}`,
     EARTH_LINK_TOKEN: process.env.EARTH_LINK_TOKEN ?? "dev-link-token",
