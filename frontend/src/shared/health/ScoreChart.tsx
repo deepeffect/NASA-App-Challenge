@@ -22,7 +22,7 @@ const MARGIN = { t: 12, r: 10, b: 26, l: 30 };
 
 export interface ScoreChartProps {
   audience: Audience;
-  /** Gün başına skor. `PersonalOverview.strip` doğrudan verilebilir; `daily` varsa ikinci çizgi de çizilir. */
+  /** Gün başına skor: `PersonalOverview.strip` doğrudan verilir (kümülatif `score` + tek günlük `daily_score`). */
   points: readonly ScorePoint[];
   /** Seçili gün, 1'den başlar. */
   selectedDay: number;
@@ -50,12 +50,12 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
   }, []);
 
   const n = points.length;
-  const hasDaily = n > 0 && points.every((p) => typeof p.daily === "number");
+  const hasDaily = n > 0 && points.every((p) => typeof p.daily_score === "number");
   const selected = points.findIndex((p) => p.day === selectedDay);
   const hover = hoverIndex !== null && hoverIndex < n ? hoverIndex : null;
 
   // Alt sınır prototipteki gibi: en düşük skor 10'a aşağı yuvarlanır, en fazla 20.
-  const lowest = Math.min(...points.flatMap((p) => (typeof p.daily === "number" ? [p.score, p.daily] : [p.score])));
+  const lowest = Math.min(...points.flatMap((p) => (typeof p.daily_score === "number" ? [p.score, p.daily_score] : [p.score])));
   const y0 = n > 0 ? Math.max(0, Math.min(20, Math.floor(lowest / 10) * 10)) : 20;
   const plotWidth = Math.max(0, width - MARGIN.l - MARGIN.r);
   const plotHeight = HEIGHT - MARGIN.t - MARGIN.b;
@@ -148,7 +148,7 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
             ) : null}
             {hasDaily ? (
               <path
-                d={path(points.map((p) => p.daily as number))}
+                d={path(points.map((p) => p.daily_score as number))}
                 fill="none"
                 stroke="var(--series-day)"
                 strokeWidth="1.5"
@@ -159,7 +159,7 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
             {marked.map((k) => (
               <g key={k}>
                 {hasDaily ? (
-                  <circle cx={x(k)} cy={y(points[k].daily as number)} r="4.5" fill="var(--series-day)" stroke="var(--surface)" strokeWidth="2" />
+                  <circle cx={x(k)} cy={y(points[k].daily_score as number)} r="4.5" fill="var(--series-day)" stroke="var(--surface)" strokeWidth="2" />
                 ) : null}
                 <circle cx={x(k)} cy={y(points[k].score)} r="5" fill="var(--series-cum)" stroke="var(--surface)" strokeWidth="2" />
               </g>
@@ -172,10 +172,10 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
               {t.tipDay(hovered.day)}
               <br />
               {t.tipRunning} <b>{formatNumber(hovered.score, 1, t)}</b>
-              {typeof hovered.daily === "number" && hasDaily ? (
+              {typeof hovered.daily_score === "number" && hasDaily ? (
                 <>
                   {" · "}
-                  {t.tipSingle} <b>{formatNumber(hovered.daily, 1, t)}</b>
+                  {t.tipSingle} <b>{formatNumber(hovered.daily_score, 1, t)}</b>
                 </>
               ) : null}
             </>

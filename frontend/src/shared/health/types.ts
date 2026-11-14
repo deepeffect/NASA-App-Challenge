@@ -15,12 +15,15 @@ export type CrewInfo = S["CrewInfo"];
 export type CatalogDomain = S["CatalogDomain"];
 export type CatalogSolution = S["CatalogSolution"];
 
-/** Skor grafiğinin bir günü. `StripDay` bu tipe doğrudan uyar (`daily` yoksa sadece kümülatif çizilir). */
+/**
+ * Skor grafiğinin bir günü. `StripDay` bu tipe doğrudan uyar: `PersonalOverview.strip` verilince iki çizgi de
+ * çizilir (kümülatif + tek günlük). `daily_score` hiç verilmezse sadece kümülatif çizgi çizilir.
+ */
 export interface ScorePoint {
   /** 1'den başlar */
   day: number;
   /** Kümülatif sağlık skoru (0–100) */
   score: number;
-  /** O günün tek günlük skoru (0–100); yoksa çizilmez */
-  daily?: number | null;
+  /** O günün tek günlük skoru (0–100) */
+  daily_score?: number | null;
 }
