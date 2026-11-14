@@ -28,6 +28,11 @@
  *  11. Hesap değiştirme: önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz — yeni astronotun
  *      verisi gelene kadar eski kimlik / şerit görünmez; çıkıştan SONRA dönen geç bir cevap da ekrana yazılmaz
  *  12. Oturum biterse (401) giriş kartına dönülür ve nedeni yazılır
+ *  13. Terminal varlığı: girişte downlink'e `terminal.online` (yük sadece kimlik + durum + son görülme), sayfa
+ *      açıkken zaman aşımı geçse de çevrimdışı olmaz, "Çıkış" → beklemeden `terminal.offline`, sekme kapanınca
+ *      zaman aşımıyla `terminal.offline`; gizlilik notundaki "Dünya yalnızca terminalinin…" satırı
+ *
+ * Geçici gemide terminal süreleri kısadır (sinyal 1 sn, zaman aşımı 4 sn) ki 13. adım dakikalarca beklemesin.
  *
  * Ana durumların ekran görüntüleri 390 ve 1440 px'te, açık ve koyu temada alınır: screenshots/personal/.
  * Ayrıca: konsol hatası, yakalanmamış hata, başarısız istek, 4xx/5xx ve dış ağa istek olmamalı (offline);
@@ -61,6 +66,10 @@ const ID = process.env.SMOKE_ASTRONAUT?.trim().toUpperCase() || "A000";
 const ID2 = ID === "A001" ? "A002" : "A001";
 /** Hesap değiştirme adımı için üçüncü astronot: check-in'i hiç başlamamış olmalı (geciken cevap ondan gelir). */
 const ID3 = ["A003", "A004", "A005"].find((x) => x !== ID && x !== ID2) as string;
+/** Terminal varlığı adımı için dördüncü astronot: o ana kadar terminali hiç açılmamış olmalı. */
+const ID4 = ["A006", "A007", "A008", "A009"].find((x) => x !== ID && x !== ID2 && x !== ID3) as string;
+/** Geçici gemideki terminal süreleri (saniye): sinyal aralığı, zaman aşımı, denetim aralığı. */
+const PRESENCE = { heartbeat: 1, timeout: 4, sweep: 0.5 };
 const LINK_TOKEN = "smoke-link-token";
 const isWin = process.platform === "win32";
 const VENV_PY = isWin ? join(BACKEND, ".venv", "Scripts", "python.exe") : join(BACKEND, ".venv", "bin", "python");
@@ -136,6 +145,17 @@ interface DownlinkEvent {
   };
 }
 
+/** terminal.online / terminal.offline: gün taşımaz, yük sadece varlık. */
+interface TerminalEvent {
+  seq: number;
+  type: string;
+  astronaut_id: string;
+  day_index: number | null;
+  ship_time: string;
+  payload: Record<string, unknown> & { day: null; presence: { astronaut_id: string; state: string; last_seen: string } };
+}
+const isTerminalEvent = (e: { type: string }) => e.type.startsWith("terminal.");
+
 /** Geminin downlink akışı (Dünya'nın okuduğu şey): `since`'ten sonraki olaylar + ham metin + son seq. */
 async function downlink(since: number): Promise<{ events: DownlinkEvent[]; raw: string; lastSeq: number }> {
   const r = await fetch(`${TEMP_API}/api/downlink/stream?since=${since}&follow=false`, { headers: { Authorization: `Bearer ${LINK_TOKEN}` } });
@@ -181,6 +201,9 @@ async function startTempShip(tmp: TempFiles): Promise<ChildProcess> {
       CHECKIN_MODE: "scripted",
       LLM_PROVIDER: "mock",
       DOWNLINK_DELAY_SECONDS: "0",
+      PRESENCE_HEARTBEAT_SECONDS: String(PRESENCE.heartbeat),
+      PRESENCE_TIMEOUT_SECONDS: String(PRESENCE.timeout),
+      PRESENCE_SWEEP_SECONDS: String(PRESENCE.sweep),
       PYTHONIOENCODING: "utf-8",
       PYTHONUTF8: "1",
     },
@@ -668,7 +691,9 @@ export async function runPersonalSmoke(): Promise<number> {
       });
       await shot("09-assistant-emergency-1440-light.png");
       await check(current.issues, "sohbet ve acil durum downlink'e girmedi", async () => {
-        const { events, raw } = await downlink(before);
+        const { events: all, raw } = await downlink(before);
+        // Terminal varlığı olayları (terminal.*) içerik taşımaz; sohbetin ürettiği olay sayılmaz (13. adım ayrıca sınar)
+        const events = all.filter((e) => !isTerminalEvent(e));
         expect(events.length === 0, `sohbetten sonra ${events.length} yeni olay: ${events.map((e) => e.type).join(", ")}`);
         expect(!/Göğsümde|durumum nasıl/.test(raw), "sohbet metni akışta");
       });
@@ -793,6 +818,93 @@ export async function runPersonalSmoke(): Promise<number> {
         current.notes.push(`mesaj: ${why}`);
         expect(await page.evaluate(() => sessionStorage.getItem("ahm-token") === null), "token silinmedi");
         expect((await page.locator(".whoami").count()) === 0 && (await strip.count()) === 0, "oturum bittikten sonra astronotun verisi ekranda");
+      });
+      expect401 = false;
+    });
+
+    // ------------------------------------------------------------------ 13
+    await step(`13. Terminal varlığı (${ID4}): girişte çevrimiçi, açıkken sürer, çıkışta hemen, sekme kapanınca zaman aşımıyla çevrimdışı`, async () => {
+      const beats: { at: number; leaving: boolean }[] = [];
+      page.on("request", (r) => {
+        if (r.method() === "POST" && r.url().includes("/api/me/presence")) beats.push({ at: Date.now(), leaving: (r.postData() ?? "").includes('"leaving":true') });
+      });
+      let since = (await downlink(0)).lastSeq;
+      /** `since`'ten sonra ID4 için terminal.<state> olayı gelene kadar bekler; olayı, akışın ham metnini ve süreyi döner. */
+      const waitTerminal = async (state: "online" | "offline", timeoutMs: number): Promise<{ ev: TerminalEvent; raw: string; ms: number }> => {
+        const t0 = Date.now();
+        let found: TerminalEvent | undefined;
+        let raw = "";
+        await waitUntil(async () => {
+          const r = await downlink(since);
+          raw = r.raw;
+          found = (r.events as unknown as TerminalEvent[]).find((e) => e.type === `terminal.${state}` && e.astronaut_id === ID4);
+          return found !== undefined;
+        }, timeoutMs, 150);
+        expect(found, `${(timeoutMs / 1000).toFixed(1)} sn içinde terminal.${state} gelmedi`);
+        since = found.seq;
+        return { ev: found, raw, ms: Date.now() - t0 };
+      };
+
+      await loginAs(ID4);
+      const online = await waitTerminal("online", 5000);
+      await check(current.issues, "yük sadece varlık: kimlik, durum, son görülme (gün / check-in / metin yok)", async () => {
+        const ev = online.ev;
+        expect(ev.day_index === null && ev.payload.day === null, "terminal olayı gün taşıyor");
+        expect(JSON.stringify(Object.keys(ev.payload.presence).sort()) === '["astronaut_id","last_seen","state"]', JSON.stringify(ev.payload.presence));
+        const extra = Object.entries(ev.payload).filter(([k, v]) => k !== "presence" && v !== null && v !== false);
+        expect(extra.length === 0, `yükte başka alan: ${JSON.stringify(Object.fromEntries(extra))}`);
+        expect(ev.payload.presence.astronaut_id === ID4 && ev.payload.presence.state === "online", JSON.stringify(ev.payload.presence));
+      });
+      await check(current.issues, "gizlilik notunda terminal satırı (TR / EN)", async () => {
+        const note = checkinCard.locator("[data-presence-note]");
+        await note.getByText("Dünya yalnızca terminalinin çevrimiçi olup olmadığını görür; ne yazdığını görmez.", { exact: true }).waitFor({ timeout: 5000 });
+        await page.locator(".langseg").getByRole("button", { name: "EN" }).click();
+        await page
+          .locator("[data-presence-note]")
+          .getByText("Earth only sees whether your terminal is online; it does not see what you write.", { exact: true })
+          .waitFor({ timeout: 10_000 });
+        await page.locator(".langseg").getByRole("button", { name: "TR" }).click();
+        await note.getByText(/^Dünya yalnızca terminalinin/).waitFor({ timeout: 10_000 });
+      });
+      await shot("12-presence-note-1440-light.png");
+
+      // Sayfa açık kaldıkça: zaman aşımından uzun süre geçse de çevrimdışı olmaz (sinyal sürer)
+      const before = beats.length;
+      const openFor = PRESENCE.timeout * 2 + 1;
+      await page.waitForTimeout(openFor * 1000);
+      await check(current.issues, `sayfa açıkken ${openFor} sn: sinyal sürer, çevrimdışı olmaz`, async () => {
+        const n = beats.length - before;
+        expect(n >= PRESENCE.timeout * 2 - 1, `bu sürede sadece ${n} sinyal`);
+        const { events } = await downlink(since);
+        const mine = events.filter((e) => isTerminalEvent(e) && e.astronaut_id === ID4);
+        expect(mine.length === 0, `açıkken terminal olayı: ${mine.map((e) => e.type).join(", ")}`);
+        current.notes.push(`açıkken ${openFor} sn: ${n} sinyal (${PRESENCE.heartbeat} sn aralık), olay yok`);
+      });
+
+      // "Çıkış": ayrılma sinyali → zaman aşımını beklemeden çevrimdışı
+      await page.getByRole("button", { name: "Çıkış" }).click();
+      await page.locator("#me-id").waitFor({ timeout: 10_000 });
+      const leftOff = await waitTerminal("offline", PRESENCE.timeout * 1000 - 500);
+      await check(current.issues, "çıkış: ayrılma sinyali gitti, terminal beklemeden çevrimdışı", async () => {
+        expect(beats.some((b) => b.leaving), "çıkışta {leaving: true} gönderilmedi");
+        current.notes.push(`çıkış → terminal.offline ${(leftOff.ms / 1000).toFixed(1)} sn (zaman aşımı ${PRESENCE.timeout} sn)`);
+      });
+
+      // Sekme kapanır (çıkış yok): son sinyalden zaman aşımı kadar sonra çevrimdışı
+      await loginAs(ID4);
+      await waitTerminal("online", 5000);
+      await page.waitForTimeout(1500);
+      await page.close();
+      const closedAt = Date.now();
+      const lastBeat = beats.filter((b) => !b.leaving).at(-1)?.at ?? closedAt;
+      const timedOut = await waitTerminal("offline", (PRESENCE.timeout + PRESENCE.sweep + 5) * 1000);
+      await check(current.issues, "sekme kapanınca: zaman aşımıyla çevrimdışı, son görülme = son sinyal", async () => {
+        const p = timedOut.ev.payload.presence;
+        const gap = (new Date(timedOut.ev.ship_time).getTime() - new Date(p.last_seen).getTime()) / 1000;
+        expect(gap >= PRESENCE.timeout, `son sinyalden ${gap.toFixed(1)} sn sonra çevrimdışı (zaman aşımı ${PRESENCE.timeout} sn)`);
+        expect(Math.abs(new Date(p.last_seen).getTime() - lastBeat) < 2000, `son görülme ${p.last_seen}, son sinyal ${new Date(lastBeat).toISOString()}`);
+        expect(!/Kötü uyudum|Göğsümde|SMOKE-/.test(timedOut.raw), "terminal olaylarının akışında içerik var");
+        current.notes.push(`sekme kapandı → terminal.offline ${((Date.now() - closedAt) / 1000).toFixed(1)} sn (son sinyalden ${gap.toFixed(1)} sn)`);
       });
     });
   } catch (e) {
