@@ -53,7 +53,7 @@ export type AlertsQuery = NonNullable<paths["/api/alerts"]["get"]["parameters"][
 export type MetricSeriesQuery = NonNullable<paths["/api/astronauts/{astronaut_id}/metrics"]["get"]["parameters"]["query"]>;
 
 // ---- İstek altyapısı --------------------------------------------------------
-export const API_BASE: string = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+export const API_BASE: string = (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/+$/, "");
 
 export class ApiError extends Error {
   readonly status: number;

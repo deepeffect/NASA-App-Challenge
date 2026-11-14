@@ -1,7 +1,7 @@
 # API Sözleşmesi (v1)
 
 Arayüz ekibiyle backend arasındaki sözleşme budur. Makine tarafından okunur hali `docs/openapi.json`
-(çalışan sunucuda: `http://localhost:8000/docs` ve `/openapi.json`).
+(çalışan sunucuda: `http://127.0.0.1:8000/docs` ve `/openapi.json`).
 
 > **Branch durumu:** `main`'de endpoint'ler şemaya uygun **stub** veri döner (v0, aynı şema).
 > `feat/backend-core`'da hepsi gerçek: SQLite + analiz motoru + LLM katmanı (mock veya gerçek model).

@@ -67,6 +67,8 @@ docs/API.md, docs/openapi.json
 
 ## Komutlar
 
+Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev` · `npm run test` · `npm run seed` (ayrıntı: README → "Kök npm komutları"). Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
+
 Backend (`backend/` içinde; venv: `.venv`):
 
 ```bash

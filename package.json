@@ -1,0 +1,22 @@
+{
+  "name": "astro-health-monitor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Astronot sağlık izleme sistemi (NASA Space Apps 2026, AI Gambit) — kök script'ler",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "concurrently --kill-others --names api,web --prefix-colors cyan.bold,magenta.bold \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "node scripts/py.mjs -m uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8000",
+    "dev:backend:lan": "node scripts/py.mjs -m uvicorn app.main:app --reload --reload-dir app --host 0.0.0.0 --port 8000",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "node scripts/py.mjs -m app.cli seed --seed 42",
+    "test": "node scripts/py.mjs -m pytest && npm --prefix frontend run typecheck"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

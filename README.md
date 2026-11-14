@@ -1,5 +1,9 @@
 # Astronot Sağlık İzleme Sistemi — AI Gambit
 
+> **Hızlı başlangıç** (kök klasörde; gereken: Node 20.19+, [uv](https://docs.astral.sh/uv/)):
+> 1. `npm run setup` — Python ortamı, npm paketleri, `.env` dosyaları, API tipleri, demo verisi
+> 2. `npm run dev` — backend + frontend birlikte → arayüz <http://localhost:5173>, API <http://127.0.0.1:8000/docs>
+
 NASA Space Apps Challenge 2026 · *Create Health Monitoring Software for Astronauts on Space Mission*
 
 Uzun süreli görevlerde astronotların sağlık göstergelerini toplayan, kişisel baseline'a göre
@@ -16,7 +20,23 @@ backend/   FastAPI + SQLite + pandas + LLM katmanı
 frontend/  Vite + React + TypeScript (bkz. frontend/README.md)
 data/      raw/ (NASA verisi) · processed/ (DB, indeks) · docs/ (RAG belgeleri)
 docs/      API.md, openapi.json
+scripts/   kök npm script'lerinin yardımcıları (setup, venv python)
 ```
+
+## 0. Kök npm komutları
+
+Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
+
+| Komut | Ne yapar |
+|---|---|
+| `npm run setup` | uv kontrolü → `backend/.venv` + `uv pip install -e ".[dev]"` → `.env.example`→`.env` (yoksa) → npm paketleri → `gen:api` → DB boşsa `seed --seed 42`. Tekrar çalıştırmak güvenli. |
+| `npm run dev` | backend (`127.0.0.1:8000`, `--reload`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır |
+| `npm run dev:backend` / `npm run dev:frontend` | tek tek |
+| `npm run dev:backend:lan` | backend'i ağa aç (`0.0.0.0:8000`) — takım arkadaşları bağlanacaksa |
+| `npm run seed` | demo verisini yeniden yükle (DB'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
+| `npm run test` | backend `pytest` + frontend tip kontrolü |
+
+Aşağıdaki bölümler aynı adımların elle yapılışını anlatır.
 
 ## 1. Backend kurulumu
 
@@ -47,9 +67,9 @@ uv pip install -e ".[rag]"
 .venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- Swagger UI: <http://localhost:8000/docs>
-- Sağlık: <http://localhost:8000/api/health>
-- Windows'ta `curl http://localhost:...` IPv6 denemesi yüzünden ~200 ms gecikir; ölçüm için `127.0.0.1` kullanın.
+- Swagger UI: <http://127.0.0.1:8000/docs>
+- Sağlık: <http://127.0.0.1:8000/api/health>
+- Backend adresi olarak `localhost` yerine `127.0.0.1` kullanın: Windows'ta `localhost` önce IPv6 denediği için her istek ~200 ms gecikir.
 
 **Demo senaryosu** (görev 2026-05-19'da başlar, gün 180 = 2026-11-14): **Astronot 2**'de 150. günden
 itibaren uyku süresi düşer → birkaç gün sonra stres artar, ruh hali ve HRV düşer, reaksiyon süresi uzar
@@ -127,7 +147,7 @@ Kontrol:
 
 ```powershell
 curl http://192.168.1.42:11434/v1/models         # model listesi gelmeli
-curl http://localhost:8000/api/health            # llm.reachable ve llm.model_available = true
+curl http://127.0.0.1:8000/api/health            # llm.reachable ve llm.model_available = true
 ```
 
 ### Senaryo B — Tek makine (yedek; demo günü ağ sorunu olursa)
@@ -163,7 +183,7 @@ Son çare: `LLM_PROVIDER=mock` — demo LLM'siz de çalışır (uyarılar, skorl
 ```powershell
 cd frontend
 npm install
-Copy-Item .env.example .env       # VITE_API_BASE_URL=http://localhost:8000
+Copy-Item .env.example .env       # VITE_API_BASE_URL=http://127.0.0.1:8000
 npm run dev                        # http://localhost:5173
 ```
 
@@ -173,6 +193,6 @@ Ayrıntılar: [`frontend/README.md`](frontend/README.md).
 
 1. Dosyayı `data/raw/` altına koyun.
 2. Format long/wide CSV veya JSON kayıtlarıysa doğrudan yükleyin:
-   `curl -F "file=@data/raw/nasa.csv" http://localhost:8000/api/ingest`
+   `curl -F "file=@data/raw/nasa.csv" http://127.0.0.1:8000/api/ingest`
 3. Değilse `backend/app/ingest/` altına yeni bir adaptör yazın (bkz. `CLAUDE.md` → "Nasıl genişletilir").
 4. Yeni metrikler için `backend/config/metrics.yaml`'a giriş ekleyin (placeholder eşik + TODO).
