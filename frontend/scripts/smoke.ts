@@ -3,6 +3,8 @@
  *
  * Ön koşul: backend (127.0.0.1:8000) ve Vite (localhost:5173) açık → kökte `npm run dev`.
  * Çalıştır:  npm run smoke   (kökte veya frontend/ içinde)
+ * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts
+ * (gemi :8000 ve Dünya :8001/:5174 açıkken; argümansız çalıştırınca :8000 yeni mimarideyse o seçilir).
  *
  * Ekranları sırayla açar, tam sayfa ekran görüntülerini frontend/screenshots/ altına yazar ve
  * konsol hatalarını, yakalanmamış JS hatalarını, başarısız/4xx-5xx istekleri raporlar.
@@ -216,7 +218,20 @@ const screens: Screen[] = [
 ];
 
 // ----------------------------------------------------------------------------- ana akış
+/** `npm run smoke -- earth` → Dünya ekranı; `-- legacy` → eski ekranlar. Argümansız: :8000 eski moddaysa legacy, yeni mimarideyse earth. */
+async function pickSuite(): Promise<"legacy" | "earth"> {
+  const arg = (process.argv[2] ?? process.env.SMOKE_SUITE ?? "").toLowerCase();
+  if (arg === "earth" || arg === "legacy") return arg;
+  try {
+    const st = (await (await fetch(`${API}/api/station`, { signal: AbortSignal.timeout(3000) })).json()) as { legacy_enabled?: boolean };
+    return st.legacy_enabled === false ? "earth" : "legacy";
+  } catch {
+    return "legacy";
+  }
+}
+
 async function main(): Promise<number> {
+  if ((await pickSuite()) === "earth") return (await import("./smoke-earth.ts")).runEarthSmoke();
   if (!(await reachable(`${API}/api/health`)) || !(await reachable(WEB))) {
     console.error(`${c.red}Backend (${API}) veya Vite (${WEB}) açık değil. Önce kökte: npm run dev${c.off}`);
     return 2;

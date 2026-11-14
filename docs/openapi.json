@@ -2498,6 +2498,190 @@
         }
       }
     },
+    "/api/monitor/events": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Alınan olaylar (canlı akışın geçmişi), yeniden eskiye",
+        "operationId": "get_events_api_monitor_events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "astronaut_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece bu astronotun olayları",
+              "title": "Astronaut Id"
+            },
+            "description": "Sadece bu astronotun olayları"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "checkin.completed",
+                      "checkin.shared",
+                      "action.done",
+                      "day.snapshot"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tekrarlanabilir: type=checkin.completed&type=checkin.shared",
+              "title": "Type"
+            },
+            "description": "Tekrarlanabilir: type=checkin.completed&type=checkin.shared"
+          },
+          {
+            "name": "before_seq",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sayfalama: bu seq'ten ÖNCEKİ olaylar",
+              "title": "Before Seq"
+            },
+            "description": "Sayfalama: bu seq'ten ÖNCEKİ olaylar"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorEventsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/stream/monitor": {
       "get": {
         "tags": [
@@ -7782,6 +7966,170 @@
           "received_at"
         ],
         "title": "MonitorDay"
+      },
+      "MonitorEvent": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "checkin.completed",
+              "checkin.shared",
+              "action.done",
+              "day.snapshot"
+            ],
+            "title": "Type"
+          },
+          "astronaut_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Astronaut Id"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day",
+            "description": "1'den başlar"
+          },
+          "mission_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mission Day"
+          },
+          "ship_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ship Time",
+            "description": "Olayın gemide oluştuğu an"
+          },
+          "publish_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Publish Time",
+            "description": "ship_time + DOWNLINK_DELAY_SECONDS"
+          },
+          "earth_received_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Earth Received Time",
+            "description": "Dünya'nın aldığı an"
+          },
+          "simulated_light_delay_minutes": {
+            "type": "number",
+            "title": "Simulated Light Delay Minutes"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share",
+            "description": "checkin.*: paylaşım seviyesi"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "action.done: self-care kodu (Dünya'da maskeliyse null)"
+          },
+          "masked": {
+            "type": "boolean",
+            "title": "Masked",
+            "description": "action.done: öğe Dünya'da maskeli",
+            "default": false
+          },
+          "done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done",
+            "description": "action.done: işaretlendi / kaldırıldı"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "type",
+          "astronaut_id",
+          "day",
+          "mission_day",
+          "ship_time",
+          "publish_time",
+          "earth_received_time",
+          "simulated_light_delay_minutes"
+        ],
+        "title": "MonitorEvent",
+        "description": "Dünya'nın aldığı bir olay (earth.db). Gün içeriği taşımaz; ekran ilgili günü ayrıca okur."
+      },
+      "MonitorEventsResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/MonitorEvent"
+            },
+            "type": "array",
+            "title": "Events",
+            "description": "Yeniden eskiye (seq azalan)"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Filtreye uyan olay sayısı (limit'ten bağımsız)"
+          },
+          "last_seq": {
+            "type": "integer",
+            "title": "Last Seq",
+            "description": "Dünya'nın işlediği son seq"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events",
+          "total",
+          "last_seq"
+        ],
+        "title": "MonitorEventsResponse"
       },
       "OverallStatus": {
         "properties": {

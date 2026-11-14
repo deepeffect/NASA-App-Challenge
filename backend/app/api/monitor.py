@@ -26,6 +26,9 @@ from app.models.schemas import (
     MonitorCrewMember,
     MonitorCrewResponse,
     MonitorDay,
+    MonitorEvent,
+    MonitorEventsResponse,
+    MonitorEventType,
     PersonalOverview,
 )
 from app.models.tables import as_utc, utcnow
@@ -138,6 +141,42 @@ def get_day(astronaut_id: str, day: Day, _p: EarthDep, db: DBSession, lang: Lang
         updated_seq=row.updated_seq,
         received_at=as_utc(row.received_at) if row.received_at else None,
     )
+
+
+@router.get("/monitor/events", response_model=MonitorEventsResponse, responses=ERRORS, summary="Alınan olaylar (canlı akışın geçmişi), yeniden eskiye")
+def get_events(
+    _p: EarthDep,
+    db: DBSession,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    astronaut_id: Annotated[str | None, Query(description="Sadece bu astronotun olayları")] = None,
+    type: Annotated[  # noqa: A002 — sorgu parametresinin adı
+        list[MonitorEventType] | None, Query(description="Tekrarlanabilir: type=checkin.completed&type=checkin.shared")
+    ] = None,
+    before_seq: Annotated[int | None, Query(ge=1, description="Sayfalama: bu seq'ten ÖNCEKİ olaylar")] = None,
+) -> MonitorEventsResponse:
+    aid = astronaut_id.strip().upper() if astronaut_id else None
+    rows, total = earth_store.list_events(db, limit=limit, astronaut_id=aid, types=list(type or []), before_seq=before_seq)
+    events = []
+    for r in rows:
+        p = r.payload or {}
+        events.append(
+            MonitorEvent(
+                seq=r.seq,
+                type=r.type,  # type: ignore[arg-type]
+                astronaut_id=r.astronaut_id,
+                day=None if r.day_index is None else r.day_index + 1,
+                mission_day=(p.get("day") or {}).get("mission_day"),
+                ship_time=as_utc(r.ship_time),
+                publish_time=as_utc(r.publish_time),
+                earth_received_time=as_utc(r.earth_received_time),
+                simulated_light_delay_minutes=r.simulated_light_delay_minutes,
+                share=p.get("share"),
+                code=p.get("code"),
+                masked=bool(p.get("masked", False)),
+                done=p.get("done"),
+            )
+        )
+    return MonitorEventsResponse(events=events, total=total, last_seq=int(earth_store.link_state(db)["last_seq"] or 0))
 
 
 def broadcaster_of(request: Request) -> Broadcaster:

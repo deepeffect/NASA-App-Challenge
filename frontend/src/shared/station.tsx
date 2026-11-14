@@ -10,7 +10,14 @@ import { type StationInfo, type StationRole, stationApi } from "../api/station";
 import { useLang } from "./i18n";
 
 export function useStation() {
-  return useQuery({ queryKey: ["station"], queryFn: stationApi.station, staleTime: Infinity, retry: 2 });
+  return useQuery({
+    queryKey: ["station"],
+    queryFn: stationApi.station,
+    staleTime: Infinity,
+    // Sunucu kapalıyken açılan ekran (kiosk) vazgeçmesin: 2, 4, 8 sn, sonra 10 sn'de bir dener; sunucu gelince açılır
+    retry: true,
+    retryDelay: (failures) => Math.min(2000 * 2 ** failures, 10_000),
+  });
 }
 
 function Center({ children }: { children: ReactNode }) {
@@ -18,9 +25,10 @@ function Center({ children }: { children: ReactNode }) {
 }
 
 export function StationGate({ children }: { children: (station: StationInfo) => ReactNode }) {
-  const { data, isPending, isError } = useStation();
+  const { data, isPending, isError, failureCount } = useStation();
   const { t } = useLang();
-  if (isPending) return <Center><p className="text-slate-400">{t("loading")}</p></Center>;
+  // İlk deneme sürerken "yükleniyor"; başarısız olduysa yeniden denerken "ulaşılamıyor"
+  if (isPending && failureCount === 0) return <Center><p className="text-slate-400">{t("loading")}</p></Center>;
   if (isError || !data) return <Center><p role="alert">⚠ {t("backendDown")}</p></Center>;
   return <>{children(data)}</>;
 }

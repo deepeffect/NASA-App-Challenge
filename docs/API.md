@@ -30,7 +30,7 @@ her istasyon sadece kendi rolünün uçlarını açar (diğerleri `404`).
 | `GET /api/checkin`, `GET /api/checkin/days/{gün}`, `POST /api/checkin/turn`, `/share`, `/reset` | ✓ | | astronot |
 | `POST /api/actions/done`, `POST /api/chat` (SSE) | ✓ | | astronot |
 | `GET /api/downlink/snapshot`, `GET /api/downlink/stream` (SSE) | ✓ | | `EARTH_LINK_TOKEN` |
-| `GET /api/monitor/crew`, `/api/monitor/astronauts/{id}[/days/{gün}]` | | ✓ | Dünya |
+| `GET /api/monitor/crew`, `/api/monitor/astronauts/{id}[/days/{gün}]`, `/api/monitor/events` | | ✓ | Dünya |
 | `GET /api/link/status`, `GET /api/stream/monitor` (SSE) | | ✓ | Dünya |
 
 - **Dil:** bütün metinler TR/EN. Öncelik `?lang=` (veya gövdedeki `lang`) > `Accept-Language` > `tr`.
@@ -181,6 +181,12 @@ günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli �
 - `GET /api/monitor/crew` → `{link: LinkStatus, astronauts: [{astronaut, today, status, status_label, subtitle, score, ground, share, checkin_text}]}`
 - `GET /api/monitor/astronauts/{id}` → `PersonalOverview` (Dünya şeridi)
 - `GET /api/monitor/astronauts/{id}/days/{gün}` → `{view: DayView (viewer=earth, gizliler hidden), checkin: EarthCheckinView, updated_seq, received_at}`
+- `GET /api/monitor/events?limit=100&astronaut_id=&type=&before_seq=` → `{events: [MonitorEvent], total, last_seq}`:
+  Dünya'nın aldığı olaylar (canlı akışın geçmişi), yeniden eskiye. `MonitorEvent`: `seq, type, astronaut_id, day,
+  mission_day, ship_time, publish_time, earth_received_time, simulated_light_delay_minutes, share, code, masked, done`.
+  Gün içeriği taşımaz (ekran günü `/days/{gün}` ile okur). `type` tekrarlanabilir (`checkin.completed`,
+  `checkin.shared`, `action.done`, `day.snapshot`); `before_seq` ile sayfalanır. Snapshot'la gelen durum olay sayılmaz;
+  gemi dönemi değişince liste sıfırlanır.
 - `GET /api/link/status` → `LinkStatus` (`connected`, `last_contact`, `last_seq`, `ship_last_seq`, `pending_on_ship`, `behind`, `events_received`)
 - `GET /api/stream/monitor?access_token=…` → SSE: `event: event` (`MonitorStreamEvent`: yeni olay) ve `event: link` (bağlantı durumu)
 
