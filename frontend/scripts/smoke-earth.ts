@@ -6,7 +6,7 @@
  *
  * Adımlar:
  *   1. Giriş (EARTH / EARTH), genel görünüm; 1440 ve 1920 px, TR koyu + EN açık ekran görüntüleri
- *   2. Gemide A000 adına check-in tamamlanır ve "Sadece skorlar" ile paylaşılır → Dünya ekranında
+ *   2. Gemide mürettebatın ilk astronotu (config DEMO_CREW[0]) adına check-in tamamlanır ve "Sadece skorlar" ile paylaşılır → Dünya ekranında
  *      gecikme + 2 sn içinde görünmeli; cevap metni hiçbir yerde görünmemeli
  *   3. Paylaşılmamış bir günde ruh hali / stres "Paylaşılmadı" görünmeli
  *   4. Gemi kapatılır → bağlantı uyarısı çıkmalı, son durum görünmeye devam etmeli; gemi açılır →
@@ -19,8 +19,8 @@
  * başlatır). İzleyici yoksa (örn. `npm run serve`) gemi dev ayarlarıyla arka planda açık bırakılır.
  *
  * Ayrıca: sayfa gemiye hiç istek atmamalı; konsol hatası, yakalanmamış hata, 4xx/5xx olmamalı.
- * Ortam değişkenleri: SMOKE_SHIP_API, SMOKE_EARTH_API, SMOKE_EARTH_WEB
- * Not: A000'ın bugünkü check-in'i bir kez paylaşılınca geri alınamaz; ölçümü tekrarlamak için önce
+ * Ortam değişkenleri: SMOKE_SHIP_API, SMOKE_EARTH_API, SMOKE_EARTH_WEB, SMOKE_ASTRONAUT
+ * Not: Bu astronotun bugünkü check-in'i bir kez paylaşılınca geri alınamaz; ölçümü tekrarlamak için önce
  * `npm run reset -- ship` ve `npm run reset -- earth`.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
@@ -30,13 +30,20 @@ import { fileURLToPath } from "node:url";
 
 import { type Browser, chromium, type Page } from "playwright";
 
+import { DEMO_CREW, MISSION } from "../src/apps/monitor/config.ts";
+
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = join(FRONTEND, "..");
 const OUT = join(FRONTEND, "screenshots", "earth");
 const SHIP = (process.env.SMOKE_SHIP_API ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const EARTH = (process.env.SMOKE_EARTH_API ?? "http://127.0.0.1:8001").replace(/\/$/, "");
 const EARTH_WEB_DEFAULT = (process.env.SMOKE_EARTH_WEB ?? "http://localhost:5174").replace(/\/$/, "");
-const DEMO_CREW_SIZE = 6;
+const DEMO_CREW_SIZE = DEMO_CREW.length;
+/**
+ * Check-in yapan astronot: mürettebatın ilki (bugün Normal, öneri listesi boş değil — npm run find-demo).
+ * Paylaşım geri alınamadığı için DB sıfırlamadan yeniden ölçmek isterseniz: SMOKE_ASTRONAUT=<mürettebattan biri>.
+ */
+const ID = process.env.SMOKE_ASTRONAUT?.trim().toUpperCase() || DEMO_CREW[0];
 const isWin = process.platform === "win32";
 
 type IssueKind = "console.error" | "pageerror" | "http" | "requestfailed" | "check" | "ship-request";
@@ -213,6 +220,10 @@ export async function runEarthSmoke(): Promise<number> {
     console.error(`${c.red}Gemi (${SHIP}) ve Dünya (${EARTH}) istasyonları açık değil. Önce kökte: npm run dev:ship ve npm run dev:earth${c.off}`);
     return 2;
   }
+  if (!DEMO_CREW.includes(ID)) {
+    console.error(`${c.red}SMOKE_ASTRONAUT=${ID} mürettebatta yok (DEMO_CREW: ${DEMO_CREW.join(", ")}).${c.off}`);
+    return 2;
+  }
   const web = (await reachable(`${EARTH_WEB_DEFAULT}/monitor`)) ? EARTH_WEB_DEFAULT : EARTH;
   const earthToken = await login(EARTH, "EARTH");
   const linkOf = () => api<LinkStatus>(EARTH, "GET", "/api/link/status", earthToken);
@@ -270,6 +281,15 @@ export async function runEarthSmoke(): Promise<number> {
       await check(current.issues, "son temas", () => page.getByText(/son temas/).first().waitFor({ timeout: 5000 }));
       await check(current.issues, "kuyruk", () => page.getByText(/kuyrukta \d+ olay/).first().waitFor({ timeout: 5000 }));
       await check(current.issues, "ışık gecikmesi etiketi", () => page.getByText(/Işık gecikmesi \(simüle\)/).first().waitFor({ timeout: 5000 }));
+      await check(current.issues, `görev çubuğu: ${MISSION.name.tr}`, async () => {
+        const txt = await page.locator(`[data-mission="${MISSION.id}"]`).innerText();
+        if (!txt.includes(MISSION.name.tr) || !txt.includes(`${DEMO_CREW_SIZE} kişilik mürettebat`)) throw new Error(`görev çubuğu: ${txt}`);
+      });
+      await check(current.issues, `mürettebatın hepsi ${MISSION.id}`, async () => {
+        const crew = await api<{ astronauts: { astronaut: { id: string; mission: string } }[] }>(EARTH, "GET", "/api/monitor/crew", earthToken);
+        const other = crew.astronauts.filter((m) => DEMO_CREW.includes(m.astronaut.id) && m.astronaut.mission !== MISSION.id).map((m) => m.astronaut.id);
+        if (other.length) throw new Error(`başka görevde: ${other.join(", ")}`);
+      });
       await check(current.issues, "footer", () => page.getByText("NASA Space Apps Challenge 2026 için AI Gambit tarafından geliştirildi").waitFor({ timeout: 5000 }));
       await check(current.issues, "tüm astronotlar tablosu (200)", () => page.getByText(/200 \/ 200 astronot/).waitFor({ timeout: 10_000 }));
       await page.waitForTimeout(500);
@@ -291,13 +311,13 @@ export async function runEarthSmoke(): Promise<number> {
     });
 
     // ------------------------------------------------------------------ 2
-    await step("2. A000 check-in + 'Sadece skorlar' → Dünya'da gecikme + 2 sn içinde, cevap metni yok", async () => {
-      const shipToken = await login(SHIP, "A000");
+    await step(`2. ${ID} check-in + 'Sadece skorlar' → Dünya'da gecikme + 2 sn içinde, cevap metni yok`, async () => {
+      const shipToken = await login(SHIP, ID);
       let st = await api<CheckinState>(SHIP, "GET", "/api/checkin", shipToken);
-      if (st.done && st.share === "full") throw new Error("A000'ın bugünkü check-in'i 'Her şey' ile paylaşılmış; temiz deneme için: npm run reset -- ship && npm run reset -- earth");
+      if (st.done && st.share === "full") throw new Error(`${ID} bugünkü check-in'i 'Her şey' ile paylaşmış; temiz deneme için: npm run reset -- ship && npm run reset -- earth`);
       const alreadyShared = st.done && st.share === "scores";
       if (alreadyShared) {
-        current.notes.push("A000 bugün zaten 'Sadece skorlar' ile paylaşılmış (önceki çalıştırma); süre ölçülemedi, sadece görünürlük denetlendi. Yeniden ölçmek için: npm run reset -- ship && npm run reset -- earth");
+        current.notes.push(`${ID} bugün zaten 'Sadece skorlar' ile paylaşmış (önceki çalıştırma); süre ölçülemedi, sadece görünürlük denetlendi. Yeniden ölçmek için: npm run reset -- ship && npm run reset -- earth`);
       } else {
         if (st.done && st.can_reset) st = await api<CheckinState>(SHIP, "POST", "/api/checkin/reset", shipToken);
         const answers = [`Kötü uyudum ${marker}`, `Biraz düşük ${marker}`, `Biraz ${marker}`, "Yok", "Hayır"];
@@ -307,14 +327,14 @@ export async function runEarthSmoke(): Promise<number> {
         }
         if (!st.done) throw new Error("check-in tamamlanamadı");
         await check(current.issues, "tamamlanınca kartta 'Gizli tuttu'", () =>
-          page.locator('article[data-astronaut="A000"] [data-share="private"]').waitFor({ timeout: 5000 }),
+          page.locator(`article[data-astronaut="${ID}"] [data-share="private"]`).waitFor({ timeout: 5000 }),
         );
         const delay = (await linkOf()).delay_seconds ?? 0;
         const budget = delay * 1000 + 2000;
         const t0 = Date.now();
         await api(SHIP, "POST", "/api/checkin/share", shipToken, { level: "scores" });
-        const card = page.locator('article[data-astronaut="A000"] [data-share="scores"]');
-        const feedItem = page.locator('li[data-type="checkin.shared"][data-astronaut="A000"]').first();
+        const card = page.locator(`article[data-astronaut="${ID}"] [data-share="scores"]`);
+        const feedItem = page.locator(`li[data-type="checkin.shared"][data-astronaut="${ID}"]`).first();
         try {
           await Promise.all([card.waitFor({ timeout: budget }), feedItem.waitFor({ timeout: budget })]);
           current.notes.push(`paylaşım Dünya ekranında ${Date.now() - t0} ms'de göründü (bütçe: gecikme ${delay} sn + 2 sn)`);
@@ -322,20 +342,20 @@ export async function runEarthSmoke(): Promise<number> {
           current.issues.push({ kind: "check", text: `paylaşım ${budget} ms içinde Dünya ekranında görünmedi` });
         }
         await page.waitForTimeout(250);
-        await shot("02-a000-shared.png");
-        await shot("02b-a000-card.png", { selector: 'article[data-astronaut="A000"]' });
+        await shot("02-shared.png");
+        await shot("02b-checkin-card.png", { selector: `article[data-astronaut="${ID}"]` });
       }
-      await check(current.issues, "kartta 'Sadece skorlar'", () => page.locator('article[data-astronaut="A000"]').getByText("Sadece skorlar").waitFor({ timeout: 5000 }));
+      await check(current.issues, "kartta 'Sadece skorlar'", () => page.locator(`article[data-astronaut="${ID}"]`).getByText("Sadece skorlar").waitFor({ timeout: 5000 }));
       await check(current.issues, "akışta 'Check-in paylaşıldı: Sadece skorlar'", () =>
-        page.locator('li[data-type="checkin.shared"][data-astronaut="A000"]').getByText("Check-in paylaşıldı: Sadece skorlar").first().waitFor({ timeout: 5000 }),
+        page.locator(`li[data-type="checkin.shared"][data-astronaut="${ID}"]`).getByText("Check-in paylaşıldı: Sadece skorlar").first().waitFor({ timeout: 5000 }),
       );
       await check(current.issues, "paylaşılınca ruh hali / stres değerleri görünür", () =>
-        page.locator('article[data-astronaut="A000"] [data-private="shared"]').waitFor({ timeout: 5000 }),
+        page.locator(`article[data-astronaut="${ID}"] [data-private="shared"]`).waitFor({ timeout: 5000 }),
       );
       // cevap metni hiçbir yerde olmamalı: sayfa (öznitelikler dahil) ve Dünya API'si
       const html = await page.content();
       if (/SMOKE-[0-9A-Z]+/.test(html) || /Kötü uyudum/.test(html)) current.issues.push({ kind: "check", text: "check-in cevap metni Dünya ekranında görünüyor" });
-      const day = await api<unknown>(EARTH, "GET", "/api/monitor/astronauts/A000/days/30", earthToken);
+      const day = await api<unknown>(EARTH, "GET", `/api/monitor/astronauts/${ID}/days/30`, earthToken);
       if (/SMOKE-|Kötü uyudum/.test(JSON.stringify(day))) current.issues.push({ kind: "check", text: "check-in cevap metni Dünya API'sinde var" });
     });
 
@@ -382,8 +402,8 @@ export async function runEarthSmoke(): Promise<number> {
       await check(current.issues, "uyarıda son durum devam ediyor: kartlar", async () => {
         if ((await page.locator("article[data-astronaut] .spark svg").count()) !== DEMO_CREW_SIZE) throw new Error("kartlar kayboldu");
       });
-      await check(current.issues, "uyarıda son durum devam ediyor: A000 paylaşımı", () =>
-        page.locator('article[data-astronaut="A000"]').getByText("Sadece skorlar").waitFor({ timeout: 3000 }),
+      await check(current.issues, `uyarıda son durum devam ediyor: ${ID} paylaşımı`, () =>
+        page.locator(`article[data-astronaut="${ID}"]`).getByText("Sadece skorlar").waitFor({ timeout: 3000 }),
       );
       await check(current.issues, "uyarıda son durum devam ediyor: tablo ve akış", async () => {
         await page.getByText(/200 \/ 200 astronot/).waitFor({ timeout: 3000 });
@@ -401,12 +421,12 @@ export async function runEarthSmoke(): Promise<number> {
       });
       await check(current.issues, "akışta 'bağlantı geri geldi' işareti", () => page.locator('li[data-marker="up"]').first().waitFor({ timeout: 5000 }));
 
-      // Yeni olay: A000'ın bugünkü ilk önerisini işaretle / kaldır (her çalıştırmada bir olay üretir)
-      const shipToken = await login(SHIP, "A000");
+      // Yeni olay: astronotun bugünkü ilk önerisini işaretle / kaldır (her çalıştırmada bir olay üretir)
+      const shipToken = await login(SHIP, ID);
       const me = await api<{ today: number }>(SHIP, "GET", "/api/me", shipToken);
       const dayView = await api<{ todo: { code: string; done: boolean }[] }>(SHIP, "GET", `/api/me/days/${me.today}`, shipToken);
       const item = dayView.todo[0];
-      if (!item) throw new Error("A000'ın bugün öneri listesi boş; yeni olay üretilemedi");
+      if (!item) throw new Error(`${ID} için bugün öneri yok; yeni olay üretilemedi (npm run find-demo ile uygun bir ilk kişi seçin)`);
       const lastSeq = (await linkOf()).last_seq;
       if (lastSeq !== before.last_seq) current.issues.push({ kind: "check", text: `kopma sırasında seq değişti (${before.last_seq} → ${lastSeq})` });
       await api(SHIP, "POST", "/api/actions/done", shipToken, { code: item.code, done: !item.done });

@@ -58,6 +58,9 @@
 .mon-brand svg { width: 44px; height: 44px; flex: none; }
 .mon-brand .who { color: var(--ink-2); font-size: 0.87em; }
 .mon-head .spacer { flex: 1 1 auto; }
+.mission { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); white-space: nowrap; }
+.mission > span:first-child { color: var(--muted); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.mission b { font-family: var(--font-display); font-size: 1.08em; }
 .mon-tools { display: flex; align-items: center; gap: 8px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .mon .seg button { border: 0; border-radius: 0; padding: 5px 10px; background: var(--surface); font-size: 0.87em; font-weight: 600; color: var(--ink-2); }

@@ -38,10 +38,10 @@ export function CrewSection() {
   );
 }
 
-export function CheckinWhen({ member, checkin }: { member: MonitorCrewMember; checkin: MonitorEvent | undefined }) {
+export function CheckinWhen({ share, today, checkin }: { share: string | null | undefined; today: number; checkin: MonitorEvent | undefined }) {
   const { t, locale } = useT();
-  if (!member.share) return <>{t("noCheckin")}</>;
-  if (!checkin || checkin.day !== member.today) return <>{t("timeUnknown")}</>;
+  if (!share) return <>{t("noCheckin")}</>;
+  if (!checkin || checkin.day !== today) return <>{t("timeUnknown")}</>;
   return <>{t("shipTimeShort", { time: fmtTime(checkin.ship_time, locale) })}</>;
 }
 
@@ -53,50 +53,51 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
   const day = useMonitorDay(a.id, member.today);
   const catalog = useCatalog();
   const hid = `card-${a.id}`;
-  const priv = day.data?.view.readings.filter((r) => r.private) ?? [];
+  const v = day.data?.view.day === member.today ? day.data.view : undefined;
+  const priv = v?.readings.filter((r) => r.private) ?? [];
+  // "Bugün" alanları astronotun kendi gününden (olayda ~10 ms'de yenilenir); /crew (200 kişi, ~0,7 sn) yedek
+  const now = v
+    ? { status: v.status, label: v.status_label, subtitle: v.subtitle, score: v.score_text, ground: v.ground, share: v.share ?? null }
+    : { status: member.status, label: member.status_label, subtitle: member.subtitle, score: member.score_text, ground: member.ground, share: member.share ?? null };
 
   return (
-    <article className={`card ccard is-s${member.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id}>
+    <article className={`card ccard is-s${now.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id}>
       <div className="ccard-top">
         <span className="ccard-id" id={hid}>
           {a.id}
         </span>
-        <span className="ccard-meta">
-          {a.mission_label} · {t("ageSex", { age: a.age, sex: a.sex })}
-          <br />
-          {t("missionDay", { n: member.mission_day })}
-        </span>
+        <span className="ccard-meta">{t("cardDay", { age: a.age, sex: a.sex, day: member.mission_day })}</span>
       </div>
       <div className="ccard-head">
         <div>
           <div className="ccard-state">
-            <StatusLabel status={member.status} label={member.status_label} />
+            <StatusLabel status={now.status} label={now.label} />
           </div>
-          <p className="ccard-sub">{member.subtitle}</p>
+          <p className="ccard-sub">{now.subtitle}</p>
         </div>
         <div className="ccard-score">
-          <b>{member.score_text}</b>
+          <b>{now.score}</b>
           <span>{t("score")}</span>
         </div>
       </div>
-      {member.ground && (
+      {now.ground && (
         <p className="groundtag">
           <span className="glyph g2" aria-hidden="true" />
           {t("groundFlag")}
         </p>
       )}
       {overview.data ? <Sparkline strip={overview.data.strip} /> : <div style={{ height: 82 }} aria-busy="true" />}
-      {day.data && catalog.data ? <AreaStrip view={day.data.view} catalog={catalog.data} /> : <div style={{ height: 52 }} aria-busy="true" />}
+      {v && catalog.data ? <AreaStrip view={v} catalog={catalog.data} /> : <div style={{ height: 52 }} aria-busy="true" />}
       <div className="ccard-foot">
         <div className="row">
           <span>{t("lastCheckin")}</span>
           <span className="num">
-            <CheckinWhen member={member} checkin={checkin} />
+            <CheckinWhen share={now.share} today={member.today} checkin={checkin} />
           </span>
         </div>
         <div className="row">
           <span>{t("sharing")}</span>
-          <span data-share={member.share ?? "none"}>{t(shareKey(member.share))}</span>
+          <span data-share={now.share ?? "none"}>{t(shareKey(now.share))}</span>
         </div>
         {priv.length > 0 && (
           // Ruh hali / stres: Dünya sadece astronot o günün check-in'ini paylaştıysa görür

@@ -16,7 +16,8 @@
     "serve": "node scripts/station.mjs serve",
     "seed": "node scripts/py.mjs -m app.cli seed --seed 42",
     "test": "node scripts/py.mjs -m pytest && npm --prefix frontend run typecheck",
-    "smoke": "npm --prefix frontend run smoke"
+    "smoke": "npm --prefix frontend run smoke",
+    "find-demo": "npm --prefix frontend run find-demo"
   },
   "engines": {
     "node": ">=20.19"

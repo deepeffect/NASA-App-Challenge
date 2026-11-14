@@ -8,6 +8,8 @@ import { type Lang, useLang } from "../../shared/i18n";
 
 const T = {
   earthBase: { tr: "Dünya üssü", en: "Earth base" },
+  missionLabel: { tr: "Görev", en: "Mission" },
+  crewCount: { tr: "{n} kişilik mürettebat", en: "crew of {n}" },
   readOnly: { tr: "salt okunur", en: "read-only" },
   logout: { tr: "Çıkış", en: "Log out" },
   themeDark: { tr: "Koyu tema", en: "Dark theme" },
@@ -89,6 +91,7 @@ const T = {
   score: { tr: "sağlık skoru", en: "health score" },
   missionDay: { tr: "görev günü {n}", en: "mission day {n}" },
   ageSex: { tr: "{age} yaş · {sex}", en: "{age} y · {sex}" },
+  cardDay: { tr: "{age} yaş · {sex} · görev günü {day}", en: "{age} y · {sex} · mission day {day}" },
   groundFlag: { tr: "Yer desteği gerekli", en: "Ground support needed" },
   lastCheckin: { tr: "Son check-in", en: "Last check-in" },
   sharing: { tr: "Paylaşım", en: "Sharing" },

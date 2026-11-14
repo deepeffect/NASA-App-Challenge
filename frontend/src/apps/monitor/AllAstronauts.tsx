@@ -139,7 +139,7 @@ export function AllAstronauts() {
                     {m.share && (
                       <span className="muted num">
                         {" "}
-                        · <CheckinWhen member={m} checkin={checkins.data?.get(m.astronaut.id)} />
+                        · <CheckinWhen share={m.share} today={m.today} checkin={checkins.data?.get(m.astronaut.id)} />
                       </span>
                     )}
                   </td>

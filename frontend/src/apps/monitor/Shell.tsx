@@ -1,7 +1,7 @@
 /** Üst başlık (logo, ürün adı, dil, tema, çıkış) ve alt bilgi. */
 import type { StationInfo } from "../../api/station";
 import { type Lang, useLang } from "../../shared/i18n";
-import { EVENT_NAME, PRODUCT_NAME, TEAM_NAME } from "./config";
+import { DEMO_CREW, EVENT_NAME, MISSION, PRODUCT_NAME, TEAM_NAME } from "./config";
 import { Logo, LogoutIcon, MoonIcon, SunIcon } from "./icons";
 import { useT } from "./texts";
 import type { Theme } from "./ui";
@@ -21,6 +21,12 @@ export function Header({ theme, setTheme, onLogout }: { theme: Theme; setTheme: 
           </p>
         </div>
       </div>
+      <span className="spacer" />
+      <p className="mission" data-mission={MISSION.id}>
+        <span>{t("missionLabel")}</span>
+        <b>{MISSION.name[lang]}</b>
+        <span className="muted">· {t("crewCount", { n: DEMO_CREW.length })}</span>
+      </p>
       <span className="spacer" />
       <div className="mon-tools">
         <LangSeg />
