@@ -86,6 +86,9 @@ const T = {
   feedIntro: { tr: "Gemiden gelen olaylar, yeniden eskiye", en: "Events from the ship, newest first" },
   feedEmpty: { tr: "Henüz olay yok. Gemide bir check-in tamamlanınca burada görünür.", en: "No events yet. They appear here when a check-in is completed on the ship." },
   feedCount: { tr: "Son {n} olay · toplam {total}", en: "Last {n} events · {total} in total" },
+  crewOnly: { tr: "Sadece mürettebat", en: "Crew only" },
+  feedCountCrew: { tr: "Mürettebattan son {n} olay", en: "Last {n} crew events" },
+  feedEmptyCrew: { tr: "Mürettebattan henüz olay yok.", en: "No crew events yet." },
 
   // kart
   score: { tr: "sağlık skoru", en: "health score" },
@@ -116,6 +119,32 @@ const T = {
   legendConcern: { tr: "Ana endişe", en: "Main concern" },
   loadError: { tr: "Veri alınamadı.", en: "Could not load data." },
   noData: { tr: "Bu astronotun verisi yok.", en: "No data for this astronaut." },
+  openDetailOf: { tr: "{id} ayrıntıları", en: "{id} details" },
+  openDetail: { tr: "Ayrıntılar", en: "Details" },
+  lastActivity: { tr: "Son etkinlik", en: "Last activity" },
+  noActivity: { tr: "henüz yok", en: "none yet" },
+  active: { tr: "Aktif", en: "Active" },
+  activeHint: {
+    tr: "Son {min} dakikada etkinlik var (check-in, paylaşım veya öneri işareti)",
+    en: "Activity in the last {min} minutes (check-in, sharing or advice marked)",
+  },
+
+  // astronot detayı (prototipin Earth görünümü)
+  backToOverview: { tr: "Genel görünüm", en: "Overview" },
+  detailViewTitle: { tr: "Dünya üssü görünümü.", en: "Earth base view." },
+  detailViewText: {
+    tr: "Yaşamsal bulgular, uyku, egzersiz, laboratuvar ve ortam her zaman görünür. Ruh hali, stres ve check-in cevapları sadece astronot paylaştıysa görünür.",
+    en: "Vital signs, sleep, exercise, labs and environment are always visible. Mood, stress and check-in answers appear only when the astronaut has shared them.",
+  },
+  pickAstronaut: { tr: "Astronot", en: "Astronaut" },
+  prevAstronaut: { tr: "Önceki astronot: {id}", en: "Previous astronaut: {id}" },
+  nextAstronaut: { tr: "Sonraki astronot: {id}", en: "Next astronaut: {id}" },
+  groupCrew: { tr: "Mürettebat", en: "Crew" },
+  groupAll: { tr: "Tüm astronotlar", en: "All astronauts" },
+  checkinTitle: { tr: "Günlük check-in", en: "Daily check-in" },
+  dayDetails: { tr: "Bu günün ayrıntıları", en: "Details for this day" },
+  unknownAstronaut: { tr: "{id} kimlikli bir astronot yok.", en: "There is no astronaut with the ID {id}." },
+  flagged: { tr: "İşaretlendi", en: "Flagged" },
 
   // paylaşım seviyeleri (Dünya'nın gözünden)
   share_none: { tr: "Check-in yok", en: "No check-in" },

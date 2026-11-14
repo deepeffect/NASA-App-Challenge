@@ -3,6 +3,8 @@
  * okunur — gemiden downlink ile gelmiş, gemide gizlilik filtresinden geçmiş veri. Gemiye doğrudan istek yok.
  *
  * Kurallar ve görünüm için tek doğru kaynak: frontend/reference/personal-artifact.html (Earth görünümü).
+ * Rotalar: /monitor (mürettebat, yer desteği, tüm astronotlar) · /monitor/astronaut/:id (astronot detayı, ./Detail.tsx).
+ * Üst başlık, bağlantı çubuğu ve canlı akış iki rotada da durur.
  * Ayarlar (ürün adı, DEMO_CREW): ./config.ts · metinler: ./texts.ts · veri: ./api.ts · canlı akış: ./live.tsx
  */
 import "@fontsource/archivo/600.css";
@@ -14,11 +16,13 @@ import "./monitor.css";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Navigate, Route, Routes } from "react-router";
 
 import { auth, type StationInfo, stationApi } from "../../api/station";
 import { AllAstronauts } from "./AllAstronauts";
 import { isUnauthorized } from "./api";
 import { CrewSection } from "./CrewSection";
+import { AstronautDetail } from "./Detail";
 import { GroundSection } from "./GroundSection";
 import { LinkBar } from "./LinkBar";
 import { LiveFeed } from "./LiveFeed";
@@ -81,11 +85,28 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
         <LinkBar />
       </div>
       <div className="mon-body">
-        <main className="mon-main">
-          <CrewSection />
-          <GroundSection />
-          <AllAstronauts />
-        </main>
+        <Routes>
+          <Route
+            index
+            element={
+              <main className="mon-main">
+                <CrewSection />
+                <GroundSection />
+                <AllAstronauts />
+              </main>
+            }
+          />
+          {/* HealthRoot kendi <main>'ini getirir: iç içe main olmasın diye kolon burada div */}
+          <Route
+            path="astronaut/:id"
+            element={
+              <div className="mon-main">
+                <AstronautDetail theme={theme} />
+              </div>
+            }
+          />
+          <Route path="*" element={<Navigate to="/monitor" replace />} />
+        </Routes>
         <aside className="mon-side">
           <LiveFeed />
         </aside>

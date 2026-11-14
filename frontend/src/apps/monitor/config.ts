@@ -18,8 +18,12 @@ export const PRODUCT_NAME: Record<Lang, string> = envName
 export const TEAM_NAME = "AI Gambit";
 export const EVENT_NAME = "NASA Space Apps Challenge 2026";
 
-/** Geminin görevi (görev çubuğu). Mürettebat bu görevin astronotlarıdır. */
-export const MISSION = { id: "Mars_Transit", name: { tr: "Mars transferi", en: "Mars transfer" } as Record<Lang, string> };
+/**
+ * Geminin görevi (görev çubuğu). Mürettebat bu görevin astronotlarıdır. Burada sadece kimlik var: görevin ADI
+ * backend kataloğundan (config/catalog.yaml → missions) seçili dilde gelir (`CrewInfo.mission_label`, api.ts →
+ * useMissionLabel); böylece görev çubuğu, tablo, astronot detayı ve /me hep aynı adı gösterir.
+ */
+export const MISSION = { id: "Mars_Transit" } as const;
 
 /**
  * A168 sağlıklı (smoke astronotu) · A076 hafif sorun · A115 iyileşiyor · A117 akut atak (gün 1 → 23 → 27 Normal → Dikkat
@@ -29,9 +33,13 @@ export const DEMO_CREW: readonly string[] = ["A168", "A076", "A115", "A117", "A0
 
 /** Canlı akışta gösterilen en fazla olay. */
 export const FEED_LIMIT = 60;
+/** "Sadece mürettebat" açıkken süzülmek üzere alınan son olay sayısı (mürettebat dışı olaylar arada kalmasın). */
+export const FEED_CREW_FETCH = 300;
 /** Yeni olay gelince kartın / satırın vurgulu kaldığı süre. */
 export const HIGHLIGHT_MS = 4000;
 /** SSE'ye ek olarak bağlantı durumunun yoklanma aralığı (SSE koparsa da güncel kalsın). */
 export const LINK_POLL_MS = 10_000;
 /** Mürettebat listesinin yedek yenilenme aralığı (asıl tetikleyici SSE olaylarıdır). */
 export const CREW_POLL_MS = 60_000;
+/** Mürettebat kartındaki "Aktif" rozeti: son etkinlik (gemi saati) bu süreden yeniyse. */
+export const ACTIVE_WINDOW_MS = 10 * 60_000;

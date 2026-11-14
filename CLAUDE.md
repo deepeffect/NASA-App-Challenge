@@ -108,6 +108,7 @@ docs/API.md, docs/openapi.json
 
 Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev:ship` (API :8000 + /me :5173) ·
 `npm run dev:earth` (API :8001 + /monitor :5174) · `npm run reset -- ship|earth` · `npm run serve` (gerçek kurulum) ·
+`npm run stop [-- ship|earth]` (çalışan / artakalan geliştirme sunucularını kapatır; bkz. bug_read.md) ·
 `npm run test` · eski ekranlar: `npm run dev` / `npm run seed` / `npm run smoke` (ayrıntı: README → "Kök npm komutları").
 Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
 

@@ -76,12 +76,14 @@ export const qk = {
   dayAny: (id: string) => ["monitor", "day", id] as const,
   events: (limit: number) => ["monitor", "events", "feed", limit] as const,
   checkins: () => ["monitor", "events", "checkins"] as const,
+  activity: (id: string) => ["monitor", "events", "activity", id] as const,
 };
 
 export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
+export const isNotFound = (e: unknown): boolean => e instanceof StationApiError && e.status === 404;
 
-/** Kısa kesintilerde (Dünya sunucusu yeniden başlıyor) birkaç kez dene: 1, 2, 4 sn. Yetkisizse deneme. */
-const retry = (n: number, e: unknown) => !isUnauthorized(e) && n < 3;
+/** Kısa kesintilerde (Dünya sunucusu yeniden başlıyor) birkaç kez dene: 1, 2, 4 sn. İstemci hatasında (4xx) deneme. */
+const retry = (n: number, e: unknown) => !(e instanceof StationApiError && e.status >= 400 && e.status < 500) && n < 3;
 /** Yenilemede eski veri kalır; hiç veri gelmediyse sık yokla (kiosk kendini toparlasın). */
 const keep = { placeholderData: keepPreviousData, retry } as const;
 const pollUntilData = (normalMs: number | false) => (q: { state: { data: unknown; status: string } }) =>
@@ -94,6 +96,15 @@ export function useLinkStatus() {
 export function useCrew() {
   const { lang } = useLang();
   return useQuery({ queryKey: qk.crew(lang), queryFn: stationApi.crew, refetchInterval: pollUntilData(CREW_POLL_MS), ...keep });
+}
+
+/**
+ * Görevin adı backend kataloğundan, seçili dilde (`CrewInfo.mission_label`; config/catalog.yaml → missions).
+ * Görev çubuğu, tablo ve astronot detayı aynı kaynaktan okur. Veri gelene kadar undefined.
+ */
+export function useMissionLabel(missionId: string): string | undefined {
+  const crew = useCrew();
+  return crew.data?.astronauts.find((m) => m.astronaut.mission === missionId)?.astronaut.mission_label;
 }
 
 export function useCatalog() {
@@ -119,6 +130,22 @@ export function useMonitorDay(id: string, day: number | undefined) {
 
 export function useFeedEvents(limit: number) {
   return useQuery({ queryKey: qk.events(limit), queryFn: () => fetchEvents({ limit }), refetchInterval: pollUntilData(false), ...keep });
+}
+
+/**
+ * Etkinlik = astronotun kendi yaptığı: check-in tamamladı, paylaştı, öneriyi işaretledi. `day.snapshot` sayılmaz:
+ * veri seti değişince gemi bütün günleri yeniden yayınlar, bu bir astronot etkinliği değildir.
+ */
+export const ACTIVITY_TYPES: MonitorEventType[] = ["checkin.completed", "checkin.shared", "action.done"];
+
+/** Astronotun son etkinliği (yoksa null). Yeni olayda ["monitor", "events"] ile yenilenir. */
+export function useLastActivity(id: string) {
+  return useQuery({
+    queryKey: qk.activity(id),
+    queryFn: async () => (await fetchEvents({ astronautId: id, limit: 1, types: ACTIVITY_TYPES })).events[0] ?? null,
+    refetchInterval: pollUntilData(false),
+    ...keep,
+  });
 }
 
 /** Her astronotun bugünkü son check-in'i (gemi saati). Snapshot'la gelenlerin olayı yoktur → saat bilinmiyor. */

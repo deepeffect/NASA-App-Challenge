@@ -1,11 +1,14 @@
 /**
  * Tüm astronotlar (200): duruma ve göreve göre filtre, kimlik araması, skora göre sıralama.
  * Satırlar /api/monitor/crew'dan (her astronotun bugünü, Dünya görünümü). Yeni olayda satır vurgulanır.
+ * Satıra veya kimliğe tıklanınca astronot detayı açılır.
  */
-import { useDeferredValue, useMemo, useState } from "react";
+import { type ReactNode, useDeferredValue, useMemo, useState } from "react";
+import { Link } from "react-router";
 
 import { useCatalog, useCheckinTimes, useCrew } from "./api";
 import { CheckinWhen } from "./CrewSection";
+import { detailPath, useOpenDetail } from "./Detail";
 import { flashClass, useLive } from "./live";
 import { shareKey, useT } from "./texts";
 import { SectionHead, StatusLabel } from "./ui";
@@ -117,8 +120,12 @@ export function AllAstronauts() {
             </thead>
             <tbody>
               {rows.map((m) => (
-                <tr key={m.astronaut.id} className={flashClass(flashFor(m.astronaut.id)).trim()} data-astronaut={m.astronaut.id}>
-                  <td className="id">{m.astronaut.id}</td>
+                <Row key={m.astronaut.id} id={m.astronaut.id} className={flashClass(flashFor(m.astronaut.id)).trim()}>
+                  <td className="id">
+                    <Link to={detailPath(m.astronaut.id)} aria-label={t("openDetailOf", { id: m.astronaut.id })}>
+                      {m.astronaut.id}
+                    </Link>
+                  </td>
                   <td>{m.astronaut.mission_label}</td>
                   <td>
                     <StatusLabel status={m.status} label={m.status_label} />
@@ -144,12 +151,22 @@ export function AllAstronauts() {
                     )}
                   </td>
                   <td className="wrap">{m.subtitle}</td>
-                </tr>
+                </Row>
               ))}
             </tbody>
           </table>
         </div>
       )}
     </section>
+  );
+}
+
+/** Satır: boş bir yerine tıklanınca detay açılır (klavyede kimlik bağlantısı). */
+function Row({ id, className, children }: { id: string; className: string; children: ReactNode }) {
+  const open = useOpenDetail(id);
+  return (
+    <tr className={className ? `open-detail ${className}` : "open-detail"} data-astronaut={id} onClick={open}>
+      {children}
+    </tr>
   );
 }

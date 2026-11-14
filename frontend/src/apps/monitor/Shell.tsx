@@ -1,6 +1,7 @@
 /** Üst başlık (logo, ürün adı, dil, tema, çıkış) ve alt bilgi. */
 import type { StationInfo } from "../../api/station";
 import { type Lang, useLang } from "../../shared/i18n";
+import { useMissionLabel } from "./api";
 import { DEMO_CREW, EVENT_NAME, MISSION, PRODUCT_NAME, TEAM_NAME } from "./config";
 import { Logo, LogoutIcon, MoonIcon, SunIcon } from "./icons";
 import { useT } from "./texts";
@@ -9,6 +10,7 @@ import type { Theme } from "./ui";
 export function Header({ theme, setTheme, onLogout }: { theme: Theme; setTheme: (t: Theme) => void; onLogout: () => void }) {
   const { t } = useT();
   const { lang } = useLang();
+  const missionLabel = useMissionLabel(MISSION.id);
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
     <header className="mon-head">
@@ -24,7 +26,7 @@ export function Header({ theme, setTheme, onLogout }: { theme: Theme; setTheme: 
       <span className="spacer" />
       <p className="mission" data-mission={MISSION.id}>
         <span>{t("missionLabel")}</span>
-        <b>{MISSION.name[lang]}</b>
+        <b aria-busy={missionLabel === undefined}>{missionLabel ?? "…"}</b>
         <span className="muted">· {t("crewCount", { n: DEMO_CREW.length })}</span>
       </p>
       <span className="spacer" />
