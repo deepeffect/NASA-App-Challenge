@@ -152,7 +152,7 @@ alınamadığı için süre ölçümünü tekrarlamak isterseniz önce `npm run 
 
 ### Astronot ekranı smoke testi
 
-Gemi lokal açıkken (`npm run dev:ship`, web :5173):
+Ön koşul yok; açık bir geliştirme sunucusu gerekmez:
 
 ```powershell
 npm run smoke -- personal   # kökte veya frontend/ içinde; görüntüler: screenshots/personal/
@@ -162,10 +162,18 @@ npm run smoke -- personal   # kökte veya frontend/ içinde; görüntüler: scre
 (geçmiş gün salt okunur) · "Yaptım" · bugünün check-in'i sonuna kadar · "Sadece skorlar" ile paylaşım → geminin
 downlink akışındaki `checkin.shared` olayında ruh hali / stres skoru var, cevap metni yok · ayrıntılar ve öz bakım
 penceresi · "Asistana sor" (mock) + acil belirti kutusu (sohbet downlink'e girmez) · check-in'de acil belirti →
-"Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış. Ana durumlar 390 ve
-1440 px'te, açık ve koyu temada kaydedilir.
-Test kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı) ve sayfanın API isteklerini oraya
-yönlendirir: `ship.db`'ye dokunmaz, her çalıştırmada baştan tekrarlanabilir. Port doluysa `SMOKE_PERSONAL_PORT`.
+"Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış · hesap değiştirme
+(önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz: cevaplar bilerek geciktirilir) · oturum
+biterse (401) giriş kartına dönüş. Ana durumlar 390 ve
+1440 px'te, açık ve koyu temada kaydedilir. Ortak bileşenlerin ölçüleri prototipin CSS değerleriyle karşılaştırılır
+(başka bir stil dosyası `/me`'ye sızarsa yakalanır).
+Test kendi kendine yeter: arayüzü derler ve kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı);
+backend hem API'yi hem derlenmiş arayüzü servis eder — gerçek kurulumdaki (`npm run serve`) gibi. `ship.db`'ye,
+`frontend/dist`'e ve çalışan sunuculara dokunmaz; her çalıştırmada baştan tekrarlanabilir. Derleme ve veritabanı
+depoda değil sistemin geçici klasöründe durur (depo klasörünü izleyen OneDrive / Google Drive gibi bir eşitleme
+istemcisi SQLite dosyalarına takılmasın diye); sonunda geçici backend'le birlikte silinir. Depoda sadece ekran
+görüntüleri ve geçici geminin logu (`screenshots/personal/ship-smoke*.log`) kalır.
+Port doluysa `npm run stop -- --port 8010` ya da `SMOKE_PERSONAL_PORT`.
 
 ## URL'de zaman
 

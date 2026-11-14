@@ -1,16 +1,21 @@
 /**
  * Astronot ekranının (/me) smoke testi (Playwright, headless Chromium).
  *
- * Ön koşul: kökte `npm run dev:ship` (web :5173). Çalıştır: `npm run smoke -- personal`.
+ * Çalıştır: `npm run smoke -- personal`. Ön koşul YOK: açık bir geliştirme sunucusu gerekmez.
  *
- * API için test KENDİ geçici gemi backend'ini başlatır (port 8010, boş ve atılabilir bir veritabanı) ve sayfanın
- * API isteklerini oraya yönlendirir. Böylece geliştirme veritabanına (ship.db) dokunulmaz ve senaryo her
- * çalıştırmada baştan tekrarlanabilir (paylaşım geri alınamadığı için bu şart). Geçici backend sonunda kapatılır.
+ * Test kendi kendine yeter: arayüzü derler (aynı adres) ve KENDİ geçici gemi backend'ini başlatır (port 8010, boş
+ * ve atılabilir bir veritabanı); backend hem API'yi hem derlenmiş arayüzü servis eder — gerçek kurulumdaki
+ * (`npm run serve`) gibi. Böylece geliştirme veritabanına (ship.db) ve çalışan sunuculara dokunulmaz, senaryo her
+ * çalıştırmada baştan tekrarlanabilir (paylaşım geri alınamadığı için bu şart).
+ *
+ * Atılabilir dosyalar (derleme + veritabanı) depoda değil, sistemin geçici klasöründe durur ve sonunda geçici
+ * backend'le birlikte silinir. Depoda sadece ekran görüntüleri ve geçici geminin logu kalır.
  *
  * Adımlar:
  *   1. Giriş kartı: kimlik aralığı /api/auth/hint'ten; EARTH girişi yok
  *   2. A000 ile giriş → bugünün ekranı (durum, şerit, yapılacaklar, check-in)
- *   3. Şeritte gün seçimi → geçmiş gün salt okunur (check-in yok, "Yaptım" yok); önceki/sonraki; bugüne dönüş
+ *   3. Şeritte gün seçimi → geçmiş gün salt okunur (check-in yok, "Yaptım" yok); önceki/sonraki; sorunlu bir
+ *      günde durum ikon + metinle; bugüne dönüş
  *   4. "Yaptım" → backend'e yazılır
  *   5. Bugünün check-in'i sonuna kadar → notlar, aktif mod satırı
  *   6. "Sadece skorlar" ile paylaşım → geminin downlink akışında `checkin.shared` olayı ruh hali / stres
@@ -20,36 +25,56 @@
  *   9. Başka bir astronotta check-in'de acil belirti → "Gemideki sağlık sorumlusu bilgilendirildi" kutusu;
  *      bu bilgi downlink'e girmez
  *  10. TR → EN; yenilemede oturum sürer; "Çıkış" token'ı siler
+ *  11. Hesap değiştirme: önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz — yeni astronotun
+ *      verisi gelene kadar eski kimlik / şerit görünmez; çıkıştan SONRA dönen geç bir cevap da ekrana yazılmaz
+ *  12. Oturum biterse (401) giriş kartına dönülür ve nedeni yazılır
  *
  * Ana durumların ekran görüntüleri 390 ve 1440 px'te, açık ve koyu temada alınır: screenshots/personal/.
- * Ayrıca: konsol hatası, yakalanmamış hata, başarısız istek, 4xx/5xx ve dış ağa istek olmamalı (offline).
+ * Ayrıca: konsol hatası, yakalanmamış hata, başarısız istek, 4xx/5xx ve dış ağa istek olmamalı (offline);
+ * ortak bileşenlerin ölçüleri prototipin CSS'indeki değerlerle aynı olmalı (başka bir stil dosyası sızmamalı).
  *
- * Ortam değişkenleri: SMOKE_WEB (http://localhost:5173), SMOKE_API (sayfanın derlendiği API adresi,
- * http://127.0.0.1:8000), SMOKE_PERSONAL_PORT (8010), SMOKE_ASTRONAUT (A000)
- * Çıkış kodu: 0 temiz · 1 sorun bulundu · 2 ön koşul yok
+ * Ortam değişkenleri: SMOKE_PERSONAL_PORT (8010), SMOKE_ASTRONAUT (A000)
+ * Çıkış kodu: 0 temiz · 1 sorun bulundu · 2 ön koşul yok (venv yok, port dolu, derleme başarısız)
  */
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, openSync, rmSync } from "node:fs";
+import { type ChildProcess, spawn } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, openSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type Browser, chromium, type Page } from "playwright";
+import { build } from "vite";
+
+// Port / süreç yardımcıları ortak modülde (npm run stop ve Dünya smoke testi de onu kullanır): scripts/ports.mjs
+import { killPid, listeningPids } from "../../scripts/ports.mjs";
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = join(FRONTEND, "..");
 const BACKEND = join(ROOT, "backend");
+/** Ekran görüntüleri + geçici geminin logu (git'e girmez). */
 const OUT = join(FRONTEND, "screenshots", "personal");
-const WEB = (process.env.SMOKE_WEB ?? "http://localhost:5173").replace(/\/$/, "");
-const DEV_API = (process.env.SMOKE_API ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const TEMP_PORT = Number(process.env.SMOKE_PERSONAL_PORT ?? 8010);
+/** Geçici geminin adresi: hem arayüz (/me) hem API (aynı adres, CORS gerekmez). */
 const TEMP_API = `http://127.0.0.1:${TEMP_PORT}`;
 const ID = process.env.SMOKE_ASTRONAUT?.trim().toUpperCase() || "A000";
 /** Acil belirti (CMO kutusu) adımı için ikinci astronot: ilkinin check-in'i paylaşıldığı için baştan başlatılamaz. */
 const ID2 = ID === "A001" ? "A002" : "A001";
+/** Hesap değiştirme adımı için üçüncü astronot: check-in'i hiç başlamamış olmalı (geciken cevap ondan gelir). */
+const ID3 = ["A003", "A004", "A005"].find((x) => x !== ID && x !== ID2) as string;
 const LINK_TOKEN = "smoke-link-token";
 const isWin = process.platform === "win32";
 const VENV_PY = isWin ? join(BACKEND, ".venv", "Scripts", "python.exe") : join(BACKEND, ".venv", "bin", "python");
-const DB_FILE = join(OUT, "ship-smoke.db");
+
+/**
+ * Atılabilir dosyaların (derlenmiş arayüz + veritabanı) yeri: depo DIŞINDA, sistemin geçici klasöründe.
+ * Depo klasörünü izleyen bir eşitleme / yedekleme istemcisi (OneDrive, Google Drive…) SQLite dosyalarını
+ * yüklemeye çalışıp silindikten sonra geri getirebiliyor; geçici klasörde buna takılmaz.
+ */
+interface TempFiles { dir: string; dist: string; db: string }
+function makeTempFiles(): TempFiles {
+  const dir = mkdtempSync(join(tmpdir(), "ahm-smoke-personal-"));
+  return { dir, dist: join(dir, "dist"), db: join(dir, "ship-smoke.db") };
+}
 
 type IssueKind = "console.error" | "pageerror" | "http" | "requestfailed" | "external" | "check";
 interface Issue { kind: IssueKind; text: string }
@@ -128,36 +153,30 @@ async function downlink(since: number): Promise<{ events: DownlinkEvent[]; raw: 
   return { events, raw, lastSeq };
 }
 
-function listeningPid(port: number): number | null {
-  if (isWin) {
-    const r = spawnSync("netstat", ["-ano", "-p", "tcp"], { encoding: "utf-8" });
-    for (const line of r.stdout.split(/\r?\n/)) {
-      const p = line.trim().split(/\s+/);
-      if (p.length >= 5 && p[1].endsWith(`:${port}`) && p[3] === "LISTENING") return Number(p[4]);
-    }
-    return null;
-  }
-  const r = spawnSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], { encoding: "utf-8" });
-  const pid = Number(r.stdout.trim().split(/\s+/)[0]);
-  return Number.isFinite(pid) && pid > 0 ? pid : null;
+/**
+ * Arayüzü test için derler (aynı adres: VITE_API_BASE_URL boş → API istekleri sayfanın geldiği sunucuya gider).
+ * `npm run serve` ile aynı derleme; çıktı frontend/dist'e değil geçici klasöre yazılır, yani oradaki derlemeye
+ * dokunulmaz.
+ */
+async function buildFrontend(dist: string): Promise<void> {
+  process.env.VITE_API_BASE_URL = ""; // ortam değişkeni frontend/.env'deki değeri ezer
+  await build({ root: FRONTEND, logLevel: "error", build: { outDir: dist, emptyOutDir: true } });
+  if (!existsSync(join(dist, "index.html"))) throw new Error(`derleme çıktısı yok: ${dist}`);
 }
 
-function killPid(pid: number): void {
-  if (isWin) spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
-  else process.kill(pid, "SIGTERM");
-}
-
-/** Geçici gemi: boş veritabanı (açılışta veri setinden dolar), hazır sorular, mock model, gecikmesiz downlink. */
-async function startTempShip(): Promise<ChildProcess> {
-  const origin = new URL(WEB).origin;
+/**
+ * Geçici gemi: boş veritabanı (açılışta veri setinden dolar), hazır sorular, mock model, gecikmesiz downlink.
+ * Derlenmiş arayüzü de kendisi servis eder (FRONTEND_DIST).
+ */
+async function startTempShip(tmp: TempFiles): Promise<ChildProcess> {
   const child = spawn(VENV_PY, ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", String(TEMP_PORT)], {
     cwd: BACKEND,
     env: {
       ...process.env,
       STATION_ROLE: "ship",
       DATA_SOURCE: "astronaut_health",
-      DATABASE_URL: `sqlite:///${DB_FILE.replaceAll("\\", "/")}`,
-      CORS_ORIGINS: [...new Set([origin, "http://localhost:5173", "http://127.0.0.1:5173"])].join(","),
+      DATABASE_URL: `sqlite:///${tmp.db.replaceAll("\\", "/")}`,
+      FRONTEND_DIST: tmp.dist,
       EARTH_LINK_TOKEN: LINK_TOKEN,
       CHECKIN_MODE: "scripted",
       LLM_PROVIDER: "mock",
@@ -169,23 +188,40 @@ async function startTempShip(): Promise<ChildProcess> {
   });
   const ready = await waitUntil(async () => {
     const hint = (await (await fetch(`${TEMP_API}/api/auth/hint`, { signal: AbortSignal.timeout(3000) })).json()) as { astronauts: { count: number } | null };
-    return (hint.astronauts?.count ?? 0) > 0;
+    return (hint.astronauts?.count ?? 0) > 0 && (await reachable(`${TEMP_API}/me`));
   }, 120_000);
   if (!ready) {
-    stopTempShip(child);
+    await stopTempShip(child);
     throw new Error(`geçici gemi ${TEMP_API} açılamadı (log: ${join(OUT, "ship-smoke.err.log")})`);
   }
   return child;
 }
 
-function stopTempShip(child: ChildProcess | null): void {
+/** Geçici gemiyi kapatır ve port boşalana kadar bekler (Windows'ta veritabanı dosyası ancak o zaman silinebilir). */
+async function stopTempShip(child: ChildProcess | null): Promise<void> {
   child?.kill();
-  const pid = listeningPid(TEMP_PORT); // Windows'ta venv başlatıcısının alt süreci ayakta kalabilir
-  if (pid) killPid(pid);
+  // Windows'ta venv başlatıcısı kapanır ama asıl Python süreci ayakta kalabilir: portu dinleyeni de kapat
+  for (const pid of listeningPids(TEMP_PORT)) killPid(pid);
+  await waitUntil(async () => listeningPids(TEMP_PORT).length === 0, 8000, 300);
+}
+
+/**
+ * Geçici klasörü (derleme + veritabanı) siler. Windows'ta yeni kapanan sürecin dosyaları kısa süre kilitli
+ * kalabilir: birkaç kez dener. Klasör gerçekten gittiyse true.
+ */
+async function removeTempFiles(tmp: TempFiles): Promise<boolean> {
+  for (let i = 0; i < 20 && existsSync(tmp.dir); i++) {
+    try {
+      rmSync(tmp.dir, { recursive: true, force: true });
+    } catch {
+      await sleep(250);
+    }
+  }
+  return !existsSync(tmp.dir);
 }
 
 function instrument(page: Page, report: (i: Issue) => void): void {
-  const allowed = new Set([new URL(WEB).host, new URL(DEV_API).host, new URL(TEMP_API).host]);
+  const allowed = new Set([new URL(TEMP_API).host]);
   page.on("console", (m) => {
     if (m.type() === "error") report({ kind: "console.error", text: m.text() });
   });
@@ -219,29 +255,38 @@ function expect(cond: unknown, message: string): asserts cond {
 
 // ----------------------------------------------------------------------------- ana akış
 export async function runPersonalSmoke(): Promise<number> {
-  if (!(await reachable(`${WEB}/me`))) {
-    console.error(`${c.red}Astronot ekranı (${WEB}/me) açık değil. Önce kökte: npm run dev:ship${c.off}`);
-    return 2;
-  }
   if (!existsSync(VENV_PY)) {
     console.error(`${c.red}${VENV_PY} yok — önce kökte: npm run setup${c.off}`);
     return 2;
   }
-  if (listeningPid(TEMP_PORT)) {
-    console.error(`${c.red}Port ${TEMP_PORT} dolu (önceki bir smoke'tan kalmış olabilir). Kapatın veya SMOKE_PERSONAL_PORT ile başka port verin.${c.off}`);
+  if (listeningPids(TEMP_PORT).length > 0) {
+    console.error(`${c.red}Port ${TEMP_PORT} dolu (önceki bir smoke'tan kalmış olabilir). Kapatın: npm run stop -- --port ${TEMP_PORT}  (ya da SMOKE_PERSONAL_PORT ile başka port verin)${c.off}`);
     return 2;
   }
 
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
+  const tmp = makeTempFiles();
+  const warnIfTempLeft = async () => {
+    if (!(await removeTempFiles(tmp))) console.error(`${c.yellow}geçici klasör silinemedi, elle silin: ${tmp.dir}${c.off}`);
+  };
+  try {
+    process.stdout.write(`${c.dim}arayüz derleniyor (${tmp.dist})…${c.off}\n`);
+    await buildFrontend(tmp.dist);
+  } catch (e) {
+    console.error(`${c.red}Arayüz derlenemedi: ${(e as Error).message.split("\n")[0]}${c.off}`);
+    await warnIfTempLeft();
+    return 2;
+  }
+
   const marker = `SMOKE-${Date.now().toString(36).toUpperCase()}`;
   const results: StepResult[] = [];
   let browser: Browser | null = null;
   let tempShip: ChildProcess | null = null;
 
   try {
-    process.stdout.write(`${c.dim}geçici gemi başlatılıyor (${TEMP_API}, boş veritabanı)…${c.off}\n`);
-    tempShip = await startTempShip();
+    process.stdout.write(`${c.dim}geçici gemi başlatılıyor (${TEMP_API}, boş veritabanı, derlenmiş arayüz)…${c.off}\n`);
+    tempShip = await startTempShip(tmp);
 
     browser = await chromium.launch();
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "tr-TR", colorScheme: "light" });
@@ -253,11 +298,32 @@ export async function runPersonalSmoke(): Promise<number> {
       }
     });
     const page = await context.newPage();
-    // Sayfa dev API adresiyle derlenmiştir; istekleri geçici gemiye çevir (dev veritabanına dokunma).
-    await page.route(`${DEV_API}/**`, (route) => route.continue({ url: route.request().url().replace(DEV_API, TEMP_API) }));
 
     let current: StepResult = { name: "", files: [], issues: [], notes: [], ms: 0 };
-    instrument(page, (i) => current.issues.push(i));
+    /** Sadece "oturum bitti" adımında açılır: orada 401 beklenen cevaptır, sorun sayılmaz. */
+    let expect401 = false;
+    instrument(page, (i) => {
+      const is401 = (i.kind === "http" && i.text.startsWith("401 ")) || (i.kind === "console.error" && i.text.includes("401"));
+      if (!(expect401 && is401)) current.issues.push(i);
+    });
+
+    /**
+     * Prototip sadakati: seçilen öğenin hesaplanmış stili, prototipin CSS'indeki değerle aynı olmalı
+     * (frontend/reference/personal-artifact.html). Başka bir stil dosyası ortak bileşenlere sızarsa burada yakalanır.
+     */
+    const expectStyle = async (selector: string, want: Record<string, string>) => {
+      const got = await page.evaluate(
+        ([sel, props]) => {
+          const el = document.querySelector(sel as string);
+          if (!el) return null;
+          const cs = getComputedStyle(el);
+          return Object.fromEntries((props as string[]).map((p) => [p, cs.getPropertyValue(p)]));
+        },
+        [selector, Object.keys(want)] as const,
+      );
+      expect(got, `${selector} bulunamadı`);
+      for (const [prop, value] of Object.entries(want)) expect(got[prop] === value, `${selector} ${prop} = ${got[prop]} (prototip: ${value})`);
+    };
 
     /** Aynı durumu 390 / 1440 px ve açık / koyu temada kaydeder; sonunda 1440 açık temaya döner. */
     const shots = async (name: string) => {
@@ -292,17 +358,42 @@ export async function runPersonalSmoke(): Promise<number> {
     const strip = page.locator(".strip");
     const dayButton = (day: number) => strip.getByRole("button", { name: new RegExp(`^(Gün|Day) ${day}:`) });
     const checkinCard = page.locator("section[aria-label='Günlük check-in'], section[aria-label='Daily check-in']");
-    const loginAs = async (id: string) => {
+    const submitLogin = async (id: string) => {
       await page.locator("#me-id").fill(id);
       await page.locator("#me-pw").fill(id);
       await page.getByRole("button", { name: "Giriş yap" }).click();
+    };
+    const dashboardReady = async () => {
       await strip.getByRole("button").nth(29).waitFor({ timeout: 20_000 });
       await page.locator(".todo h2").waitFor({ timeout: 10_000 });
+    };
+    const loginAs = async (id: string) => {
+      await submitLogin(id);
+      await dashboardReady();
+    };
+    /**
+     * Bir isteğin cevabını tarayıcıya geç ulaştırır (yavaş ağ / yavaş model): backend isteği hemen işler, cevap
+     * `release()` çağrılana kadar bekletilir. `release()` cevap sayfaya teslim edilince döner.
+     */
+    const holdResponse = async (url: RegExp) => {
+      let open!: () => void;
+      const gate = new Promise<void>((resolve) => (open = resolve));
+      let delivered = false;
+      await page.route(url, async (route) => {
+        const response = await route.fetch();
+        await gate;
+        await route.fulfill({ response });
+        delivered = true;
+      });
+      return async () => {
+        open();
+        expect(await waitUntil(async () => delivered, 10_000, 50), `bekletilen cevap teslim edilemedi: ${url}`);
+      };
     };
 
     // ------------------------------------------------------------------ 1
     await step("1. Giriş kartı (kimlik aralığı API'den, EARTH girişi yok)", async () => {
-      await page.goto(`${WEB}/me`);
+      await page.goto(`${TEMP_API}/me`);
       await page.locator("#me-id").waitFor({ timeout: 20_000 });
       const hint = await api<{ astronauts: { first_id: string; last_id: string; count: number }; text: string }>("GET", "/api/auth/hint");
       await check(current.issues, "ipucu metni API'den", () => page.getByText(hint.text, { exact: true }).waitFor({ timeout: 10_000 }));
@@ -317,6 +408,11 @@ export async function runPersonalSmoke(): Promise<number> {
       });
       await check(current.issues, "üst barda TR/EN seçimi", async () => {
         expect((await page.locator(".langseg button[aria-pressed='true']").innerText()) === "TR", "TR seçili değil");
+      });
+      await check(current.issues, "prototip ölçüleri: giriş kartı", async () => {
+        await expectStyle(".ahc .login", { "max-width": "420px", "row-gap": "12px" });
+        await expectStyle(".ahc .field label", { "font-size": "13px", "font-weight": "600" });
+        await expectStyle(".ahc > main", { "max-width": "680px" });
       });
       await shots("01-login");
     });
@@ -347,7 +443,7 @@ export async function runPersonalSmoke(): Promise<number> {
     });
 
     // ------------------------------------------------------------------ 3
-    await step("3. Şeritte gün seçimi → geçmiş gün salt okunur; önceki/sonraki; bugüne dönüş", async () => {
+    await step("3. Şeritte gün seçimi → geçmiş gün salt okunur; önceki/sonraki; sorunlu gün; bugüne dönüş", async () => {
       await dayButton(12).click();
       await check(current.issues, "gün 12 seçildi", async () => {
         await strip.locator("button[aria-current='true'][aria-label^='Gün 12:']").waitFor({ timeout: 5000 });
@@ -368,6 +464,23 @@ export async function runPersonalSmoke(): Promise<number> {
       await page.getByRole("button", { name: "Önceki gün" }).click();
       await page.getByRole("button", { name: "Önceki gün" }).click();
       await check(current.issues, "önceki gün ×2 → 11", () => strip.locator("button[aria-current='true'][aria-label^='Gün 11:']").waitFor({ timeout: 5000 }));
+      // Sorunlu bir gün (şeritte renkli çubuk): durum başlıkta ikon + metinle verilir, sadece renkle değil
+      const troubled = strip.locator("button.s1, button.s2").first();
+      if ((await troubled.count()) > 0) {
+        const label = (await troubled.getAttribute("aria-label")) ?? "";
+        await troubled.click();
+        await check(current.issues, "sorunlu günde durum: ikon + metin, prototip ölçüsü", async () => {
+          await page.locator(".state .glyph").waitFor({ timeout: 5000 });
+          expect(!(await page.locator(".state").innerText()).includes("Normal"), `başlık hâlâ Normal (${label})`);
+          await expectStyle(".ahc .state .glyph", { width: "13px", height: "13px" });
+        });
+        // Görüntü günün verisi geldikten sonra alınsın (başlık şeritten hemen dolar, gerisi istekle gelir)
+        const troubledDay = /^Gün (\d+):/.exec(label)?.[1];
+        if (troubledDay) await page.locator(".dayrow span", { hasText: new RegExp(`^30 günün ${troubledDay}\\. günü`) }).waitFor({ timeout: 5000 });
+        await page.waitForFunction(() => !document.querySelector("[aria-busy='true'], .waiting"), undefined, { timeout: 5000 });
+        await page.mouse.move(5, 5);
+        await shot("03b-attention-day-1440-light.png");
+      } else current.notes.push(`${ID} için şeritte sorunlu gün yok; ikon denetimi atlandı`);
       await dayButton(30).click();
       await check(current.issues, "bugüne dönüş", () => checkinCard.locator("input").waitFor({ timeout: 5000 }));
     });
@@ -426,6 +539,7 @@ export async function runPersonalSmoke(): Promise<number> {
         expect(notes.length === 4, `not sayısı ${notes.length}`);
         expect(notes[0].includes(answers[0]) && notes[0].includes("işaretlendi"), `uyku notu: ${notes[0]}`);
         expect((await checkinCard.locator(".cinotes > div").first().locator(".glyph.g1").count()) === 1, "işaretli notta ikon yok");
+        await expectStyle(".ahc .cinotes .glyph", { width: "10px", height: "10px" });
       });
       await check(current.issues, "backend'de tamamlandı ve gizli", async () => {
         const st = await api<{ done: boolean; share: string | null; can_reset: boolean; mode: string }>("GET", "/api/checkin", await apiLogin(ID));
@@ -494,6 +608,12 @@ export async function runPersonalSmoke(): Promise<number> {
         expect((await details.locator("table.readings tr[data-col]").count()) === 18, "18 ölçüm satırı yok");
         await details.getByText("Aralıklar simüle veri setinden alınmıştır, tıbbi doğrulama yapılmamıştır.").waitFor({ timeout: 3000 });
         expect((await details.locator("tr[data-col='beh_mood_score'] td").nth(1).innerText()) !== "Paylaşılmadı", "astronot kendi ruh halini göremiyor");
+      });
+      await check(current.issues, "prototip ölçüleri: grafik açıklaması ve tablo işaretleri", async () => {
+        // açık tema: --ink-2 = #47525f
+        await expectStyle(".ahc .legend", { "column-gap": "16px", "font-size": "13px", color: "rgb(71, 82, 95)", "margin-top": "4px", "margin-bottom": "6px" });
+        if ((await details.locator("table.readings .glyph").count()) > 0) await expectStyle(".ahc table.readings .glyph", { width: "10px", height: "10px" });
+        else current.notes.push("tabloda aralık dışı ölçüm yok; işaret ölçüsü denetlenmedi");
       });
       await check(current.issues, "kimlik satırı", () => details.locator(".who").getByText("Simülasyon deseni").waitFor({ timeout: 3000 }));
       await check(current.issues, "grafiğe tıklama gün seçer", async () => {
@@ -617,18 +737,76 @@ export async function runPersonalSmoke(): Promise<number> {
         expect((await page.locator(".whoami").count()) === 0, "çıkıştan sonra kimlik görünüyor");
       });
     });
+
+    // ------------------------------------------------------------------ 11
+    await step(`11. Hesap değiştirme: ${ID3} → ${ID2}; önceki oturumdan hiçbir şey sızmaz (geciken cevaplar dahil)`, async () => {
+      await loginAs(ID3);
+      // ID3'ün cevabı gemiye yazılır ama cevabın dönüşü gecikir (yavaş model gibi); bu sırada çıkış yapılır.
+      const late = `GEC-${marker}`;
+      const releaseTurn = await holdResponse(/\/api\/checkin\/turn\?/);
+      await checkinCard.locator("input").fill(late);
+      await checkinCard.locator("input").press("Enter");
+      await checkinCard.locator(".msg.pending").waitFor({ timeout: 5000 });
+      await page.getByRole("button", { name: "Çıkış" }).click();
+      await page.locator("#me-id").waitFor({ timeout: 10_000 });
+
+      // Sonraki astronot girer; kendi verisi gelene kadar ekranda öncekinden hiçbir şey olmamalı.
+      const releaseMe = await holdResponse(/\/api\/me\?/);
+      await submitLogin(ID2);
+      await page.getByRole("button", { name: "Çıkış" }).waitFor({ timeout: 10_000 });
+      await check(current.issues, "yeni oturum yüklenirken önceki astronotun kimliği / şeridi görünmez", async () => {
+        // allInnerTexts beklemez (innerText öğe yokken 30 sn beklerdi)
+        expect((await page.locator(".whoami").count()) === 0, `üst barda kimlik: ${(await page.locator(".whoami").allInnerTexts()).join(", ")}`);
+        expect((await strip.count()) === 0, "önceki astronotun 30 günlük şeridi görünüyor");
+        expect(!(await page.locator(".ahc").innerText()).includes(ID3), `ekranda ${ID3} geçiyor`);
+      });
+      await releaseMe();
+      await dashboardReady();
+      await check(current.issues, "yeni oturumun kimliği", async () => {
+        expect((await page.locator(".whoami").innerText()).startsWith(`${ID2} ·`), await page.locator(".whoami").innerText());
+      });
+
+      // Şimdi ID3'ün geciken cevabı döner: ID2'nin ekranına yazılmamalı.
+      await releaseTurn();
+      await page.waitForTimeout(500);
+      await check(current.issues, "çıkıştan sonra dönen cevap sonraki astronotun ekranına yazılmaz", async () => {
+        expect(!(await page.locator(".ahc").innerText()).includes(late), `${ID3}'ün cevabı ${ID2}'nin ekranında görünüyor`);
+        expect((await page.locator(".whoami").innerText()).startsWith(`${ID2} ·`), await page.locator(".whoami").innerText());
+      });
+      await check(current.issues, "geciken cevap gemide kayıtlı (denetim gerçekten geç cevabı sınadı)", async () => {
+        const st = await api<{ messages: { who: string; text: string }[] }>("GET", "/api/checkin", await apiLogin(ID3));
+        expect(st.messages.some((m) => m.text.includes(late)), `${ID3}'ün cevabı gemide yok`);
+      });
+      await page.unrouteAll({ behavior: "wait" });
+    });
+
+    // ------------------------------------------------------------------ 12
+    await step("12. Oturum biterse (401) giriş kartına dönülür ve nedeni yazılır", async () => {
+      // Token geçersizleşir (süresi dolmuş / istasyon sıfırlanmış gibi); sonraki istek 401 döner.
+      expect401 = true;
+      await page.evaluate(() => sessionStorage.setItem("ahm-token", "gecersiz-token"));
+      await dayButton(5).click();
+      await check(current.issues, "giriş kartı, neden yazılı, token silindi, astronotun verisi ekranda değil", async () => {
+        await page.locator("#me-id").waitFor({ timeout: 10_000 });
+        const why = (await page.locator(".login [role='alert']").allInnerTexts()).join(" ").trim();
+        expect(why.length > 0, "giriş kartında neden yazmıyor");
+        current.notes.push(`mesaj: ${why}`);
+        expect(await page.evaluate(() => sessionStorage.getItem("ahm-token") === null), "token silinmedi");
+        expect((await page.locator(".whoami").count()) === 0 && (await strip.count()) === 0, "oturum bittikten sonra astronotun verisi ekranda");
+      });
+    });
   } catch (e) {
     results.push({ name: "hazırlık", files: [], issues: [{ kind: "check", text: (e as Error).message }], notes: [], ms: 0 });
   } finally {
     await browser?.close();
-    stopTempShip(tempShip);
-    await sleep(500);
-    rmSync(DB_FILE, { force: true });
-    for (const ext of ["-wal", "-shm"]) rmSync(DB_FILE + ext, { force: true });
+    await stopTempShip(tempShip);
+    // Geride sadece ekran görüntüleri ve log kalsın: geçici veritabanı ve derleme (geçici klasör) silinir
+    await warnIfTempLeft();
+    if (listeningPids(TEMP_PORT).length > 0) console.error(`${c.yellow}geçici gemi hâlâ ${TEMP_PORT} portunda; kapatın: npm run stop -- --port ${TEMP_PORT}${c.off}`);
   }
 
   // ------------------------------------------------------------------ rapor
-  console.log(`\n${c.bold}Smoke raporu — astronot ekranı${c.off}  ${c.dim}(${WEB}/me → geçici gemi ${TEMP_API}; görüntüler: ${OUT})${c.off}\n`);
+  console.log(`\n${c.bold}Smoke raporu — astronot ekranı${c.off}  ${c.dim}(${TEMP_API}/me: derlenmiş arayüz + geçici gemi; görüntüler: ${OUT})${c.off}\n`);
   let failed = 0;
   for (const r of results) {
     const ok = r.issues.length === 0;

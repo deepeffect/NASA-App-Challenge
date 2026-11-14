@@ -5,8 +5,8 @@
  * Çalıştır:  npm run smoke   (kökte veya frontend/ içinde)
  * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts
  * (gemi :8000 ve Dünya :8001/:5174 açıkken; argümansız çalıştırınca :8000 yeni mimarideyse o seçilir).
- * Astronot ekranı (/me) için: `npm run smoke -- personal` → scripts/smoke-personal.ts (dev:ship açıkken;
- * kendi geçici gemi backend'ini başlatır, geliştirme veritabanına dokunmaz).
+ * Astronot ekranı (/me) için: `npm run smoke -- personal` → scripts/smoke-personal.ts (ön koşul yok: arayüzü
+ * derler ve kendi geçici gemi backend'ini başlatır; geliştirme veritabanına ve çalışan sunuculara dokunmaz).
  *
  * Ekranları sırayla açar, tam sayfa ekran görüntülerini frontend/screenshots/ altına yazar ve
  * konsol hatalarını, yakalanmamış JS hatalarını, başarısız/4xx-5xx istekleri raporlar.
