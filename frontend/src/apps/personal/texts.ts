@@ -59,6 +59,10 @@ const T = {
     tr: "Cevaplarınız, sonunda paylaşmayı seçmediğiniz sürece gemide kalır.",
     en: "Your answers stay on the ship unless you choose to share them at the end.",
   },
+  presenceNote: {
+    tr: "Dünya yalnızca terminalinin çevrimiçi olup olmadığını görür; ne yazdığını görmez.",
+    en: "Earth only sees whether your terminal is online; it does not see what you write.",
+  },
   sendFailed: { tr: "Gönderilemedi. Lütfen yeniden cevaplayın.", en: "That did not go through. Please answer again." },
   pastNoCheckin: { tr: "Bu gün için kaydedilmiş bir check-in yok.", en: "No check-in was saved for this day." },
   pastReadOnly: {

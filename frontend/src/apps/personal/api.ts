@@ -22,6 +22,7 @@ export const qk = {
   dayAny: (day: number) => ["personal", "day", day] as const,
   checkin: (day: number, lang: Lang) => ["personal", "checkin", day, lang] as const,
   checkinAny: (day: number) => ["personal", "checkin", day] as const,
+  presence: () => ["personal", "presence"] as const,
 };
 
 export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
@@ -72,6 +73,28 @@ export function useCheckin(day: number | undefined, lang: Lang) {
     queryKey: qk.checkin(day ?? 0, lang),
     queryFn: () => stationApi.checkinDay(day as number),
     enabled: day !== undefined,
+    retry,
+  });
+}
+
+/**
+ * Terminal varlığı: ekran açıkken gemiye sinyal (`POST /api/me/presence`). İlk sinyal girişte hemen, sonra gemi
+ * cevabındaki aralıkla (PRESENCE_HEARTBEAT_SECONDS, varsayılan 30 sn); sekme arka plandayken de sürer (ekran açık =
+ * terminal çevrimiçi), sekme yeniden görünür olunca ve ağ geri gelince hemen. Dünya sadece çevrimiçi / çevrimdışı ve
+ * son görülmeyi görür; ne yazıldığını görmez. Sonucu ekranda gösterilmez.
+ *
+ * Sorgu olarak yazıldı: aralık, odak / yeniden bağlanma ve oturum yalıtımı hazır gelir — çıkışta oturumun
+ * istemcisiyle birlikte durur, 401 dönerse Session'ın önbellek dinleyicisi girişe döndürür.
+ */
+export function useTerminalPresence(): void {
+  useQuery({
+    queryKey: qk.presence(),
+    queryFn: () => stationApi.presence(),
+    refetchInterval: (q) => (q.state.data?.interval_seconds ?? 30) * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: "always",
+    refetchOnReconnect: "always",
+    staleTime: 0,
     retry,
   });
 }

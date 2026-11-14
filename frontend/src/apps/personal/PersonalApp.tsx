@@ -11,6 +11,8 @@
  *  - Check-in ve paylaşım backend'de tutulur; check-in sadece bugün yapılır.
  *  - Üst barda TR/EN seçimi; yazı tipleri paketten gelir (offline).
  * Ekler: to-do'da "Yaptım", kapalı "Asistana sor" kartı, acil belirtide "sağlık sorumlusu bilgilendirildi" kutusu.
+ * Terminal varlığı: giriş yapılmışken gemiye düzenli sinyal (api.ts → useTerminalPresence); "Çıkış" ayrıca bir
+ * ayrılma sinyali gönderir, terminal Dünya'da beklemeden çevrimdışı görünür. Ekranda görünmez.
  *
  * Oturum yalıtımı (ortak ekran, birden çok astronot): giriş yapan astronota ait her şey — sorgular, yazma
  * istekleri, "yenisi gelene kadar eskisini göster" verisi — o oturuma özel bir sorgu istemcisinde yaşar ve
@@ -22,7 +24,7 @@ import { type ReactNode, useCallback, useEffect, useState } from "react";
 
 import { auth, type PersonalCatalog, type StationInfo, StationApiError, stationApi } from "../../api/station";
 import { HealthRoot, SelfCareDialog } from "../../shared/health";
-import { isUnauthorized, useCatalog, useHint, useOverview } from "./api";
+import { isUnauthorized, useCatalog, useHint, useOverview, useTerminalPresence } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Login } from "./Login";
 import "./personal.css";
@@ -64,9 +66,18 @@ export function PersonalApp(_props: { station: StationInfo }) {
     [session],
   );
 
+  /**
+   * "Çıkış": terminal Dünya'da beklemeden çevrimdışı görünsün (aynı terminalde hesap değişince önceki astronot
+   * zaman aşımına kadar "çevrimiçi" kalmasın). İstek token silinmeden yola çıkar; cevabı beklenmez.
+   */
+  const logout = useCallback(() => {
+    stationApi.presence(true).catch(() => undefined);
+    endSession(null);
+  }, [endSession]);
+
   const frame: Frame = (who, days, content) => (
     <>
-      <TopBar who={who} authed={session !== null} onLogout={() => endSession(null)} onInfo={() => setInfoOpen(true)} />
+      <TopBar who={who} authed={session !== null} onLogout={logout} onInfo={() => setInfoOpen(true)} />
       {content}
       <SelfCareDialog audience="astronaut" open={infoOpen} onClose={() => setInfoOpen(false)} solutions={catalog.data?.solutions ?? []} />
       <p className="muted">{count && days ? t("footnote", { count, days }) : t("footnoteShort")}</p>
@@ -108,6 +119,7 @@ function Session({ catalog, onEnd, frame }: SessionProps) {
   const { t, lang } = useT();
   const qc = useQueryClient(); // bu oturumun istemcisi
   const overview = useOverview(lang);
+  useTerminalPresence(); // gemiye "terminal açık" sinyali (bu oturumun istemcisinde; çıkışta durur)
 
   // Herhangi bir sorgu veya değişiklik 401 dönerse (token süresi dolmuş, istasyon sıfırlanmış) girişe dön.
   useEffect(() => {
