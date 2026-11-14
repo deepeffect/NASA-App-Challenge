@@ -94,6 +94,14 @@ step("npm bağımlılıkları (kök + frontend)");
 npm(["install", "--no-fund", "--no-audit"], ROOT);
 npm(["install", "--no-fund", "--no-audit"], FRONTEND);
 
+// Görsel smoke testi (npm run smoke) için Playwright tarayıcısı; kullanıcı dizinine iner.
+// İndirme başarısız olsa da kurulum devam eder (uygulama tarayıcısız çalışır).
+step("Playwright Chromium (npm run smoke için)");
+const pw = run("npx", ["playwright", "install", "chromium"], { cwd: FRONTEND, shell: isWin, allowFail: true });
+if (pw.error || pw.status !== 0) {
+  console.log(`${c.yellow}Chromium indirilemedi; smoke'tan önce elle: cd frontend && npx playwright install chromium${c.off}`);
+}
+
 // ---------------------------------------------------------------- 5) sözleşme
 step("API sözleşmesi → frontend tipleri");
 py(["-m", "app.cli", "export-openapi"]);
