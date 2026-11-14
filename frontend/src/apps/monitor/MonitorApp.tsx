@@ -19,6 +19,7 @@ import { auth, type StationInfo, stationApi } from "../../api/station";
 import { AllAstronauts } from "./AllAstronauts";
 import { isUnauthorized } from "./api";
 import { CrewSection } from "./CrewSection";
+import { GroundSection } from "./GroundSection";
 import { LinkBar } from "./LinkBar";
 import { LiveFeed } from "./LiveFeed";
 import { LiveProvider } from "./live";
@@ -82,6 +83,7 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
       <div className="mon-body">
         <main className="mon-main">
           <CrewSection />
+          <GroundSection />
           <AllAstronauts />
         </main>
         <aside className="mon-side">

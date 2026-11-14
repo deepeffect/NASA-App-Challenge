@@ -163,16 +163,17 @@ tr.flash > td { background: var(--accent-soft); }
 }
 
 /* ---------------------------------------------------------------- yer desteği */
-.glist { display: flex; flex-direction: column; }
+.glist { display: flex; flex-direction: column; max-height: 372px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; }
+@media (min-width: 1800px) { .glist { max-height: 440px; } }
 .glist details { border-top: 1px solid var(--line); }
 .glist details:first-child { border-top: 0; }
-.glist summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 64px minmax(0, 1.2fr) 150px 52px minmax(0, 2fr) 18px; gap: 12px; align-items: center; padding: 8px 2px; }
+.glist summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 56px 150px 120px 40px minmax(0, 1fr) 18px; gap: 12px; align-items: center; padding: 8px 2px; }
 .glist summary::-webkit-details-marker { display: none; }
 .glist summary .chev { color: var(--muted); transition: transform 0.15s; justify-self: end; width: 14px; height: 14px; }
 .glist details[open] summary .chev { transform: rotate(90deg); }
 @media (prefers-reduced-motion: reduce) { .glist summary .chev { transition: none; } }
 .glist summary b { font-family: var(--font-display); font-weight: 700; }
-.glist .why { padding: 2px 2px 12px 76px; display: flex; flex-direction: column; gap: 4px; font-size: 0.92em; }
+.glist .why { padding: 2px 2px 12px 68px; display: flex; flex-direction: column; gap: 4px; font-size: 0.92em; }
 .glist .why .r { display: flex; gap: 10px; align-items: center; }
 .glist .why .r .glyph { width: 9px; height: 9px; }
 .glist .score { text-align: right; font-weight: 600; }
