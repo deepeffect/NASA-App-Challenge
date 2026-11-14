@@ -2,7 +2,11 @@
 
 > **Hızlı başlangıç** (kök klasörde; gereken: Node 20.19+, [uv](https://docs.astral.sh/uv/)):
 > 1. `npm run setup` — Python ortamı, npm paketleri, `.env` dosyaları, API tipleri, demo verisi
-> 2. `npm run dev` — backend + frontend birlikte → arayüz <http://localhost:5173>, API <http://127.0.0.1:8000/docs>
+> 2. `npm run dev:ship` — gemi: API <http://127.0.0.1:8000/docs> + astronot ekranı <http://localhost:5173/me>
+> 3. `npm run dev:earth` — Dünya üssü: API :8001 + <http://localhost:5174/monitor> (gemiden downlink alır)
+>
+> Gerçek kurulum (3 bilgisayar, `npm run serve`): aşağıda **"3 bilgisayar kurulumu"**.
+> Eski ekranlar (sentetik veri): `npm run dev` → <http://localhost:5173/legacy>
 
 NASA Space Apps Challenge 2026 · *Create Health Monitoring Software for Astronauts on Space Mission*
 
@@ -29,15 +33,149 @@ Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
 
 | Komut | Ne yapar |
 |---|---|
+| `npm run dev:ship` | gemi rolü: backend `127.0.0.1:8000` (`ship.db`, veri seti ilk açılışta yüklenir) + arayüz `:5173` (`/me`). `-- --lan` → `0.0.0.0` |
+| `npm run dev:earth` | Dünya rolü: backend `127.0.0.1:8001` (`earth.db`, `SHIP_URL=http://127.0.0.1:8000`) + arayüz `:5174` (`/monitor`) |
+| `npm run reset` | seçili rolün DB'sini sıfırlar: `npm run reset -- ship` / `-- earth` (rol verilmezse `backend/.env`'deki `STATION_ROLE`) |
+| `npm run serve` | arayüzü derler, backend'i `0.0.0.0:8000`'de başlatır ve derlenmiş arayüzü kendisi servis eder (gemi `/me`, Dünya `/monitor`). Rol `backend/.env`'den; `npm run serve -- earth --port 8001 --no-build` |
 | `npm run setup` | uv kontrolü → `backend/.venv` + `uv pip install -e ".[dev]"` → `.env.example`→`.env` (yoksa) → npm paketleri → `gen:api` → DB boşsa `seed --seed 42`. Tekrar çalıştırmak güvenli. |
-| `npm run dev` | backend (`127.0.0.1:8000`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır. Backend `app/` altındaki `.py` değişince kendiliğinden yeniden başlar (`scripts/backend-dev.mjs`; uvicorn `--reload` Windows'ta tüm konsola Ctrl+C gönderip `npm run dev`'i düşürdüğü için kullanılmıyor) |
+| `npm run dev` | **eski ekranlar** (`DATA_SOURCE=synthetic`, `health.db`, `/legacy`): backend (`127.0.0.1:8000`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır. Backend `app/` altındaki `.py` değişince kendiliğinden yeniden başlar (`scripts/backend-dev.mjs`; uvicorn `--reload` Windows'ta tüm konsola Ctrl+C gönderip `npm run dev`'i düşürdüğü için kullanılmıyor) |
 | `npm run dev:backend` / `npm run dev:frontend` | tek tek |
 | `npm run dev:backend:lan` | backend'i ağa aç (`0.0.0.0:8000`) — takım arkadaşları bağlanacaksa |
-| `npm run seed` | demo verisini yeniden yükle (DB'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
+| `npm run seed` | eski ekranların sentetik demo verisini yeniden yükle (`health.db`'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
 | `npm run test` | backend `pytest` + frontend tip kontrolü |
 | `npm run smoke` | Playwright ile 7 ekranın tam sayfa görüntüsü (`frontend/screenshots/`) + konsol hatası / başarısız istek raporu. `npm run dev` açıkken çalıştırın; ilk sefer: `npx --prefix frontend playwright install --only-shell chromium` |
 
 Aşağıdaki bölümler aynı adımların elle yapılışını anlatır.
+
+## 3 bilgisayar kurulumu (gemi · astronot terminali · Dünya üssü)
+
+Aynı yerel ağda üç bilgisayar; **internet yok**, Docker/bulut/tünel yok. Aynı repo iki rolde çalışır
+(`STATION_ROLE`). Kurallar için tek doğru kaynak: [`frontend/reference/personal-artifact.html`](frontend/reference/personal-artifact.html).
+
+```
+ Astronot terminali ──(tarayıcı)──▶  GEMİ  :8000  ──(downlink: snapshot + SSE)──▶  DÜNYA ÜSSÜ :8000
+   http://<gemi>:8000/me            Ollama + backend + bütün veri                  earth.db, /monitor (salt okunur)
+                                    ship.db, gizlilik filtresi BURADA
+```
+
+| Rol | Ne çalışır | Açtığı ekran | Veri |
+|---|---|---|---|
+| **Gemi** (`STATION_ROLE=ship`) | Ollama + backend (`npm run serve`) | `/me` (astronot) | `data/processed/ship.db` (veri seti ilk açılışta `data/raw/astronaut_health.json`'dan yüklenir) |
+| **Astronot terminali** | sadece tarayıcı | `http://<gemi>:8000/me` | yok |
+| **Dünya üssü** (`STATION_ROLE=earth`) | backend (`npm run serve`) | `/monitor` (EARTH / EARTH) | `data/processed/earth.db` — sadece gemiden gelen, **gemide filtrelenmiş** veri |
+
+- Paylaşılmamış veri (ruh hali, stres, check-in cevapları, CMO bildirimleri) gemi bilgisayarından hiç çıkmaz.
+- Gemi, Dünya bağlantısı olmadan tam çalışır; bağlantı gelince Dünya kaldığı yerden devam eder.
+- Diğer rolün ekranı açılırsa arayüz "bu ekran bu istasyonda değil" gösterir.
+
+### 1) Her bilgisayarda (bir kez)
+
+```powershell
+git clone <repo> ; cd NASA-App-Challenge
+npm run setup            # Python ortamı, npm paketleri, .env dosyaları
+ipconfig                 # IPv4 adresini not edin (Wi-Fi/Ethernet), örn. gemi 192.168.1.10
+```
+
+Windows ağ profili **Özel** olmalı (Ayarlar → Ağ ve İnternet → bağlantı → Ağ profili türü: Özel);
+"Ortak" profilde gelen bağlantılar engellenir.
+
+Ortak bir downlink anahtarı üretin (iki istasyonda **aynı** olacak):
+
+```powershell
+backend\.venv\Scripts\python -c "import secrets; print(secrets.token_urlsafe(24))"
+```
+
+### 2) Gemi bilgisayarı
+
+`backend/.env`:
+
+```ini
+STATION_ROLE=ship
+DATA_SOURCE=astronaut_health
+EARTH_LINK_TOKEN=<ortak-anahtar>
+# Ollama aynı makinede
+LLM_PROVIDER=openai
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_MODEL=qwen3:14b
+# scripted (varsayılan) | auto: LLM'e ulaşılamazsa scripted | llm
+CHECKIN_MODE=scripted
+# Gecikme deneyi: olaylar Dünya'ya bu kadar saniye sonra gider (0 = hemen)
+DOWNLINK_DELAY_SECONDS=0
+# Gerçek ışık gecikmesi etiketi (dakika; sadece gösterilir)
+DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES=20
+```
+
+Ollama (bkz. "2. LLM servisi"; backend aynı makinede olduğu için `OLLAMA_HOST` değiştirmek gerekmez):
+
+```powershell
+ollama pull qwen3:14b                    # 8 GB VRAM: qwen3:8b
+setx OLLAMA_KEEP_ALIVE "-1"
+setx OLLAMA_CONTEXT_LENGTH "16384"
+```
+
+Firewall (Yönetici PowerShell) — astronot terminali ve Dünya üssü gemiye 8000'den bağlanır:
+
+```powershell
+New-NetFirewallRule -DisplayName "Astro Health 8000" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+```
+
+Çalıştır:
+
+```powershell
+npm run serve            # arayüzü derler, 0.0.0.0:8000'de başlar; ağ adreslerini yazar
+```
+
+### 3) Astronot terminali
+
+Sadece tarayıcı: `http://<gemi-ip>:8000/me`. Kiosk modu (tam ekran, adres çubuğu yok; çıkış Alt+F4):
+
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk http://192.168.1.10:8000/me
+# Edge: msedge --kiosk http://192.168.1.10:8000/me --edge-kiosk-type=fullscreen
+```
+
+Giriş: astronot kimliği (A000 … A199), şifre kimlikle aynı (büyük/küçük harf duyarsız).
+
+### 4) Dünya üssü
+
+`backend/.env`:
+
+```ini
+STATION_ROLE=earth
+SHIP_URL=http://192.168.1.10:8000
+EARTH_LINK_TOKEN=<ortak-anahtar>
+# EARTH_PASSWORD=EARTH
+```
+
+```powershell
+npm run serve            # tarayıcıda http://127.0.0.1:8000/monitor  (EARTH / EARTH)
+```
+
+Dünya ekranını başka cihazlar da açacaksa Dünya bilgisayarında da 8000 için aynı firewall kuralını ekleyin.
+
+### 5) Kontrol
+
+```powershell
+curl http://192.168.1.10:8000/api/station          # gemi: {"role":"ship", ...}
+curl http://127.0.0.1:8000/api/station             # Dünya'da: {"role":"earth", ...}
+```
+
+Dünya ekranındaki bağlantı durumu (`GET /api/link/status`, giriş gerekir): bağlı mı, son temas, gemide
+bekleyen olay sayısı. Gemi kapatılıp açılırsa Dünya kendiliğinden yeniden bağlanır ve eksik olayları alır.
+Gemi DB'si sıfırlanırsa (`npm run reset`) Dünya baştan senkronize olur.
+
+Güncelleme: her bilgisayarda `git pull` → `npm run serve` (veri seti değiştiyse gemi açılışta yeniden yükler).
+
+### Tek makinede geliştirme
+
+```powershell
+npm run dev:ship         # API :8000 (ship.db) + arayüz :5173  → http://localhost:5173/me
+npm run dev:earth        # API :8001 (earth.db, SHIP_URL=http://127.0.0.1:8000) + arayüz :5174 → /monitor
+npm run reset -- ship    # rolün DB'sini sıfırla (earth için: npm run reset -- earth)
+```
+
+İki rol aynı geliştirme anahtarını kullanır (`EARTH_LINK_TOKEN` ortamda yoksa `dev-link-token`).
+
 
 ## 1. Backend kurulumu
 

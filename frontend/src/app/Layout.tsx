@@ -19,10 +19,10 @@ export function Layout() {
               <span className="text-xl font-bold tracking-tight">Astronot Sağlık İzleme</span>
             </div>
             <nav className="flex items-center gap-1" aria-label="Ana menü">
-              <NavLink to="/" end className={navCls}>
+              <NavLink to="/legacy" end className={navCls}>
                 Mürettebat
               </NavLink>
-              <NavLink to="/checkin" className={navCls}>
+              <NavLink to="/legacy/checkin" className={navCls}>
                 Check-in
               </NavLink>
             </nav>

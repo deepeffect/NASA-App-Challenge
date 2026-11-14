@@ -13,6 +13,7 @@
     "dev:ship": "node scripts/station.mjs dev ship",
     "dev:earth": "node scripts/station.mjs dev earth",
     "reset": "node scripts/station.mjs reset",
+    "serve": "node scripts/station.mjs serve",
     "seed": "node scripts/py.mjs -m app.cli seed --seed 42",
     "test": "node scripts/py.mjs -m pytest && npm --prefix frontend run typecheck",
     "smoke": "npm --prefix frontend run smoke"

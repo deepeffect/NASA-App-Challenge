@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.auth import EARTH_ID, PrincipalDep, authenticate, issue_token, station_secret
 from app.i18n import LangDep, t
 from app.models.schemas import AccountRange, AuthHint, ErrorResponse, LoginRequest, LoginResponse, PrincipalInfo
-from app.station import HOME_PATH, DBSession, station_settings
+from app.station import DBSession, home_path, station_settings
 
 router = APIRouter(tags=["auth"])
 ERRORS = {400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 403: {"model": ErrorResponse}}
@@ -37,7 +37,7 @@ def login(req: LoginRequest, request: Request, lang: LangDep, db: DBSession) -> 
         subject=p.subject,
         astronaut_id=p.astronaut_id,
         station=s.station_role,
-        home_path=HOME_PATH[s.station_role],
+        home_path=home_path(s),
         expires_at=exp,
     )
 

@@ -22,6 +22,11 @@ EARTH_WRITE_ALLOWLIST = frozenset({"/api/auth/login"})
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
+def home_path(s: Settings) -> str:
+    """Bu istasyonun ana ekranı: gemi /me, Dünya /monitor; eski sentetik mod /legacy."""
+    return "/legacy" if s.legacy_enabled else HOME_PATH[s.station_role]
+
+
 def station_settings(request: Request) -> Settings:
     """Uygulamanın kurulduğu ayarlar (create_app(settings=...)); yoksa global ayarlar."""
     return getattr(request.app.state, "settings", None) or get_settings()

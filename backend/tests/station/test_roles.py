@@ -28,10 +28,15 @@ def test_explicit_database_url_wins() -> None:
     assert Settings(station_role="earth", database_url="sqlite:///x.db").database_url_resolved == "sqlite:///x.db"
 
 
-def test_station_endpoint_ship() -> None:
-    with make_client("ship") as c:
-        info = c.get("/api/station").json()
+def test_station_endpoint_ship(ship_client) -> None:
+    info = ship_client.get("/api/station").json()
     assert info["role"] == "ship" and info["home_path"] == "/me" and info["read_only"] is False
+
+
+def test_station_endpoint_legacy_ship() -> None:
+    with make_client("ship") as c:  # test ortamı: DATA_SOURCE=synthetic
+        info = c.get("/api/station").json()
+    assert info["role"] == "ship" and info["home_path"] == "/legacy" and info["legacy_enabled"] is True
 
 
 def test_station_endpoint_earth() -> None:

@@ -79,7 +79,10 @@ def _custom_openapi(app: FastAPI):
             return app.openapi_schema
         schema = get_openapi(title=app.title, version=app.version, description=app.description, routes=app.routes)
         comps = schema.setdefault("components", {}).setdefault("schemas", {})
-        for model in SSE_MODELS.values():
+        from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, MonitorStreamEvent
+
+        # SSE ile akan ama route şemasında görünmeyen modeller (frontend tip üretimi için)
+        for model in [*SSE_MODELS.values(), DownlinkEvent, DownlinkHeartbeat, MonitorStreamEvent]:
             js = model.model_json_schema(ref_template="#/components/schemas/{model}", mode="serialization")
             for name, sub in js.pop("$defs", {}).items():
                 comps.setdefault(name, sub)
@@ -133,6 +136,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.legacy_enabled:
         # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
         app.include_router(legacy_router, prefix="/api")
+    from app.web import mount_frontend
+
+    mount_frontend(app, settings)  # en sonda: /api önceliklidir
+    app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
+    return app
+
+
+def create_docs_app() -> FastAPI:
+    """Dokümantasyon için: iki istasyonun ve eski modun BÜTÜN uçları tek şemada (docs/openapi.json).
+
+    Çalışma zamanında her istasyon bunların sadece kendi rolüne ait olanlarını açar (API.md).
+    Eski /api/chat yerine aynı yoldaki yeni sohbet belgelenir (ChatRequest ikisini de kapsar).
+    """
+    from fastapi import APIRouter
+
+    app = FastAPI(title="Astronaut Health Monitor API", version=__version__, description=DESCRIPTION)
+    for r in (station_router, auth_router, catalog_router, personal_router, checkin_router, downlink_router,
+              assistant_router, monitor_router):
+        app.include_router(r, prefix="/api")
+    legacy = APIRouter()
+    legacy.routes.extend(r for r in legacy_router.routes if getattr(r, "path", "") != "/chat")
+    app.include_router(legacy, prefix="/api")
     app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
     return app
 

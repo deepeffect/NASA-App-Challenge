@@ -113,8 +113,9 @@ def cmd_reindex(args: argparse.Namespace) -> None:
 
 
 def cmd_export_openapi(args: argparse.Namespace) -> None:
-    from app.main import app
+    from app.main import create_docs_app
 
+    app = create_docs_app()
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(app.openapi(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

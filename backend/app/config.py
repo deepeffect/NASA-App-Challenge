@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     # --- Yollar ---
+    frontend_dist: Path = REPO_ROOT / "frontend" / "dist"  # backend'in servis ettiği derlenmiş arayüz
     data_dir: Path = REPO_ROOT / "data"
     config_dir: Path = BACKEND_DIR / "config"
     database_url: str | None = None
@@ -108,7 +109,7 @@ class Settings(BaseSettings):
             return [p.strip() for p in v.split(",") if p.strip()]
         return v
 
-    @field_validator("data_dir", "config_dir", "docs_dir", "rag_index_dir", "dataset_path", mode="after")
+    @field_validator("data_dir", "config_dir", "docs_dir", "rag_index_dir", "dataset_path", "frontend_dist", mode="after")
     @classmethod
     def _resolve_path(cls, v: Path | None) -> Path | None:
         if v is None or v.is_absolute():

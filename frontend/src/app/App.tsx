@@ -1,11 +1,18 @@
+/**
+ * Kök router. Aynı derleme iki istasyonda servis edilir; her istasyon sadece kendi ekranını açar:
+ *   /me       astronot ekranı (gemi)        → apps/personal
+ *   /monitor  Dünya üssü ekranı (Dünya)     → apps/monitor
+ *   /legacy   eski ekranlar (gemi + DATA_SOURCE=synthetic)
+ *   /         bu istasyonun ana ekranına yönlendirir
+ */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
-import { AstronautPage } from "../features/astronaut";
-import { CheckinPage } from "../features/checkin";
-import { CrewPage } from "../features/crew";
-import { AsOfProvider } from "./AsOfContext";
-import { Layout } from "./Layout";
+import { MonitorApp } from "../apps/monitor/MonitorApp";
+import { PersonalApp } from "../apps/personal/PersonalApp";
+import { LangProvider, useLang } from "../shared/i18n";
+import { LegacyOnly, StationGate, StationOnly } from "../shared/station";
+import { LegacyApp } from "./LegacyApp";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,22 +20,46 @@ const queryClient = new QueryClient({
   },
 });
 
+function NotFound() {
+  const { t } = useLang();
+  return <p className="mx-auto mt-24 max-w-lg px-4 text-center">{t("notFound")}</p>;
+}
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AsOfProvider>
+      <LangProvider>
+        <BrowserRouter>
           <Routes>
-            <Route element={<Layout />}>
-              <Route index element={<CrewPage />} />
-              <Route path="astronauts/:id" element={<AstronautPage />} />
-              <Route path="checkin" element={<CheckinPage />} />
-              <Route path="checkin/:id" element={<CheckinPage />} />
-              <Route path="*" element={<p>Sayfa bulunamadı.</p>} />
-            </Route>
+            <Route path="/" element={<StationGate>{(s) => <Navigate to={s.home_path} replace />}</StationGate>} />
+            <Route
+              path="/me/*"
+              element={
+                <StationOnly role="ship">
+                  <StationGate>{(s) => <PersonalApp station={s} />}</StationGate>
+                </StationOnly>
+              }
+            />
+            <Route
+              path="/monitor/*"
+              element={
+                <StationOnly role="earth">
+                  <StationGate>{(s) => <MonitorApp station={s} />}</StationGate>
+                </StationOnly>
+              }
+            />
+            <Route
+              path="/legacy/*"
+              element={
+                <LegacyOnly>
+                  <LegacyApp />
+                </LegacyOnly>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
           </Routes>
-        </AsOfProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </LangProvider>
     </QueryClientProvider>
   );
 }

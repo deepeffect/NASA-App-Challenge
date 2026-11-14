@@ -16,7 +16,7 @@ export function CrewCard({ member }: { member: CrewMember }) {
   const { active_events: c } = member;
   return (
     <Link
-      to={`/astronauts/${member.id}`}
+      to={`/legacy/astronauts/${member.id}`}
       className={`block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 transition-colors ${RING[member.status]}`}
       aria-label={`${member.name} detayına git`}
     >
