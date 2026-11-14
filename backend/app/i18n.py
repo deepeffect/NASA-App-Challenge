@@ -115,6 +115,19 @@ MESSAGES: dict[str, dict[Lang, str]] = {
     "forbidden_kind": {"tr": "Bu hesap bu işlemi yapamaz.", "en": "This account cannot do that."},
     "unknown_astronaut": {"tr": "Astronot bulunamadı: {id}", "en": "Astronaut not found: {id}"},
     "unknown_day": {"tr": "Geçersiz gün: {day} (1–{n})", "en": "Invalid day: {day} (1–{n})"},
+    # ---- check-in
+    "empty_answer": {"tr": "Bir cevap yazın.", "en": "Type an answer."},
+    "checkin_done": {"tr": "Bugünün check-in'i tamamlandı.", "en": "Today's check-in is complete."},
+    "checkin_not_done": {"tr": "Önce bugünün check-in'ini tamamlayın.", "en": "Finish today's check-in first."},
+    "reset_locked": {
+        "tr": "Dünya ile paylaşılmış bir check-in baştan başlatılamaz.",
+        "en": "A check-in shared with Earth cannot be started over.",
+    },
+    "cmo_title": {"tr": "Gemideki sağlık sorumlusu bilgilendirildi.", "en": "Crew medical officer told."},
+    "cmo_text": {
+        "tr": "Belirti cevabınız gemideki sağlık sorumlusuna iletildi. Dünya'ya gönderilmedi.",
+        "en": "Your symptom answer went to the medical officer on board. It was not sent to Earth.",
+    },
 }
 
 

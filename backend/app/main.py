@@ -13,6 +13,7 @@ from fastapi.openapi.utils import get_openapi
 from app import __version__
 from app.api import router as legacy_router
 from app.api.auth import router as auth_router
+from app.api.checkin import router as checkin_router
 from app.api.personal import public_router as catalog_router
 from app.api.personal import router as personal_router
 from app.api.station import router as station_router
@@ -95,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(catalog_router, prefix="/api")
     if settings.station_role == "ship" and settings.data_source == "astronaut_health":
         app.include_router(personal_router, prefix="/api")
+        app.include_router(checkin_router, prefix="/api")
     if settings.legacy_enabled:
         # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
         app.include_router(legacy_router, prefix="/api")

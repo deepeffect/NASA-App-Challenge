@@ -808,3 +808,65 @@ class PersonalCatalogResponse(BaseModel):
     threshold_source: str
     verified: bool
     threshold_note: str
+
+
+# =============================================================================
+# /api/checkin (gemi) — prototipin assistantTurn sözleşmesi
+# =============================================================================
+CheckinMode = Literal["scripted", "llm", "auto"]
+
+
+class CheckinMessage(BaseModel):
+    who: Literal["bot", "me"]
+    text: str
+
+
+class CheckinNote(BaseModel):
+    topic: str = Field(description="Konu adı (yazıldığı dilde)")
+    topic_key: str = Field(description="sleep | mood | stress | symptoms | other")
+    text: str = Field(description="Astronotun cevabı (aynen)")
+    flag: bool
+    urgent: bool = Field(description="Acil belirti → gemideki CMO bilgilendirildi (Dünya'ya gitmez)")
+
+
+class CheckinNext(BaseModel):
+    text: str
+    options: list[str]
+
+
+class CmoNotice(BaseModel):
+    title: str
+    text: str
+
+
+class CheckinState(BaseModel):
+    astronaut_id: str
+    day: int
+    mission_day: int
+    is_today: bool
+    editable: bool = Field(description="true → bugün ve bitmemiş (cevap verilebilir)")
+    started: bool
+    step: int
+    options: list[str] = Field(description="Hızlı cevaplar")
+    messages: list[CheckinMessage]
+    notes: list[CheckinNote]
+    done: bool
+    share: ShareLevel | None = Field(description="Tamamlandıysa paylaşım seviyesi (varsayılan private)")
+    can_reset: bool = Field(description="'Baştan başla': sadece paylaşım private iken")
+    cmo_notified: bool
+    cmo_notice: CmoNotice | None = Field(description="'Gemideki sağlık sorumlusu bilgilendirildi'")
+    completed_at: dt.datetime | None = None
+
+
+class CheckinTurnRequest(BaseModel):
+    answer: str = Field(max_length=2000)
+
+
+class CheckinTurnResponse(BaseModel):
+    """Prototipin assistantTurn çıktısı aynen + güncel durum (`checkin`, ek alan)."""
+
+    reply: str
+    note: CheckinNote | None
+    next: CheckinNext | None
+    done: bool
+    checkin: CheckinState

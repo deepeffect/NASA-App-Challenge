@@ -106,6 +106,12 @@ class MockClient:
             return json.dumps(templates.alert_explanation(ctx, lang), ensure_ascii=False)
         if name == "DailyBriefing":
             return json.dumps(templates.daily_briefing(ctx, lang), ensure_ascii=False)
+        if name == "CheckinTurnDraft":  # mock: scripted check-in ile aynı karar
+            from app.personal.checkin_script import assistant_turn
+
+            out = assistant_turn(ctx, lang)
+            note = out["note"]
+            return json.dumps({"reply": out["reply"], "flag": bool(note and note["flag"]), "skip": note is None}, ensure_ascii=False)
         return "{}"
 
     # ------------------------------------------------------------------ arayüz

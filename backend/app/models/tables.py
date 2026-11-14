@@ -130,3 +130,37 @@ class DayRecord(SQLModel, table=True):
     main_concern: str
     self_care: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     needs_ground_support: bool
+
+
+class CheckinSession(SQLModel, table=True):
+    """Bir günün check-in'i (prototipteki checkins[id:gün]). Sadece bugün için yazılır."""
+
+    astronaut_id: str = Field(foreign_key="crewprofile.id", primary_key=True)
+    day_index: int = Field(primary_key=True)
+    mission_day: int
+    lang: str = "tr"
+    step: int = 0
+    options: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    messages: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    notes: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    modes: list[str] = Field(default_factory=list, sa_column=Column(JSON))  # tur başına scripted | llm
+    done: bool = False
+    cmo: bool = False
+    share: str | None = Field(default=None, description="private | scores | full; sadece artar")
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+    completed_at: datetime | None = None
+    shared_at: datetime | None = None
+
+
+class CmoNotification(SQLModel, table=True):
+    """Gemideki sağlık sorumlusuna (CMO) bildirim. SADECE gemide; Dünya'ya asla gönderilmez."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    astronaut_id: str = Field(index=True)
+    day_index: int
+    mission_day: int
+    source: str = Field(description="checkin | chat")
+    topic: str | None = None
+    text: str
+    created_at: datetime = Field(default_factory=utcnow)

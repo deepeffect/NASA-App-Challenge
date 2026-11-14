@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     auth_secret: str | None = None
     auth_token_ttl_hours: float = Field(24.0, gt=0)
 
+    # --- Check-in ---
+    # scripted: prototipteki kural tabanlı akış | llm: LLM (Qwen) JSON şemalı | auto: LLM, olmazsa scripted
+    checkin_mode: Literal["scripted", "llm", "auto"] = "scripted"
+
     # --- Veri kaynağı ---
     # astronaut_health: data/raw/astronaut_health.json (yeni mimari, /me ve /monitor)
     # synthetic: eski sentetik veri + eski analiz motoru (/legacy ekranları ve eski testler)
