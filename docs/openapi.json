@@ -171,6 +171,91 @@
         }
       }
     },
+    "/api/astronauts/{astronaut_id}/scores": {
+      "get": {
+        "tags": [
+          "astronauts"
+        ],
+        "summary": "Günlük genel + sistem skoru geçmişi (skor grafiği ve mini grafikler için)",
+        "operationId": "get_score_history_api_astronauts__astronaut_id__scores_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 1,
+              "description": "as_of'tan geriye kaç gün",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "as_of'tan geriye kaç gün"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreHistoryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/astronauts/{astronaut_id}/metrics": {
       "get": {
         "tags": [
@@ -3639,6 +3724,133 @@
           "value"
         ],
         "title": "RawPoint"
+      },
+      "ScoreBands": {
+        "properties": {
+          "green_min": {
+            "type": "number",
+            "title": "Green Min",
+            "description": "skor ≥ green_min → green (rules.yaml → scoring)"
+          },
+          "yellow_min": {
+            "type": "number",
+            "title": "Yellow Min",
+            "description": "skor ≥ yellow_min → yellow, altı red"
+          }
+        },
+        "type": "object",
+        "required": [
+          "green_min",
+          "yellow_min"
+        ],
+        "title": "ScoreBands"
+      },
+      "ScoreDay": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "O günkü genel skor 0-100 (en zayıf sistemin skoru)"
+          },
+          "systems": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "cardiovascular",
+                "musculoskeletal",
+                "immune",
+                "behavioral",
+                "sleep",
+                "radiation"
+              ]
+            },
+            "type": "object",
+            "title": "Systems",
+            "description": "Sistem → o günkü skor (veri yoksa null)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "mission_day",
+          "status",
+          "systems"
+        ],
+        "title": "ScoreDay"
+      },
+      "ScoreHistoryResponse": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "bands": {
+            "$ref": "#/components/schemas/ScoreBands"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreDay"
+            },
+            "type": "array",
+            "title": "Days",
+            "description": "Eskiden yeniye; her gün, o güne kadarki veriyle hesaplanmış skor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "as_of",
+          "bands",
+          "days"
+        ],
+        "title": "ScoreHistoryResponse"
       },
       "ScorePenalty": {
         "properties": {

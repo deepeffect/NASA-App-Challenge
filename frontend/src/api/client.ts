@@ -17,6 +17,8 @@ export type AstronautSummary = S["AstronautSummary"];
 export type SystemScore = S["SystemScore"];
 export type MetricSnapshot = S["MetricSnapshot"];
 export type MetricSeriesResponse = S["MetricSeriesResponse"];
+export type ScoreHistoryResponse = S["ScoreHistoryResponse"];
+export type ScoreDay = S["ScoreDay"];
 export type HealthEvent = S["HealthEvent"];
 export type Contributor = S["Contributor"];
 export type AlertListResponse = S["AlertListResponse"];
@@ -108,6 +110,8 @@ export const api = {
   crew: (asOf?: string | null) => request<CrewResponse>("GET", "/api/crew", { query: { as_of: asOf } }),
   summary: (id: string, asOf?: string | null) =>
     request<AstronautSummary>("GET", `/api/astronauts/${enc(id)}/summary`, { query: { as_of: asOf } }),
+  scoreHistory: (id: string, q: { days?: number; as_of?: string | null } = {}) =>
+    request<ScoreHistoryResponse>("GET", `/api/astronauts/${enc(id)}/scores`, { query: q }),
   metricSeries: (id: string, q: MetricSeriesQuery) =>
     request<MetricSeriesResponse>("GET", `/api/astronauts/${enc(id)}/metrics`, { query: q }),
   checkins: (id: string, q: { days?: number; as_of?: string | null } = {}) =>

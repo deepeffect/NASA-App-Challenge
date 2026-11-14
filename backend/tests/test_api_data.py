@@ -1,6 +1,12 @@
 """Veri endpoint'leri: gerçek DB + analiz motoru (seed=42 demo senaryosu)."""
 
-from app.models.schemas import AlertListResponse, AstronautSummary, CrewResponse, MetricSeriesResponse
+from app.models.schemas import (
+    AlertListResponse,
+    AstronautSummary,
+    CrewResponse,
+    MetricSeriesResponse,
+    ScoreHistoryResponse,
+)
 
 
 def test_crew_end_state(client):
@@ -34,6 +40,24 @@ def test_summary(client):
     assert snap["radiation_cumulative"].state == "normal"
     sleep = next(x for x in s.systems if x.system == "sleep")
     assert sleep.penalties and sleep.score < 80
+
+
+def test_score_history(client):
+    # Demo senaryosu: AST-02 gün 151 yeşil → 152 sarı → 157 kırmızı (2026-10-22 = görev günü 157)
+    r = client.get("/api/astronauts/AST-02/scores", params={"days": 8, "as_of": "2026-10-22"})
+    h = ScoreHistoryResponse.model_validate(r.json())
+    assert [d.mission_day for d in h.days] == list(range(150, 158))
+    status = {d.mission_day: d.status for d in h.days}
+    assert status[151] == "green" and status[152] == "yellow" and status[157] == "red"
+    assert h.bands.green_min == 80 and h.bands.yellow_min == 50
+    # Son gün, aynı as_of'un özetindeki skorlarla birebir aynı olmalı (tek kaynak: analiz motoru)
+    s = AstronautSummary.model_validate(client.get("/api/astronauts/AST-02/summary", params={"as_of": "2026-10-22"}).json())
+    assert h.days[-1].score == s.overall.score
+    assert h.days[-1].systems == {x.system: x.score for x in s.systems}
+    # Görev başlangıcından öncesi istenmez; bilinmeyen astronot 404
+    early = client.get("/api/astronauts/AST-01/scores", params={"days": 30, "as_of": "2026-05-21"}).json()
+    assert [d["mission_day"] for d in early["days"]] == [1, 2, 3]
+    assert client.get("/api/astronauts/YOK/scores").status_code == 404
 
 
 def test_metric_series(client):

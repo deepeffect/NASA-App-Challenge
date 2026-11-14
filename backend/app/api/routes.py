@@ -35,6 +35,7 @@ from app.models.schemas import (
     IngestReport,
     Lang,
     MetricSeriesResponse,
+    ScoreHistoryResponse,
     Severity,
     ShareRequest,
     ShareResponse,
@@ -104,6 +105,23 @@ def get_crew(db: DB, as_of: AsOf = None) -> CrewResponse:
 def get_summary(db: DB, astronaut_id: str, as_of: AsOf = None) -> AstronautSummary:
     _require_astronaut(db, astronaut_id)
     return data_svc.summary(db, astronaut_id, as_of)
+
+
+@router.get(
+    "/astronauts/{astronaut_id}/scores",
+    response_model=ScoreHistoryResponse,
+    responses=NOT_FOUND,
+    tags=["astronauts"],
+    summary="Günlük genel + sistem skoru geçmişi (skor grafiği ve mini grafikler için)",
+)
+def get_score_history(
+    db: DB,
+    astronaut_id: str,
+    days: Annotated[int, Query(ge=1, le=400, description="as_of'tan geriye kaç gün")] = 30,
+    as_of: AsOf = None,
+) -> ScoreHistoryResponse:
+    _require_astronaut(db, astronaut_id)
+    return data_svc.score_history(db, astronaut_id, days, as_of)
 
 
 @router.get(

@@ -19,7 +19,7 @@ Arayüz ekibiyle backend arasındaki sözleşme budur. Makine tarafından okunur
 
 ## Zaman kaydırıcısı (`as_of`)
 
-`crew`, `summary`, `metrics`, `checkins`, `briefing`, `alerts`, `ground-report` endpoint'leri opsiyonel
+`crew`, `summary`, `scores`, `metrics`, `checkins`, `briefing`, `alerts`, `ground-report` endpoint'leri opsiyonel
 `as_of=YYYY-MM-DD` alır: hesap **o güne kadarki veriyle** yapılır (gelecek veri sızmaz).
 Boşsa verideki son gün kullanılır. Aralık dışı değerler görev başı/sonuna sıkıştırılır.
 Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
@@ -189,6 +189,29 @@ Metrik adları, birimleri, sistemleri, normal aralıkları ve eşikler. Grafik e
 - `latest[].state`: `normal` | `watch` (aktif info olay) | `alert` (aktif warning/critical) | `no_data`.
 - Sistem skoru = `100 − Σ(metrik başına en yüksek ceza)`; ceza: critical 45, warning 20, info 3
   (`backend/config/rules.yaml`). Aktif critical olay → `red`, aktif warning → en iyi `yellow`.
+
+### `GET /api/astronauts/{id}/scores?days=30&as_of=`
+
+Skor grafiği ve sistem kartlarındaki mini grafikler için günlük skor geçmişi (eskiden yeniye).
+Her gün, **o güne kadarki veriyle** hesaplanmış skordur; son gün aynı `as_of` için `summary`
+cevabındaki skorlarla birebir aynıdır. Görev başlangıcından önceki günler dönmez.
+
+```jsonc
+{
+  "astronaut_id": "AST-02",
+  "as_of": "2026-10-22",
+  "bands": { "green_min": 80.0, "yellow_min": 50.0 },
+  "days": [
+    {
+      "date": "2026-10-21", "mission_day": 156, "status": "yellow", "score": 60.0,
+      "systems": { "cardiovascular": 100.0, "sleep": 60.0, "radiation": 100.0 /* … */ }
+    }
+  ]
+}
+```
+
+- `bands`: `rules.yaml → scoring` eşikleri; grafikteki yatay çizgiler buradan çizilir (arayüzde sabit sayı yok).
+- İlk çağrı gün başına bir analiz çalıştırır (30 gün ≈ birkaç saniye); sonuç veri/kural değişene kadar önbelleklidir.
 
 ### `GET /api/astronauts/{id}/metrics?metric=&days=30&resolution=daily&as_of=`
 

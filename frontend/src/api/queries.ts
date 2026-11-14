@@ -8,6 +8,7 @@ export const qk = {
   catalog: ["catalog"] as const,
   crew: (asOf: string | null) => ["crew", asOf] as const,
   summary: (id: string, asOf: string | null) => ["summary", id, asOf] as const,
+  scores: (id: string, days: number, asOf: string | null) => ["scores", id, days, asOf] as const,
   series: (id: string, metric: string, days: number, asOf: string | null) => ["series", id, metric, days, asOf] as const,
   alerts: (q: AlertsQuery) => ["alerts", q] as const,
   briefing: (id: string, asOf: string | null, lang: Lang) => ["briefing", id, asOf, lang] as const,
@@ -31,6 +32,20 @@ export function useSummary(id: string, asOf: string | null) {
     queryKey: qk.summary(id, asOf),
     queryFn: () => api.summary(id, asOf),
     placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Günlük skor geçmişi: `endDate` gününde biten `days` günlük pencere (endDate yokken sorgu beklemede kalır).
+ * İlk çağrı sunucuda birkaç saniye sürebilir; sonrası önbellekten gelir.
+ */
+export function useScoreHistory(id: string, days: number, endDate: string | null) {
+  return useQuery({
+    queryKey: qk.scores(id, days, endDate),
+    queryFn: () => api.scoreHistory(id, { days, as_of: endDate }),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+    enabled: Boolean(id && endDate),
   });
 }
 
@@ -63,7 +78,7 @@ export function useCheckins(id: string, asOf: string | null) {
 function useInvalidateEvents() {
   const qc = useQueryClient();
   return () =>
-    Promise.all(["summary", "alerts", "series", "crew"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
+    Promise.all(["summary", "alerts", "series", "crew", "scores"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
 }
 
 export function useExplain() {
@@ -93,6 +108,6 @@ export function useSubmitCheckin() {
   return useMutation({
     mutationFn: (body: CheckinRequest) => api.checkin(body),
     onSuccess: () =>
-      Promise.all(["checkins", "summary", "crew", "series", "alerts"].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
+      Promise.all(["checkins", "summary", "crew", "series", "alerts", "scores"].map((k) => qc.invalidateQueries({ queryKey: [k] }))),
   });
 }

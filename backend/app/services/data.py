@@ -42,6 +42,9 @@ from app.models.schemas import (
     MetricSeriesResponse,
     MetricSnapshot,
     RawPoint,
+    ScoreBands,
+    ScoreDay,
+    ScoreHistoryResponse,
     ShareRequest,
     ShareResponse,
 )
@@ -67,6 +70,8 @@ class DataService:
         self._frame: tuple[tuple, pd.DataFrame, list[AstronautInfo]] | None = None
         self._results: OrderedDict[tuple, AnalysisResult] = OrderedDict()
         self._engine: tuple[tuple, AnalysisEngine] | None = None
+        # Günlük skor özeti (küçük): analiz LRU'sundan bağımsız tutulur, veri/kural değişince sıfırlanır
+        self._scores: tuple[tuple, dict[date, dict[str, ScoreDay]]] | None = None
 
     # ------------------------------------------------------------------ yükleme + cache
     def _config_key(self) -> tuple:
@@ -122,6 +127,35 @@ class DataService:
         with self._lock:
             self._frame = None
             self._results.clear()
+            self._scores = None
+
+    def daily_scores(self, session: Session, days: list[date]) -> list[dict[str, ScoreDay]]:
+        """Her gün için (o güne kadarki veriyle) astronot → skor özeti. Sayılar analiz motorundan gelir."""
+        self.engine()
+        prefix = (self.data_version(session), self._config_key())
+        with self._lock:
+            if self._scores is None or self._scores[0] != prefix:
+                self._scores = (prefix, {})
+            memo = self._scores[1]
+        out = []
+        for d in days:
+            hit = memo.get(d)
+            if hit is None:
+                res = self.analysis(session, d)
+                hit = {
+                    aid: ScoreDay(
+                        date=d,
+                        mission_day=(d - res.start_date).days + 1 if res.start_date else 0,
+                        status=a.overall.status,
+                        score=a.overall.score,
+                        systems={s.system: s.score for s in a.systems},
+                    )
+                    for aid, a in res.astronauts.items()
+                }
+                with self._lock:
+                    memo[d] = hit
+            out.append(hit)
+        return out
 
     # ------------------------------------------------------------------ feedback/paylaşım bindirme
     @staticmethod
@@ -207,6 +241,18 @@ def summary(session: Session, aid: str, as_of: date | None) -> AstronautSummary:
         astronaut=a.info, mission=res.mission(), overall=a.overall, systems=a.systems,
         latest=_snapshot(a, active), active_events=active, last_measurement_at=a.last_measurement_at,
     )
+
+
+def score_history(session: Session, aid: str, days: int, as_of: date | None) -> ScoreHistoryResponse:
+    res = _service.analysis(session, as_of)
+    cfg = _service.engine().rules.scoring
+    bands = ScoreBands(green_min=cfg.green_min, yellow_min=cfg.yellow_min)
+    if res.as_of is None or res.start_date is None:
+        return ScoreHistoryResponse(astronaut_id=aid, as_of=None, bands=bands, days=[])
+    first = max(res.start_date, res.as_of - timedelta(days=days - 1))
+    wanted = [first + timedelta(days=i) for i in range((res.as_of - first).days + 1)]
+    rows = [by_astronaut[aid] for by_astronaut in _service.daily_scores(session, wanted) if aid in by_astronaut]
+    return ScoreHistoryResponse(astronaut_id=aid, as_of=res.as_of, bands=bands, days=rows)
 
 
 def metric_series(session: Session, aid: str, metric: str, days: int, as_of: date | None, resolution: str) -> MetricSeriesResponse:

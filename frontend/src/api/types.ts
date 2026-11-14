@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/astronauts/{astronaut_id}/scores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Günlük genel + sistem skoru geçmişi (skor grafiği ve mini grafikler için) */
+        get: operations["get_score_history_api_astronauts__astronaut_id__scores_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/astronauts/{astronaut_id}/metrics": {
         parameters: {
             query?: never;
@@ -1236,6 +1253,59 @@ export interface components {
             /** Source */
             source?: string | null;
         };
+        /** ScoreBands */
+        ScoreBands: {
+            /**
+             * Green Min
+             * @description skor ≥ green_min → green (rules.yaml → scoring)
+             */
+            green_min: number;
+            /**
+             * Yellow Min
+             * @description skor ≥ yellow_min → yellow, altı red
+             */
+            yellow_min: number;
+        };
+        /** ScoreDay */
+        ScoreDay: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Mission Day */
+            mission_day: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "green" | "yellow" | "red" | "unknown";
+            /**
+             * Score
+             * @description O günkü genel skor 0-100 (en zayıf sistemin skoru)
+             */
+            score?: number | null;
+            /**
+             * Systems
+             * @description Sistem → o günkü skor (veri yoksa null)
+             */
+            systems: {
+                [key: string]: number | null;
+            };
+        };
+        /** ScoreHistoryResponse */
+        ScoreHistoryResponse: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /** As Of */
+            as_of: string | null;
+            bands: components["schemas"]["ScoreBands"];
+            /**
+             * Days
+             * @description Eskiden yeniye; her gün, o güne kadarki veriyle hesaplanmış skor
+             */
+            days: components["schemas"]["ScoreDay"][];
+        };
         /** ScorePenalty */
         ScorePenalty: {
             /** Event Id */
@@ -1553,6 +1623,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AstronautSummary"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_score_history_api_astronauts__astronaut_id__scores_get: {
+        parameters: {
+            query?: {
+                /** @description as_of'tan geriye kaç gün */
+                days?: number;
+                /** @description Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün. */
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScoreHistoryResponse"];
                 };
             };
             /** @description Not Found */

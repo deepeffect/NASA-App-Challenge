@@ -272,6 +272,29 @@ class AstronautSummary(BaseModel):
 
 
 # =============================================================================
+# /api/astronauts/{id}/scores
+# =============================================================================
+class ScoreDay(BaseModel):
+    date: dt.date
+    mission_day: int
+    status: StatusColor
+    score: float | None = Field(None, description="O günkü genel skor 0-100 (en zayıf sistemin skoru)")
+    systems: dict[HealthSystem, float | None] = Field(description="Sistem → o günkü skor (veri yoksa null)")
+
+
+class ScoreBands(BaseModel):
+    green_min: float = Field(description="skor ≥ green_min → green (rules.yaml → scoring)")
+    yellow_min: float = Field(description="skor ≥ yellow_min → yellow, altı red")
+
+
+class ScoreHistoryResponse(BaseModel):
+    astronaut_id: str
+    as_of: dt.date | None
+    bands: ScoreBands
+    days: list[ScoreDay] = Field(description="Eskiden yeniye; her gün, o güne kadarki veriyle hesaplanmış skor")
+
+
+# =============================================================================
 # /api/astronauts/{id}/metrics
 # =============================================================================
 class Baseline(BaseModel):
