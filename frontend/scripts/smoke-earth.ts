@@ -206,9 +206,13 @@ async function check(issues: Issue[], what: string, fn: () => Promise<unknown>):
   }
 }
 
+/** Ortak bileşenlerin kökü (HealthRoot) ve altı: monitor.css'in hiçbir kuralı buraya uygulanmamalı. */
+const AHC_EXCLUDE = ":not(:where(.ahc, .ahc *))";
+
 /**
- * monitor.css'te `.mon` kapsamı dışında kalan seçiciler ve mon- öneksiz @keyframes adları.
- * App bu dosyayı her rotada yükler; kapsamsız bir seçici /me'deki ortak bileşenlerin stilini bozar.
+ * monitor.css'te kapsam kuralına uymayan seçiciler ve mon- öneksiz @keyframes adları:
+ *   - `.mon` ile başlamalı (App bu dosyayı her rotada yükler; kapsamsız seçici /me'deki ortak bileşenlere sızar)
+ *   - öznesi AHC_EXCLUDE ile bitmeli, sözde öğeden önce (astronot detayındaki ortak bileşenler .mon'un içinde)
  */
 function unscopedMonitorSelectors(): string[] {
   const css = readFileSync(join(FRONTEND, "src", "apps", "monitor", "monitor.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
@@ -223,7 +227,13 @@ function unscopedMonitorSelectors(): string[] {
         if (/^@keyframes\s+(?!mon-)/.test(p)) bad.push(p);
         inKeyframes.push(p.startsWith("@keyframes"));
       } else {
-        if (!parentKf) bad.push(...p.split(",").map((s) => s.trim()).filter((s) => !/^\.mon(?![\w-])/.test(s)));
+        if (!parentKf)
+          bad.push(
+            ...p
+              .split(/,(?![^(]*\))/) // :where(.ahc, .ahc *) içindeki virgülde bölme
+              .map((s) => s.trim())
+              .filter((s) => !/^\.mon(?![\w-])/.test(s) || !s.replace(/::[\w-]+$/, "").endsWith(AHC_EXCLUDE)),
+          );
         inKeyframes.push(parentKf);
       }
       prelude = "";
@@ -306,7 +316,7 @@ export async function runEarthSmoke(): Promise<number> {
 
     // ------------------------------------------------------------------ 1
     await step("1. Giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık)", async () => {
-      await check(current.issues, "monitor.css: her seçici .mon altında (diğer ekranlara sızmaz)", async () => {
+      await check(current.issues, "monitor.css: her seçici .mon altında ve ortak bileşenlerin (.ahc) dışında", async () => {
         const bad = unscopedMonitorSelectors();
         if (bad.length) throw new Error(`kapsamsız: ${bad.slice(0, 8).join(" | ")}${bad.length > 8 ? ` … (+${bad.length - 8})` : ""}`);
       });

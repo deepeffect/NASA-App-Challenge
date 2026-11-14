@@ -1,11 +1,16 @@
 /* Dünya üssü ekranı. Prototiple aynı tasarım dili (frontend/reference/personal-artifact.html):
    aynı renk jetonları, Archivo (başlık) + IBM Plex Sans (metin), renk sadece bir sorun varken.
    Kiosk ekranı: varsayılan koyu tema, 1440 ve 1920 px için.
-   Kapsam: App bu dosyayı her rotada yükler, bu yüzden HER seçici .mon ile başlar ve animasyon adları mon- ile
-   başlar; kapsamsız bir seçici /me'deki ortak bileşenlere (.glyph, .legend, .login…) sızar. Dünya smoke testi
-   (scripts/smoke-earth.ts, 1. adım) bunu denetler. */
+   Kapsam (iki kural; Dünya smoke testi ikisini de denetler, scripts/smoke-earth.ts):
+   1. App bu dosyayı her rotada yükler: HER seçici .mon ile başlar, animasyon adları mon- ile başlar. Kapsamsız
+      bir seçici /me'deki ortak bileşenlere (.glyph, .legend, .login…) sızar.
+   2. Astronot detayındaki ortak bileşenler (shared/health, HealthRoot = .ahc) .mon'un içindedir. Bu dosya
+      katmansızdır, health.css ise @layer components'tadır: katmansız kural her zaman kazanır. Bu yüzden HER
+      seçicinin öznesi `:not(:where(.ahc, .ahc *))` ile biter (sözde öğeden önce): .ahc ağacına hiçbir kural
+      uygulanmaz, ortak bileşenler Dünya'da /me'dekiyle birebir aynı görünür. :where sayesinde özgüllük değişmez.
+      Yeni kural yazarken sonuna aynısını ekleyin. */
 
-.mon {
+.mon:not(:where(.ahc, .ahc *)) {
   --bg: #f1f4f7; --surface: #ffffff; --surface-2: #f6f8fa; --ink: #10161d; --ink-2: #47525f; --muted: #6b7784;
   --line: #dce2e9; --quiet: #cfd6de; --accent: #1c5cab; --accent-soft: rgba(28, 92, 171, 0.12);
   --series-cum: #2a78d6; --series-day: #eb6834;
@@ -22,7 +27,7 @@
   display: flex;
   flex-direction: column;
 }
-.mon[data-theme="dark"] {
+.mon[data-theme="dark"]:not(:where(.ahc, .ahc *)) {
   color-scheme: dark;
   --bg: #0d1115; --surface: #171c22; --surface-2: #1d232a; --ink: #eef1f4; --ink-2: #b7c0ca; --muted: #8b96a2;
   --line: #2a323b; --quiet: #3a444f; --accent: #86b6ef; --accent-soft: rgba(134, 182, 239, 0.14);
@@ -30,205 +35,205 @@
   --warn-ink: #fab219; --crit-ink: #ff7b7b;
   --crit-soft: rgba(208, 59, 59, 0.16); --warn-soft: rgba(250, 178, 25, 0.12);
 }
-@media (min-width: 1800px) { .mon { font-size: 16.5px; } }
+@media (min-width: 1800px) { .mon:not(:where(.ahc, .ahc *)) { font-size: 16.5px; } }
 
-.mon *, .mon *::before, .mon *::after { box-sizing: border-box; }
-.mon h1, .mon h2, .mon h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; line-height: 1.2; }
-.mon h1 { font-size: 1.35em; font-weight: 700; }
-.mon h2 { font-size: 1.15em; font-weight: 700; }
-.mon h3 { font-size: 1em; font-weight: 600; }
-.mon p { margin: 0; }
-.mon .num { font-variant-numeric: tabular-nums; }
-.mon .muted { color: var(--muted); font-size: 0.87em; }
-.mon .ink2 { color: var(--ink-2); }
-.mon .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.mon [hidden] { display: none !important; }
+.mon *:not(:where(.ahc, .ahc *)), .mon *:not(:where(.ahc, .ahc *))::before, .mon *:not(:where(.ahc, .ahc *))::after { box-sizing: border-box; }
+.mon h1:not(:where(.ahc, .ahc *)), .mon h2:not(:where(.ahc, .ahc *)), .mon h3:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); margin: 0; text-wrap: balance; line-height: 1.2; }
+.mon h1:not(:where(.ahc, .ahc *)) { font-size: 1.35em; font-weight: 700; }
+.mon h2:not(:where(.ahc, .ahc *)) { font-size: 1.15em; font-weight: 700; }
+.mon h3:not(:where(.ahc, .ahc *)) { font-size: 1em; font-weight: 600; }
+.mon p:not(:where(.ahc, .ahc *)) { margin: 0; }
+.mon .num:not(:where(.ahc, .ahc *)) { font-variant-numeric: tabular-nums; }
+.mon .muted:not(:where(.ahc, .ahc *)) { color: var(--muted); font-size: 0.87em; }
+.mon .ink2:not(:where(.ahc, .ahc *)) { color: var(--ink-2); }
+.mon .sr:not(:where(.ahc, .ahc *)) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.mon [hidden]:not(:where(.ahc, .ahc *)) { display: none !important; }
 
-.mon button, .mon select, .mon input {
+.mon button:not(:where(.ahc, .ahc *)), .mon select:not(:where(.ahc, .ahc *)), .mon input:not(:where(.ahc, .ahc *)) {
   font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
 }
-.mon button { cursor: pointer; }
-.mon button:hover, .mon select:hover { border-color: var(--accent); }
-.mon button:disabled { opacity: 0.5; cursor: not-allowed; }
-.mon :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.mon button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; padding: 9px 12px; }
-.mon .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.mon button:not(:where(.ahc, .ahc *)) { cursor: pointer; }
+.mon button:hover:not(:where(.ahc, .ahc *)), .mon select:hover:not(:where(.ahc, .ahc *)) { border-color: var(--accent); }
+.mon button:disabled:not(:where(.ahc, .ahc *)) { opacity: 0.5; cursor: not-allowed; }
+.mon :focus-visible:not(:where(.ahc, .ahc *)) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mon button.primary:not(:where(.ahc, .ahc *)) { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; padding: 9px 12px; }
+.mon .card:not(:where(.ahc, .ahc *)) { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
 
 /* ---------------------------------------------------------------- kabuk */
-.mon .mon-top { position: sticky; top: 0; z-index: 20; background: var(--bg); }
-.mon .mon-head { display: flex; align-items: center; gap: 14px; padding: 12px 24px 10px; }
-.mon .mon-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.mon .mon-brand svg { width: 44px; height: 44px; flex: none; }
-.mon .mon-brand .who { color: var(--ink-2); font-size: 0.87em; }
-.mon .mon-head .spacer { flex: 1 1 auto; }
-.mon .mission { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); white-space: nowrap; }
-.mon .mission > span:first-child { color: var(--muted); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-.mon .mission b { font-family: var(--font-display); font-size: 1.08em; }
-.mon .mon-tools { display: flex; align-items: center; gap: 8px; }
-.mon .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.mon .seg button { border: 0; border-radius: 0; padding: 5px 10px; background: var(--surface); font-size: 0.87em; font-weight: 600; color: var(--ink-2); }
-.mon .seg button + button { border-left: 1px solid var(--line); }
-.mon .seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
-.mon .mon-tools .icon-btn { width: 34px; height: 34px; padding: 0; display: inline-grid; place-items: center; }
-.mon .mon-tools .icon-btn svg { width: 18px; height: 18px; }
+.mon .mon-top:not(:where(.ahc, .ahc *)) { position: sticky; top: 0; z-index: 20; background: var(--bg); }
+.mon .mon-head:not(:where(.ahc, .ahc *)) { display: flex; align-items: center; gap: 14px; padding: 12px 24px 10px; }
+.mon .mon-brand:not(:where(.ahc, .ahc *)) { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mon .mon-brand svg:not(:where(.ahc, .ahc *)) { width: 44px; height: 44px; flex: none; }
+.mon .mon-brand .who:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.87em; }
+.mon .mon-head .spacer:not(:where(.ahc, .ahc *)) { flex: 1 1 auto; }
+.mon .mission:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: baseline; gap: 8px; padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); white-space: nowrap; }
+.mon .mission > span:first-child:not(:where(.ahc, .ahc *)) { color: var(--muted); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.mon .mission b:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.08em; }
+.mon .mon-tools:not(:where(.ahc, .ahc *)) { display: flex; align-items: center; gap: 8px; }
+.mon .seg:not(:where(.ahc, .ahc *)) { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.mon .seg button:not(:where(.ahc, .ahc *)) { border: 0; border-radius: 0; padding: 5px 10px; background: var(--surface); font-size: 0.87em; font-weight: 600; color: var(--ink-2); }
+.mon .seg button + button:not(:where(.ahc, .ahc *)) { border-left: 1px solid var(--line); }
+.mon .seg button[aria-pressed="true"]:not(:where(.ahc, .ahc *)) { background: var(--accent); color: var(--surface); }
+.mon .mon-tools .icon-btn:not(:where(.ahc, .ahc *)) { width: 34px; height: 34px; padding: 0; display: inline-grid; place-items: center; }
+.mon .mon-tools .icon-btn svg:not(:where(.ahc, .ahc *)) { width: 18px; height: 18px; }
 
-.mon .mon-body { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; padding: 16px 24px 24px; align-items: start; }
-@media (min-width: 1800px) { .mon .mon-body { grid-template-columns: minmax(0, 1fr) 440px; gap: 22px; padding: 18px 32px 28px; } .mon .mon-head { padding: 12px 32px 10px; } }
-@media (max-width: 1100px) { .mon .mon-body { grid-template-columns: minmax(0, 1fr); } }
-.mon .mon-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-.mon .mon-side { position: sticky; top: var(--top-h, 112px); height: calc(100vh - var(--top-h, 112px) - 16px); display: flex; flex-direction: column; min-height: 0; }
-@media (max-width: 1100px) { .mon .mon-side { position: static; height: auto; max-height: 70vh; } }
+.mon .mon-body:not(:where(.ahc, .ahc *)) { flex: 1 1 auto; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; padding: 16px 24px 24px; align-items: start; }
+@media (min-width: 1800px) { .mon .mon-body:not(:where(.ahc, .ahc *)) { grid-template-columns: minmax(0, 1fr) 440px; gap: 22px; padding: 18px 32px 28px; } .mon .mon-head:not(:where(.ahc, .ahc *)) { padding: 12px 32px 10px; } }
+@media (max-width: 1100px) { .mon .mon-body:not(:where(.ahc, .ahc *)) { grid-template-columns: minmax(0, 1fr); } }
+.mon .mon-main:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.mon .mon-side:not(:where(.ahc, .ahc *)) { position: sticky; top: var(--top-h, 112px); height: calc(100vh - var(--top-h, 112px) - 16px); display: flex; flex-direction: column; min-height: 0; }
+@media (max-width: 1100px) { .mon .mon-side:not(:where(.ahc, .ahc *)) { position: static; height: auto; max-height: 70vh; } }
 
-.mon .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.mon .sec-head p { color: var(--muted); font-size: 0.87em; }
+.mon .sec-head:not(:where(.ahc, .ahc *)) { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.mon .sec-head p:not(:where(.ahc, .ahc *)) { color: var(--muted); font-size: 0.87em; }
 
-.mon .mon-foot { padding: 14px 24px 22px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 0.85em; }
-@media (min-width: 1800px) { .mon .mon-foot { padding: 14px 32px 22px; } }
+.mon .mon-foot:not(:where(.ahc, .ahc *)) { padding: 14px 24px 22px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 0.85em; }
+@media (min-width: 1800px) { .mon .mon-foot:not(:where(.ahc, .ahc *)) { padding: 14px 32px 22px; } }
 
 /* ---------------------------------------------------------------- durum glifleri (renk + şekil + metin) */
-.mon .glyph { width: 0.8em; height: 0.8em; flex: none; display: inline-block; }
-.mon .g0 { border: 2px solid var(--quiet); border-radius: 50%; }
-.mon .g1 { background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.mon .g2 { background: var(--crit); transform: rotate(45deg) scale(0.85); }
-.mon .st { display: inline-flex; align-items: center; gap: 0.45em; font-weight: 600; white-space: nowrap; }
-.mon .st.s1 { color: var(--warn-ink); }
-.mon .st.s2 { color: var(--crit-ink); }
+.mon .glyph:not(:where(.ahc, .ahc *)) { width: 0.8em; height: 0.8em; flex: none; display: inline-block; }
+.mon .g0:not(:where(.ahc, .ahc *)) { border: 2px solid var(--quiet); border-radius: 50%; }
+.mon .g1:not(:where(.ahc, .ahc *)) { background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.mon .g2:not(:where(.ahc, .ahc *)) { background: var(--crit); transform: rotate(45deg) scale(0.85); }
+.mon .st:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; gap: 0.45em; font-weight: 600; white-space: nowrap; }
+.mon .st.s1:not(:where(.ahc, .ahc *)) { color: var(--warn-ink); }
+.mon .st.s2:not(:where(.ahc, .ahc *)) { color: var(--crit-ink); }
 
 /* ---------------------------------------------------------------- bağlantı çubuğu */
-.mon .linkbar { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 8px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); font-size: 0.93em; }
-@media (min-width: 1800px) { .mon .linkbar { padding: 8px 32px; } }
-.mon .linkbar .lk { display: inline-flex; align-items: center; gap: 8px; }
-.mon .linkbar .lk b { font-weight: 600; }
-.mon .linkbar .sep { color: var(--muted); }
-.mon .linkbar .delay { margin-left: auto; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
-.mon .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
-.mon .dot.up { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
-.mon .dot.down { background: var(--crit); border-radius: 2px; transform: rotate(45deg) scale(0.9); }
-.mon .dot.wait { background: none; border: 2px solid var(--muted); }
-.mon .linkdown { display: flex; gap: 12px; align-items: flex-start; padding: 10px 24px; background: var(--crit-soft); border-bottom: 2px solid var(--crit); }
-@media (min-width: 1800px) { .mon .linkdown { padding: 10px 32px; } }
-.mon .linkdown svg { width: 22px; height: 22px; color: var(--crit-ink); flex: none; margin-top: 1px; }
-.mon .linkdown b { font-family: var(--font-display); font-size: 1.08em; display: block; }
-.mon .linkdown p { color: var(--ink-2); font-size: 0.93em; }
+.mon .linkbar:not(:where(.ahc, .ahc *)) { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; padding: 8px 24px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface); font-size: 0.93em; }
+@media (min-width: 1800px) { .mon .linkbar:not(:where(.ahc, .ahc *)) { padding: 8px 32px; } }
+.mon .linkbar .lk:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; gap: 8px; }
+.mon .linkbar .lk b:not(:where(.ahc, .ahc *)) { font-weight: 600; }
+.mon .linkbar .sep:not(:where(.ahc, .ahc *)) { color: var(--muted); }
+.mon .linkbar .delay:not(:where(.ahc, .ahc *)) { margin-left: auto; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
+.mon .dot:not(:where(.ahc, .ahc *)) { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.mon .dot.up:not(:where(.ahc, .ahc *)) { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+.mon .dot.down:not(:where(.ahc, .ahc *)) { background: var(--crit); border-radius: 2px; transform: rotate(45deg) scale(0.9); }
+.mon .dot.wait:not(:where(.ahc, .ahc *)) { background: none; border: 2px solid var(--muted); }
+.mon .linkdown:not(:where(.ahc, .ahc *)) { display: flex; gap: 12px; align-items: flex-start; padding: 10px 24px; background: var(--crit-soft); border-bottom: 2px solid var(--crit); }
+@media (min-width: 1800px) { .mon .linkdown:not(:where(.ahc, .ahc *)) { padding: 10px 32px; } }
+.mon .linkdown svg:not(:where(.ahc, .ahc *)) { width: 22px; height: 22px; color: var(--crit-ink); flex: none; margin-top: 1px; }
+.mon .linkdown b:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.08em; display: block; }
+.mon .linkdown p:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.93em; }
 
 /* ---------------------------------------------------------------- mürettebat kartları */
-.mon .crew-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-@media (max-width: 1280px) { .mon .crew-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.mon .ccard { display: flex; flex-direction: column; gap: 10px; position: relative; }
-.mon .ccard.is-s2 { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
-.mon .ccard.is-s1 { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
-.mon .ccard-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.mon .ccard-id { font-family: var(--font-display); font-size: 1.35em; font-weight: 700; letter-spacing: 0.01em; }
-.mon .ccard-meta { color: var(--ink-2); font-size: 0.85em; text-align: right; }
-.mon .ccard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.mon .ccard-state { font-family: var(--font-display); font-size: 1.5em; font-weight: 700; line-height: 1.15; display: flex; align-items: center; gap: 0.4em; }
-.mon .ccard-state .glyph { width: 0.55em; height: 0.55em; }
-.mon .ccard-sub { color: var(--ink-2); font-size: 0.9em; }
-.mon .ccard-score { text-align: right; flex: none; }
-.mon .ccard-score b { font-family: var(--font-display); font-size: 2em; line-height: 1; display: block; }
-.mon .ccard-score span { color: var(--muted); font-size: 0.8em; }
-.mon .ccard-foot { display: flex; flex-direction: column; gap: 3px; font-size: 0.87em; border-top: 1px solid var(--line); padding-top: 8px; }
-.mon .ccard-foot .row { display: flex; justify-content: space-between; gap: 10px; }
-.mon .ccard-foot .row > span:first-child { color: var(--muted); }
-.mon .ccard-foot .row > span:last-child { text-align: right; }
-.mon .groundtag { display: inline-flex; align-items: center; gap: 6px; border-left: 3px solid var(--crit); padding: 1px 0 1px 9px; font-weight: 600; font-size: 0.9em; }
-.mon .ccard.skeleton { min-height: 300px; justify-content: center; align-items: center; color: var(--muted); }
+.mon .crew-grid:not(:where(.ahc, .ahc *)) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1280px) { .mon .crew-grid:not(:where(.ahc, .ahc *)) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mon .ccard:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 10px; position: relative; }
+.mon .ccard.is-s2:not(:where(.ahc, .ahc *)) { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
+.mon .ccard.is-s1:not(:where(.ahc, .ahc *)) { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+.mon .ccard-top:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mon .ccard-id:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.35em; font-weight: 700; letter-spacing: 0.01em; }
+.mon .ccard-meta:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.85em; text-align: right; }
+.mon .ccard-head:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mon .ccard-state:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.5em; font-weight: 700; line-height: 1.15; display: flex; align-items: center; gap: 0.4em; }
+.mon .ccard-state .glyph:not(:where(.ahc, .ahc *)) { width: 0.55em; height: 0.55em; }
+.mon .ccard-sub:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.9em; }
+.mon .ccard-score:not(:where(.ahc, .ahc *)) { text-align: right; flex: none; }
+.mon .ccard-score b:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 2em; line-height: 1; display: block; }
+.mon .ccard-score span:not(:where(.ahc, .ahc *)) { color: var(--muted); font-size: 0.8em; }
+.mon .ccard-foot:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 3px; font-size: 0.87em; border-top: 1px solid var(--line); padding-top: 8px; }
+.mon .ccard-foot .row:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; gap: 10px; }
+.mon .ccard-foot .row > span:first-child:not(:where(.ahc, .ahc *)) { color: var(--muted); }
+.mon .ccard-foot .row > span:last-child:not(:where(.ahc, .ahc *)) { text-align: right; }
+.mon .groundtag:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; gap: 6px; border-left: 3px solid var(--crit); padding: 1px 0 1px 9px; font-weight: 600; font-size: 0.9em; }
+.mon .ccard.skeleton:not(:where(.ahc, .ahc *)) { min-height: 300px; justify-content: center; align-items: center; color: var(--muted); }
 
 /* sparkline */
-.mon .spark { position: relative; }
-.mon .spark svg { display: block; width: 100%; overflow: visible; }
-.mon .spark .ax { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.75em; margin-top: 2px; }
-.mon .spark .tip { position: absolute; top: -6px; transform: translate(-50%, -100%); pointer-events: none; background: var(--ink); color: var(--surface); font-size: 0.8em; padding: 3px 8px; border-radius: 6px; white-space: nowrap; z-index: 2; }
+.mon .spark:not(:where(.ahc, .ahc *)) { position: relative; }
+.mon .spark svg:not(:where(.ahc, .ahc *)) { display: block; width: 100%; overflow: visible; }
+.mon .spark .ax:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.75em; margin-top: 2px; }
+.mon .spark .tip:not(:where(.ahc, .ahc *)) { position: absolute; top: -6px; transform: translate(-50%, -100%); pointer-events: none; background: var(--ink); color: var(--surface); font-size: 0.8em; padding: 3px 8px; border-radius: 6px; white-space: nowrap; z-index: 2; }
 
 /* alan ikon şeridi */
-.mon .areas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-.mon .area { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 5px; border-radius: 8px; background: var(--surface-2); border: 1px solid transparent; min-width: 0; }
-.mon .area.l1 { background: var(--warn-soft); }
-.mon .area.l2 { background: var(--crit-soft); }
-.mon .area.concern { border-color: var(--ink-2); }
-.mon .area .ic { position: relative; display: inline-flex; color: var(--ink-2); }
-.mon .area .ic svg { width: 20px; height: 20px; }
-.mon .area .ic .glyph { position: absolute; right: -9px; top: -3px; width: 9px; height: 9px; }
-.mon .area .ic .lock { position: absolute; left: -9px; top: -4px; width: 11px; height: 11px; color: var(--muted); }
-.mon .area .lb { font-size: 0.72em; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.mon .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 0.82em; align-items: center; }
-.mon .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.mon .legend .glyph { width: 10px; height: 10px; }
-.mon .legend svg { width: 12px; height: 12px; }
-.mon .legend .concern-key { width: 14px; height: 10px; border: 1px solid var(--ink-2); border-radius: 3px; }
+.mon .areas:not(:where(.ahc, .ahc *)) { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.mon .area:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 5px; border-radius: 8px; background: var(--surface-2); border: 1px solid transparent; min-width: 0; }
+.mon .area.l1:not(:where(.ahc, .ahc *)) { background: var(--warn-soft); }
+.mon .area.l2:not(:where(.ahc, .ahc *)) { background: var(--crit-soft); }
+.mon .area.concern:not(:where(.ahc, .ahc *)) { border-color: var(--ink-2); }
+.mon .area .ic:not(:where(.ahc, .ahc *)) { position: relative; display: inline-flex; color: var(--ink-2); }
+.mon .area .ic svg:not(:where(.ahc, .ahc *)) { width: 20px; height: 20px; }
+.mon .area .ic .glyph:not(:where(.ahc, .ahc *)) { position: absolute; right: -9px; top: -3px; width: 9px; height: 9px; }
+.mon .area .ic .lock:not(:where(.ahc, .ahc *)) { position: absolute; left: -9px; top: -4px; width: 11px; height: 11px; color: var(--muted); }
+.mon .area .lb:not(:where(.ahc, .ahc *)) { font-size: 0.72em; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mon .legend:not(:where(.ahc, .ahc *)) { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 0.82em; align-items: center; }
+.mon .legend span:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; gap: 6px; }
+.mon .legend .glyph:not(:where(.ahc, .ahc *)) { width: 10px; height: 10px; }
+.mon .legend svg:not(:where(.ahc, .ahc *)) { width: 12px; height: 12px; }
+.mon .legend .concern-key:not(:where(.ahc, .ahc *)) { width: 14px; height: 10px; border: 1px solid var(--ink-2); border-radius: 3px; }
 
 /* vurgu: yeni olay geldi (prefers-reduced-motion → animasyonsuz, sabit çerçeve) */
 @keyframes mon-flash-0 { 0% { box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px var(--accent-soft); background-color: var(--accent-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
 @keyframes mon-flash-1 { 0% { box-shadow: 0 0 0 3px var(--accent), 0 0 0 9px var(--accent-soft); background-color: var(--accent-soft); } 100% { box-shadow: 0 0 0 0 transparent; } }
-.mon .flash.flash-0 { animation: mon-flash-0 4s ease-out; }
-.mon .flash.flash-1 { animation: mon-flash-1 4s ease-out; }
-.mon tr.flash > td { background: var(--accent-soft); }
+.mon .flash.flash-0:not(:where(.ahc, .ahc *)) { animation: mon-flash-0 4s ease-out; }
+.mon .flash.flash-1:not(:where(.ahc, .ahc *)) { animation: mon-flash-1 4s ease-out; }
+.mon tr.flash > td:not(:where(.ahc, .ahc *)) { background: var(--accent-soft); }
 @media (prefers-reduced-motion: reduce) {
-  .mon .flash.flash-0, .mon .flash.flash-1 { animation: none; outline: 3px solid var(--accent); outline-offset: 1px; }
-  .mon tr.flash { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mon .flash.flash-0:not(:where(.ahc, .ahc *)), .mon .flash.flash-1:not(:where(.ahc, .ahc *)) { animation: none; outline: 3px solid var(--accent); outline-offset: 1px; }
+  .mon tr.flash:not(:where(.ahc, .ahc *)) { outline: 2px solid var(--accent); outline-offset: -2px; }
 }
 
 /* ---------------------------------------------------------------- yer desteği */
-.mon .glist { display: flex; flex-direction: column; max-height: 372px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; }
-@media (min-width: 1800px) { .mon .glist { max-height: 440px; } }
-.mon .glist details { border-top: 1px solid var(--line); }
-.mon .glist details:first-child { border-top: 0; }
-.mon .glist summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 56px 150px 120px 40px minmax(0, 1fr) 18px; gap: 12px; align-items: center; padding: 8px 2px; }
-.mon .glist summary::-webkit-details-marker { display: none; }
-.mon .glist summary .chev { color: var(--muted); transition: transform 0.15s; justify-self: end; width: 14px; height: 14px; }
-.mon .glist details[open] summary .chev { transform: rotate(90deg); }
-@media (prefers-reduced-motion: reduce) { .mon .glist summary .chev { transition: none; } }
-.mon .glist summary b { font-family: var(--font-display); font-weight: 700; }
-.mon .glist .why { padding: 2px 2px 12px 68px; display: flex; flex-direction: column; gap: 4px; font-size: 0.92em; }
-.mon .glist .why .r { display: flex; gap: 10px; align-items: center; }
-.mon .glist .why .r .glyph { width: 9px; height: 9px; }
-.mon .glist .score { text-align: right; font-weight: 600; }
-.mon .glist .sub { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mon .calm { color: var(--ink-2); }
+.mon .glist:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; max-height: 372px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; }
+@media (min-width: 1800px) { .mon .glist:not(:where(.ahc, .ahc *)) { max-height: 440px; } }
+.mon .glist details:not(:where(.ahc, .ahc *)) { border-top: 1px solid var(--line); }
+.mon .glist details:first-child:not(:where(.ahc, .ahc *)) { border-top: 0; }
+.mon .glist summary:not(:where(.ahc, .ahc *)) { list-style: none; cursor: pointer; display: grid; grid-template-columns: 56px 150px 120px 40px minmax(0, 1fr) 18px; gap: 12px; align-items: center; padding: 8px 2px; }
+.mon .glist summary:not(:where(.ahc, .ahc *))::-webkit-details-marker { display: none; }
+.mon .glist summary .chev:not(:where(.ahc, .ahc *)) { color: var(--muted); transition: transform 0.15s; justify-self: end; width: 14px; height: 14px; }
+.mon .glist details[open] summary .chev:not(:where(.ahc, .ahc *)) { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .mon .glist summary .chev:not(:where(.ahc, .ahc *)) { transition: none; } }
+.mon .glist summary b:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-weight: 700; }
+.mon .glist .why:not(:where(.ahc, .ahc *)) { padding: 2px 2px 12px 68px; display: flex; flex-direction: column; gap: 4px; font-size: 0.92em; }
+.mon .glist .why .r:not(:where(.ahc, .ahc *)) { display: flex; gap: 10px; align-items: center; }
+.mon .glist .why .r .glyph:not(:where(.ahc, .ahc *)) { width: 9px; height: 9px; }
+.mon .glist .score:not(:where(.ahc, .ahc *)) { text-align: right; font-weight: 600; }
+.mon .glist .sub:not(:where(.ahc, .ahc *)) { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mon .calm:not(:where(.ahc, .ahc *)) { color: var(--ink-2); }
 
 /* ---------------------------------------------------------------- tüm astronotlar */
-.mon .filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 10px; }
-.mon .filters label { display: flex; flex-direction: column; gap: 3px; font-size: 0.8em; font-weight: 600; color: var(--ink-2); }
-.mon .filters input, .mon .filters select { font-size: 1.15em; font-weight: 400; min-width: 150px; }
-.mon .filters input { width: 150px; }
-.mon .filters .count { margin-left: auto; color: var(--muted); font-size: 0.87em; padding-bottom: 6px; }
-.mon .tablewrap { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
-@media (min-width: 1800px) { .mon .tablewrap { max-height: 680px; } }
-.mon table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
-.mon th, .mon td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.mon thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; font-size: 0.85em; color: var(--muted); font-weight: 600; box-shadow: 0 1px 0 var(--line); }
-.mon td.r, .mon th.r { text-align: right; }
-.mon td.id { font-family: var(--font-display); font-weight: 700; }
-.mon td.wrap { white-space: normal; color: var(--ink-2); min-width: 220px; }
-.mon tbody tr:hover > td { background: var(--surface-2); }
-.mon tbody tr:last-child > td { border-bottom: 0; }
+.mon .filters:not(:where(.ahc, .ahc *)) { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin-bottom: 10px; }
+.mon .filters label:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 3px; font-size: 0.8em; font-weight: 600; color: var(--ink-2); }
+.mon .filters input:not(:where(.ahc, .ahc *)), .mon .filters select:not(:where(.ahc, .ahc *)) { font-size: 1.15em; font-weight: 400; min-width: 150px; }
+.mon .filters input:not(:where(.ahc, .ahc *)) { width: 150px; }
+.mon .filters .count:not(:where(.ahc, .ahc *)) { margin-left: auto; color: var(--muted); font-size: 0.87em; padding-bottom: 6px; }
+.mon .tablewrap:not(:where(.ahc, .ahc *)) { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+@media (min-width: 1800px) { .mon .tablewrap:not(:where(.ahc, .ahc *)) { max-height: 680px; } }
+.mon table:not(:where(.ahc, .ahc *)) { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+.mon th:not(:where(.ahc, .ahc *)), .mon td:not(:where(.ahc, .ahc *)) { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.mon thead th:not(:where(.ahc, .ahc *)) { position: sticky; top: 0; background: var(--surface); z-index: 1; font-size: 0.85em; color: var(--muted); font-weight: 600; box-shadow: 0 1px 0 var(--line); }
+.mon td.r:not(:where(.ahc, .ahc *)), .mon th.r:not(:where(.ahc, .ahc *)) { text-align: right; }
+.mon td.id:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-weight: 700; }
+.mon td.wrap:not(:where(.ahc, .ahc *)) { white-space: normal; color: var(--ink-2); min-width: 220px; }
+.mon tbody tr:hover > td:not(:where(.ahc, .ahc *)) { background: var(--surface-2); }
+.mon tbody tr:last-child > td:not(:where(.ahc, .ahc *)) { border-bottom: 0; }
 
 /* ---------------------------------------------------------------- canlı akış */
-.mon .feed { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; padding: 14px 0 0; }
-.mon .feed .sec-head { padding: 0 16px; margin-bottom: 8px; }
-.mon .feed ol { list-style: none; margin: 0; padding: 0 8px 8px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
-.mon .fitem { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; padding: 9px 8px; border-radius: 8px; border-bottom: 1px solid var(--line); }
-.mon .fitem:last-child { border-bottom: 0; }
-.mon .fitem .ic { color: var(--accent); padding-top: 2px; }
-.mon .fitem .ic svg { width: 18px; height: 18px; }
-.mon .fitem .t { font-weight: 600; }
-.mon .fitem .who { display: flex; gap: 8px; flex-wrap: wrap; color: var(--ink-2); font-size: 0.87em; }
-.mon .fitem .who b { color: var(--ink); font-family: var(--font-display); }
-.mon .fitem .times { grid-column: 2; display: grid; grid-template-columns: auto auto 1fr; gap: 0 10px; font-size: 0.82em; color: var(--muted); }
-.mon .fitem .times b { color: var(--ink-2); font-weight: 500; }
-.mon .fitem.marker { background: var(--surface-2); }
-.mon .fitem.marker.down .ic { color: var(--crit-ink); }
-.mon .fitem.marker.up .ic { color: var(--good); }
-.mon .feed .foot { padding: 8px 16px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.82em; }
+.mon .feed:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; padding: 14px 0 0; }
+.mon .feed .sec-head:not(:where(.ahc, .ahc *)) { padding: 0 16px; margin-bottom: 8px; }
+.mon .feed ol:not(:where(.ahc, .ahc *)) { list-style: none; margin: 0; padding: 0 8px 8px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.mon .fitem:not(:where(.ahc, .ahc *)) { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 10px; padding: 9px 8px; border-radius: 8px; border-bottom: 1px solid var(--line); }
+.mon .fitem:last-child:not(:where(.ahc, .ahc *)) { border-bottom: 0; }
+.mon .fitem .ic:not(:where(.ahc, .ahc *)) { color: var(--accent); padding-top: 2px; }
+.mon .fitem .ic svg:not(:where(.ahc, .ahc *)) { width: 18px; height: 18px; }
+.mon .fitem .t:not(:where(.ahc, .ahc *)) { font-weight: 600; }
+.mon .fitem .who:not(:where(.ahc, .ahc *)) { display: flex; gap: 8px; flex-wrap: wrap; color: var(--ink-2); font-size: 0.87em; }
+.mon .fitem .who b:not(:where(.ahc, .ahc *)) { color: var(--ink); font-family: var(--font-display); }
+.mon .fitem .times:not(:where(.ahc, .ahc *)) { grid-column: 2; display: grid; grid-template-columns: auto auto 1fr; gap: 0 10px; font-size: 0.82em; color: var(--muted); }
+.mon .fitem .times b:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-weight: 500; }
+.mon .fitem.marker:not(:where(.ahc, .ahc *)) { background: var(--surface-2); }
+.mon .fitem.marker.down .ic:not(:where(.ahc, .ahc *)) { color: var(--crit-ink); }
+.mon .fitem.marker.up .ic:not(:where(.ahc, .ahc *)) { color: var(--good); }
+.mon .feed .foot:not(:where(.ahc, .ahc *)) { padding: 8px 16px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.82em; }
 
 /* ---------------------------------------------------------------- giriş */
-.mon .login-wrap { flex: 1 1 auto; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 32px; }
-.mon .login { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 14px; }
-.mon .login .brand { display: flex; align-items: center; gap: 14px; }
-.mon .login .brand svg { width: 64px; height: 64px; }
-.mon .login form { display: flex; flex-direction: column; gap: 10px; }
-.mon .field { display: flex; flex-direction: column; gap: 4px; }
-.mon .field label { font-size: 0.87em; font-weight: 600; color: var(--ink-2); }
-.mon .field input { padding: 9px 11px; }
-.mon .err { border-left: 3px solid var(--crit); padding-left: 10px; }
-.mon .state-msg { padding: 24px; text-align: center; color: var(--muted); }
+.mon .login-wrap:not(:where(.ahc, .ahc *)) { flex: 1 1 auto; display: flex; align-items: flex-start; justify-content: center; padding: 8vh 16px 32px; }
+.mon .login:not(:where(.ahc, .ahc *)) { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 14px; }
+.mon .login .brand:not(:where(.ahc, .ahc *)) { display: flex; align-items: center; gap: 14px; }
+.mon .login .brand svg:not(:where(.ahc, .ahc *)) { width: 64px; height: 64px; }
+.mon .login form:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 10px; }
+.mon .field:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 4px; }
+.mon .field label:not(:where(.ahc, .ahc *)) { font-size: 0.87em; font-weight: 600; color: var(--ink-2); }
+.mon .field input:not(:where(.ahc, .ahc *)) { padding: 9px 11px; }
+.mon .err:not(:where(.ahc, .ahc *)) { border-left: 3px solid var(--crit); padding-left: 10px; }
+.mon .state-msg:not(:where(.ahc, .ahc *)) { padding: 24px; text-align: center; color: var(--muted); }
