@@ -208,7 +208,10 @@ ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider. Terminal
 
 ## Dünya üssü
 
-- `GET /api/monitor/crew` → `{link: LinkStatus, astronauts: [{astronaut, today, status, status_label, subtitle, score, ground, share, checkin_text}]}`
+- `GET /api/monitor/crew` → `{link: LinkStatus, astronauts: [{astronaut, today, status, status_label, subtitle, score, ground, share, checkin_text, terminal}]}`
+  - `terminal: TerminalStatus` `{state, last_seen, last_known}`: `online` / `offline` gemiden gelen son durum,
+    `never` bu terminalden hiç sinyal gelmedi, `unknown` gemiyle bağlantı yok — o an durum **bilinmez**, `offline`
+    denmez (son bilinen `last_known`'da). `last_seen`: terminalden gelen son sinyal (gemi saati).
 - `GET /api/monitor/astronauts/{id}` → `PersonalOverview` (Dünya şeridi; `score` ve `daily_score` gemidekiyle aynıdır)
 - `GET /api/monitor/astronauts/{id}/days/{gün}` → `{view: DayView (viewer=earth, gizliler hidden), checkin: EarthCheckinView, updated_seq, received_at}`
 - `GET /api/monitor/events?limit=100&astronaut_id=&type=&before_seq=` → `{events: [MonitorEvent], total, last_seq}`:
@@ -218,7 +221,10 @@ ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider. Terminal
   tekrarlanabilir (`checkin.completed`, `checkin.shared`, `action.done`, `day.snapshot`, `terminal.online`,
   `terminal.offline`); `before_seq` ile sayfalanır. Snapshot'la gelen durum olay sayılmaz;
   gemi dönemi değişince liste sıfırlanır.
-- `GET /api/link/status` → `LinkStatus` (`connected`, `last_contact`, `last_seq`, `ship_last_seq`, `pending_on_ship`, `behind`, `events_received`)
+- `GET /api/link/status` → `LinkStatus` (`connected`, `last_contact`, `last_seq`, `ship_last_seq`, `pending_on_ship`, `behind`, `events_received`, `ship_clock`)
+  - `ship_clock`: geminin şu anki saati (tahmin) = son heartbeat'teki gemi zamanı + Dünya'da o andan beri geçen süre.
+    Gemi saatiyle gelen zamanlar (`last_seen`, olayların `ship_time`'ı) buna göre yorumlanır: yerel ağda bilgisayar
+    saatleri kaysa da "son görülme 5 dk önce" doğru kalır. Gemiden hiç haber alınmadıysa `null`.
 - `GET /api/stream/monitor?access_token=…` → SSE: `event: event` (`MonitorStreamEvent`: yeni olay) ve `event: link` (bağlantı durumu)
 
 ---

@@ -1089,6 +1089,22 @@ class LinkStatus(BaseModel):
     last_error: str | None
     delay_seconds: float | None
     simulated_light_delay_minutes: float | None
+    ship_clock: dt.datetime | None = Field(
+        description="Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. "
+        "Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri "
+        "kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null."
+    )
+
+
+class TerminalStatus(BaseModel):
+    """Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok)."""
+
+    state: Literal["online", "offline", "never", "unknown"] = Field(
+        description="online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · "
+        "unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)"
+    )
+    last_seen: dt.datetime | None = Field(description="Terminalden gelen son sinyal (gemi saati)")
+    last_known: TerminalState | None = Field(description="Gemiden gelen son durum (bağlantı yokken de)")
 
 
 class MonitorCrewMember(BaseModel):
@@ -1103,6 +1119,7 @@ class MonitorCrewMember(BaseModel):
     ground: bool
     share: ShareLevel | None = Field(description="Bugünün check-in'i (tamamlandıysa)")
     checkin_text: str
+    terminal: TerminalStatus
 
 
 class MonitorCrewResponse(BaseModel):

@@ -231,3 +231,105 @@ def test_rebuild_outbox_republishes_presence(ship, clock) -> None:
     assert summary(app) == [("terminal.online", "A040", "online"), ("terminal.offline", "A041", "offline")]
     snap = c.get("/api/downlink/snapshot", headers=LINK).json()
     assert [(p["astronaut_id"], p["state"]) for p in snap["presence"]] == [("A040", "online"), ("A041", "offline")]
+
+
+# ---------------------------------------------------------------- Dünya
+def make_earth(tmp_path, name: str = "earth.db"):
+    from app.db import engine_for, init_db
+    from app.downlink.receiver import Receiver
+
+    eng = engine_for(sqlite_url(tmp_path / name))
+    init_db(eng)
+    rec = Receiver(eng, Settings(station_role="earth", data_source="astronaut_health", ship_url="http://ship", earth_link_token=TOKEN))
+    return eng, rec
+
+
+def sync(app, rec) -> None:
+    """Dünya alıcısı: (gerekirse snapshot) + gemide birikmiş olaylar + heartbeat, sonra durur."""
+    import asyncio
+
+    import httpx
+
+    async def go():
+        async with rec.client(httpx.ASGITransport(app=app)) as client:
+            await rec.consume(client, follow=False)
+
+    asyncio.run(go())
+
+
+def earth_get(eng, path: str):
+    earth = create_app(Settings(station_role="earth", data_source="astronaut_health", database_url=str(eng.url)))
+    with TestClient(earth) as e:
+        r = e.get(path, headers=login(e, "EARTH"))
+        assert r.status_code == 200, r.text
+        return r.json()
+
+
+def terminals(eng) -> dict[str, dict]:
+    return {m["astronaut"]["id"]: m["terminal"] for m in earth_get(eng, "/api/monitor/crew")["astronauts"]}
+
+
+def test_earth_card_follows_ship_terminal(ship, clock, tmp_path) -> None:
+    app, c = ship
+    auth = login(c, "A050")
+    beat(c, auth)
+    seen = clock()
+    eng, rec = make_earth(tmp_path)
+    sync(app, rec)  # ilk bağlantı: durum snapshot'tan (olay olarak kopyalanmaz)
+    t = terminals(eng)
+    assert t["A050"]["state"] == "online" and datetime.fromisoformat(t["A050"]["last_seen"]) == seen
+    assert t["A051"] == {"state": "never", "last_seen": None, "last_known": None}  # hiç sinyal yok
+    assert earth_get(eng, "/api/monitor/events?type=terminal.online")["events"] == []
+
+    clock(TIMEOUT + 1)
+    sweep(app)
+    sync(app, rec)
+    t = terminals(eng)
+    assert t["A050"] == {"state": "offline", "last_seen": t["A050"]["last_seen"], "last_known": "offline"}
+    assert datetime.fromisoformat(t["A050"]["last_seen"]) == seen  # son görülme = son sinyal, fark edilme anı değil
+    ev = earth_get(eng, "/api/monitor/events?type=terminal.offline&type=terminal.online")["events"]
+    assert [(e["type"], e["astronaut_id"], e["day"], e["mission_day"]) for e in ev] == [("terminal.offline", "A050", None, None)]
+    assert datetime.fromisoformat(ev[0]["last_seen"]) == seen
+
+    clock(10)
+    beat(c, auth)
+    sync(app, rec)
+    assert terminals(eng)["A050"]["state"] == "online"
+    assert [e["type"] for e in earth_get(eng, "/api/monitor/events?astronaut_id=A050")["events"]] == ["terminal.online", "terminal.offline"]
+
+
+def test_link_down_means_unknown_not_offline(ship, clock, tmp_path) -> None:
+    """Gemiyle bağlantı koparsa terminalin şu anki durumu bilinmez: "unknown" — "offline" denmez."""
+    app, c = ship
+    beat(c, login(c, "A052"))
+    eng, rec = make_earth(tmp_path)
+    sync(app, rec)
+    rec._link(connected=False)  # alıcı gemiye ulaşamıyor
+    t = terminals(eng)
+    assert t["A052"]["state"] == "unknown" and t["A052"]["last_known"] == "online" and t["A052"]["last_seen"]
+    assert t["A053"] == {"state": "unknown", "last_seen": None, "last_known": None}
+    assert all(x["state"] == "unknown" for x in t.values())
+    sync(app, rec)  # bağlantı geri geldi
+    assert terminals(eng)["A052"]["state"] == "online"
+
+
+def test_ship_clock_survives_clock_skew(ship, clock, tmp_path) -> None:
+    """Gemi bilgisayarının saati Dünya'nınkinden 1 saat ileri: 'son görülme' yine gemi saatiyle doğru hesaplanır."""
+    from app.models.tables import utcnow as earth_wall_clock
+
+    app, c = ship
+    clock(3600)
+    beat(c, login(c, "A054"))
+    eng, rec = make_earth(tmp_path)
+    sync(app, rec)
+    status = earth_get(eng, "/api/link/status")
+    ship_clock = datetime.fromisoformat(status["ship_clock"])
+    assert abs((ship_clock - clock()).total_seconds()) < 5  # geminin saati
+    assert (ship_clock - earth_wall_clock()).total_seconds() > 3500  # Dünya'nın duvar saati değil
+    last_seen = datetime.fromisoformat(terminals(eng)["A054"]["last_seen"])
+    assert 0 <= (ship_clock - last_seen).total_seconds() < 5  # "az önce" (Dünya saatiyle "1 saat sonra" olurdu)
+
+
+def test_link_status_without_contact_has_no_ship_clock(tmp_path) -> None:
+    eng, _rec = make_earth(tmp_path)
+    assert earth_get(eng, "/api/link/status")["ship_clock"] is None

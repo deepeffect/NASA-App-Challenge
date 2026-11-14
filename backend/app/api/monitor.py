@@ -30,8 +30,9 @@ from app.models.schemas import (
     MonitorEventsResponse,
     MonitorEventType,
     PersonalOverview,
+    TerminalStatus,
 )
-from app.models.tables import as_utc, utcnow
+from app.models.tables import EarthPresenceRow, as_utc, utcnow
 from app.personal.catalog import load_personal_catalog
 from app.personal.dataset import AstronautMeta
 from app.personal.earth_view import earth_checkin_view, earth_day_view, earth_strip
@@ -53,6 +54,10 @@ def link_status(request: Request, db: Session) -> LinkStatus:
     last_contact = _dt(st["last_contact"])
     fresh = last_contact is not None and utcnow() - last_contact < timedelta(seconds=max(15.0, 3 * s.downlink_heartbeat_seconds))
     ship_last = st["ship_last_seq"]
+    # Geminin şu anki saati: son gelen gemi zamanı + Dünya'da o andan beri geçen süre (iki saat arasındaki fark
+    # bu şekilde düşer; sadece aynı saatte iki anın farkı kullanılır)
+    ship_time, ship_time_at = _dt(st["ship_time"]), _dt(st["ship_time_at"])
+    ship_clock = ship_time + (utcnow() - ship_time_at) if ship_time is not None and ship_time_at is not None else None
     return LinkStatus(
         configured=bool(s.ship_url and s.earth_link_token),
         connected=bool(st["connected"]) and fresh,
@@ -69,6 +74,19 @@ def link_status(request: Request, db: Session) -> LinkStatus:
         last_error=st["last_error"],
         delay_seconds=st["delay_seconds"],
         simulated_light_delay_minutes=st["simulated_light_delay_minutes"],
+        ship_clock=ship_clock,
+    )
+
+
+def terminal_status(row: EarthPresenceRow | None, connected: bool) -> TerminalStatus:
+    """Gemiyle bağlantı yokken terminalin şu anki durumu BİLİNMEZ: "unknown" (son bilinen ayrıca); asla "offline"
+    denmez. Bağlantı varken gemiden gelen son durum; hiç sinyal gelmediyse "never"."""
+    known = row.state if row is not None else None
+    state = "unknown" if not connected else (known or "never")
+    return TerminalStatus(
+        state=state,  # type: ignore[arg-type]
+        last_seen=as_utc(row.last_seen) if row is not None else None,
+        last_known=known,  # type: ignore[arg-type]
     )
 
 
@@ -89,6 +107,8 @@ def get_link_status(_p: EarthDep, request: Request, db: DBSession) -> LinkStatus
 def get_crew(_p: EarthDep, request: Request, db: DBSession, lang: LangDep) -> MonitorCrewResponse:
     cat = load_personal_catalog()
     today = earth_store.today_rows(db)
+    link = link_status(request, db)
+    presence = earth_store.presence_rows(db)
     members = []
     for a in earth_store.earth_astronauts(db):
         rec = today.get(a.id)
@@ -109,9 +129,10 @@ def get_crew(_p: EarthDep, request: Request, db: DBSession, lang: LangDep) -> Mo
                 ground=view.ground,
                 share=view.share,
                 checkin_text=earth_checkin_view(rec.checkin, lang).text,
+                terminal=terminal_status(presence.get(a.id), link.connected),
             )
         )
-    return MonitorCrewResponse(link=link_status(request, db), astronauts=members)
+    return MonitorCrewResponse(link=link, astronauts=members)
 
 
 @router.get("/monitor/astronauts/{astronaut_id}", response_model=PersonalOverview, responses=ERRORS, summary="Astronotun 30 günlük şeridi (Dünya)")

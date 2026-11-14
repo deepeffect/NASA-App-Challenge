@@ -2117,6 +2117,11 @@ export interface components {
             delay_seconds: number | null;
             /** Simulated Light Delay Minutes */
             simulated_light_delay_minutes: number | null;
+            /**
+             * Ship Clock
+             * @description Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null.
+             */
+            ship_clock: string | null;
         };
         /** LoginRequest */
         LoginRequest: {
@@ -2332,6 +2337,7 @@ export interface components {
             share: ("private" | "scores" | "full") | null;
             /** Checkin Text */
             checkin_text: string;
+            terminal: components["schemas"]["TerminalStatus"];
         };
         /** MonitorCrewResponse */
         MonitorCrewResponse: {
@@ -2779,6 +2785,28 @@ export interface components {
              * @description Skoru düşüren aktif olaylar (açıklanabilirlik)
              */
             penalties: components["schemas"]["ScorePenalty"][];
+        };
+        /**
+         * TerminalStatus
+         * @description Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok).
+         */
+        TerminalStatus: {
+            /**
+             * State
+             * @description online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)
+             * @enum {string}
+             */
+            state: "online" | "offline" | "never" | "unknown";
+            /**
+             * Last Seen
+             * @description Terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen: string | null;
+            /**
+             * Last Known
+             * @description Gemiden gelen son durum (bağlantı yokken de)
+             */
+            last_known: ("online" | "offline") | null;
         };
         /** Thresholds */
         Thresholds: {

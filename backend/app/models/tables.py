@@ -216,6 +216,15 @@ class EarthDayRow(SQLModel, table=True):
     received_at: datetime = Field(default_factory=utcnow)
 
 
+class EarthPresenceRow(SQLModel, table=True):
+    """Dünya: astronot terminalinin gemiden gelen son durumu (EarthPresence; snapshot veya terminal.* olayı)."""
+
+    astronaut_id: str = Field(primary_key=True)
+    state: str = Field(description="online | offline")
+    last_seen: datetime = Field(description="Terminalden gelen son sinyal (gemi saati)")
+    updated_seq: int = 0
+
+
 class EarthEvent(SQLModel, table=True):
     """Dünya: alınan her olay (gemideki seq ile; tekrar gelen seq yok sayılır)."""
 

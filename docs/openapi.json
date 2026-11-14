@@ -7542,6 +7542,19 @@
               }
             ],
             "title": "Simulated Light Delay Minutes"
+          },
+          "ship_clock": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ship Clock",
+            "description": "Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null."
           }
         },
         "type": "object",
@@ -7560,7 +7573,8 @@
           "snapshot_at",
           "last_error",
           "delay_seconds",
-          "simulated_light_delay_minutes"
+          "simulated_light_delay_minutes",
+          "ship_clock"
         ],
         "title": "LinkStatus"
       },
@@ -8088,6 +8102,9 @@
           "checkin_text": {
             "type": "string",
             "title": "Checkin Text"
+          },
+          "terminal": {
+            "$ref": "#/components/schemas/TerminalStatus"
           }
         },
         "type": "object",
@@ -8102,7 +8119,8 @@
           "score_text",
           "ground",
           "share",
-          "checkin_text"
+          "checkin_text",
+          "terminal"
         ],
         "title": "MonitorCrewMember"
       },
@@ -9087,6 +9105,58 @@
           "penalties"
         ],
         "title": "SystemScore"
+      },
+      "TerminalStatus": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline",
+              "never",
+              "unknown"
+            ],
+            "title": "State",
+            "description": "online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen",
+            "description": "Terminalden gelen son sinyal (gemi saati)"
+          },
+          "last_known": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "online",
+                  "offline"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Known",
+            "description": "Gemiden gelen son durum (bağlantı yokken de)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "last_seen",
+          "last_known"
+        ],
+        "title": "TerminalStatus",
+        "description": "Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok)."
       },
       "Thresholds": {
         "properties": {
