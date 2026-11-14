@@ -5,19 +5,6 @@
  */
 @layer properties, theme, base, components, utilities; /* health.css ile aynı sıra (yükleme sırasından bağımsız) */
 
-/* ----------------------------------------------------------------------------
-   Katman dışı düzeltme: apps/monitor/monitor.css bazı sınıfları kapsamsız tanımlıyor (.glyph, .legend,
-   .login, .field label). O dosya her zaman yüklenir (iki ekran tek pakettedir) ve katmansız olduğu için
-   health.css'teki katmanlı kuralları ezer. Bu ekranda prototipin değerleri geri yazılır.
-   Not: asıl çözüm monitor.css'teki seçicilerin `.mon` altına alınmasıdır; o dosya Dünya ekibine aittir.
-   ---------------------------------------------------------------------------- */
-.ahc .glyph { width: 13px; height: 13px; }
-.ahc .glyph.sm, .ahc .cinotes .glyph { width: 10px; height: 10px; }
-.ahc .legend { flex-wrap: nowrap; gap: 16px; align-items: normal; color: var(--ink-2); font-size: 13px; margin: 4px 0 6px; }
-.ahc .legend span { display: inline; }
-.ahc .login { max-width: 420px; gap: 12px; }
-.ahc .field label { font-size: 13px; }
-
 @layer components {
   /* ---------- üst bar: TR/EN seçimi (prototipin "basılı" düğme görünümü) ---------- */
   .ahc .langseg { display: flex; flex: none; }
