@@ -1,17 +1,19 @@
 /**
  * Mürettebat: DEMO_CREW'daki astronotlar büyük kartlar halinde. Kart: durum (ikon + metin), kümülatif skor,
  * 30 günlük skor sparkline'ı, 5 alan ikon şeridi, son etkinlik ("2 dk önce"; son 10 dakikadaysa "Aktif" rozeti),
- * son check-in zamanı ve paylaşım seviyesi.
+ * terminal durumu ("çevrimiçi" / "çevrimdışı · son görülme 5 dk önce"; gemiyle bağlantı yoksa "bilinmiyor"),
+ * son check-in zamanı ve paylaşım seviyesi. Gemi saatiyle gelen zamanlar geminin saatine göre (useShipNow).
  * Yeni olay gelince kart kısa süre vurgulanır (live.tsx). Karta veya kimliğe tıklanınca astronot detayı açılır.
  */
 import { Link } from "react-router";
 
 import { AreaLegend, AreaStrip } from "./AreaStrip";
+import type { TerminalStatus } from "../../api/station";
 import { type MonitorCrewMember, type MonitorEvent, useCatalog, useCheckinTimes, useCrew, useLastActivity, useMonitorDay, useOverview } from "./api";
 import { ACTIVE_WINDOW_MS, DEMO_CREW } from "./config";
 import { detailPath, useOpenDetail } from "./Detail";
-import { ActivityIcon } from "./icons";
-import { flashClass, useLive, useNow } from "./live";
+import { ActivityIcon, TerminalIcon } from "./icons";
+import { flashClass, useLive, useShipNow } from "./live";
 import { Sparkline } from "./Sparkline";
 import { fmtAgo, fmtTime, shareKey, useT } from "./texts";
 import { SectionHead, StatusLabel } from "./ui";
@@ -59,7 +61,7 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
   const day = useMonitorDay(a.id, member.today);
   const catalog = useCatalog();
   const activity = useLastActivity(a.id);
-  const clock = useNow(5_000);
+  const clock = useShipNow(5_000); // geminin saati: son etkinlik ve son görülme gemi saatiyle gelir
   const hid = `card-${a.id}`;
   const v = day.data?.view.day === member.today ? day.data.view : undefined;
   const priv = v?.readings.filter((r) => r.private) ?? [];
@@ -121,6 +123,7 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
             {last ? fmtAgo(last.ship_time, clock, t) : activity.isPending ? "…" : t("noActivity")}
           </span>
         </div>
+        <TerminalRow terminal={member.terminal} clock={clock} />
         <div className="row">
           <span>{t("lastCheckin")}</span>
           <span className="num">
@@ -140,5 +143,46 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
         )}
       </div>
     </article>
+  );
+}
+
+/**
+ * "Terminal" satırı (ikon + metin). Gemiyle bağlantı yokken (veya bu istasyona ulaşılamıyorken) terminalin şu anki
+ * durumu bilinmez: "bilinmiyor (bağlantı yok)" — son bilinen sadece ipucunda; asla "çevrimdışı" denmez. Bağlantı
+ * durumu canlıdır (SSE): kopunca /crew'un yenilenmesi beklenmez.
+ */
+function TerminalRow({ terminal, clock }: { terminal: TerminalStatus; clock: number }) {
+  const { t, locale } = useT();
+  const { link, earthReachable } = useLive();
+  const linkUp = link === undefined ? terminal.state !== "unknown" : earthReachable && link.connected;
+  // /crew bağlantı yokken okunduysa "unknown" der; bağlantı geri geldiyse son bilineni göster (yenilenmesi yolda)
+  const state = !linkUp ? "unknown" : terminal.state === "unknown" ? (terminal.last_known ?? "never") : terminal.state;
+  const seen = terminal.last_seen ? fmtTime(terminal.last_seen, locale, true) : null;
+  const text =
+    state === "online"
+      ? t("terminalOnline")
+      : state === "offline"
+        ? t("terminalOffline", { ago: fmtAgo(terminal.last_seen, clock, t) })
+        : state === "never"
+          ? t("terminalNever")
+          : t("terminalUnknown");
+  const hint =
+    state === "unknown"
+      ? terminal.last_known && seen
+        ? t("terminalUnknownHint", { state: t(terminal.last_known === "online" ? "terminalOnline" : "terminalOfflineShort"), time: seen })
+        : t("terminalUnknownNeverHint")
+      : state === "never"
+        ? t("terminalNeverHint")
+        : seen
+          ? t("terminalSeenHint", { time: seen })
+          : undefined;
+  return (
+    <div className="row" data-terminal={state} data-last-seen={terminal.last_seen ?? ""}>
+      <span>{t("terminal")}</span>
+      <span className="term" title={hint}>
+        <TerminalIcon state={state} />
+        <span className="num">{text}</span>
+      </span>
+    </div>
   );
 }

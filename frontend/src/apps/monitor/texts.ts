@@ -128,6 +128,23 @@ const T = {
     tr: "Son {min} dakikada etkinlik var (check-in, paylaşım veya öneri işareti)",
     en: "Activity in the last {min} minutes (check-in, sharing or advice marked)",
   },
+  // terminal varlığı: sadece çevrimiçi / çevrimdışı ve son görülme (içerik yok)
+  terminal: { tr: "Terminal", en: "Terminal" },
+  terminalOnline: { tr: "çevrimiçi", en: "online" },
+  terminalOfflineShort: { tr: "çevrimdışı", en: "offline" },
+  terminalOffline: { tr: "çevrimdışı · son görülme {ago}", en: "offline · last seen {ago}" },
+  terminalNever: { tr: "henüz bağlanmadı", en: "not connected yet" },
+  terminalUnknown: { tr: "bilinmiyor (bağlantı yok)", en: "unknown (no link)" },
+  terminalSeenHint: { tr: "Son sinyal {time} (gemi saati)", en: "Last signal {time} (ship time)" },
+  terminalNeverHint: { tr: "Bu astronotun terminalinden henüz sinyal gelmedi.", en: "No signal from this astronaut's terminal yet." },
+  terminalUnknownHint: {
+    tr: "Gemiyle bağlantı yok; terminalin şu anki durumu bilinmiyor. Son bilinen: {state}, son sinyal {time} (gemi saati).",
+    en: "No link to the ship; the terminal's current state is unknown. Last known: {state}, last signal {time} (ship time).",
+  },
+  terminalUnknownNeverHint: {
+    tr: "Gemiyle bağlantı yok; terminalin şu anki durumu bilinmiyor.",
+    en: "No link to the ship; the terminal's current state is unknown.",
+  },
 
   // astronot detayı (prototipin Earth görünümü)
   backToOverview: { tr: "Genel görünüm", en: "Overview" },
@@ -187,6 +204,8 @@ const T = {
   ev_action_undone: { tr: "Öneri işareti kaldırıldı: {title}", en: "Advice unmarked: {title}" },
   ev_action_masked: { tr: "Bir öneri işaretlendi (ayrıntı paylaşılmadı)", en: "An advice item was marked (details not shared)" },
   ev_day_snapshot: { tr: "Gün verisi güncellendi", en: "Day data updated" },
+  ev_terminal_online: { tr: "Terminal çevrimiçi", en: "Terminal online" },
+  ev_terminal_offline: { tr: "Terminal çevrimdışı · son görülme {time}", en: "Terminal offline · last seen {time}" },
   ev_link_down: { tr: "Gemi bağlantısı koptu", en: "Ship link lost" },
   ev_link_up: { tr: "Gemi bağlantısı geri geldi", en: "Ship link restored" },
   evDay: { tr: "gün {day} · görev günü {mission}", en: "day {day} · mission day {mission}" },

@@ -3,6 +3,7 @@
  * zamanı ve aradaki süre. Geçmiş /api/monitor/events'ten gelir (sayfa yenilenince kaybolmaz); yeni olay SSE
  * ile tetiklenir ve kısa süre vurgulanır. Bağlantı kopma / geri gelme anları ekran işareti olarak araya girer.
  * "Sadece mürettebat": sadece DEMO_CREW'un olayları (bağlantı işaretleri kalır); seçim tarayıcıda hatırlanır.
+ * Terminal olayları (terminal.online / terminal.offline): sadece varlık; çevrimdışında son görülme (gemi saati).
  */
 import { useState } from "react";
 import { Link } from "react-router";
@@ -17,7 +18,7 @@ import { SectionHead } from "./ui";
 
 type Item = { kind: "event"; at: number; ev: MonitorEvent } | { kind: "marker"; at: number; m: LinkMarker };
 
-function eventTitle(ev: MonitorEvent, t: TFn, solTitle: (code: string) => string): string {
+function eventTitle(ev: MonitorEvent, t: TFn, locale: string, solTitle: (code: string) => string): string {
   switch (ev.type) {
     case "checkin.completed":
       return t("ev_checkin_completed");
@@ -26,6 +27,10 @@ function eventTitle(ev: MonitorEvent, t: TFn, solTitle: (code: string) => string
     case "action.done":
       if (ev.masked || !ev.code) return t("ev_action_masked");
       return t(ev.done === false ? "ev_action_undone" : "ev_action_done", { title: solTitle(ev.code) });
+    case "terminal.online":
+      return t("ev_terminal_online");
+    case "terminal.offline":
+      return t("ev_terminal_offline", { time: fmtTime(ev.last_seen, locale, true) });
     default:
       return t("ev_day_snapshot");
   }
@@ -105,7 +110,7 @@ export function LiveFeed() {
                 </div>
               </li>
             ) : (
-              <FeedEvent key={it.ev.seq} ev={it.ev} title={eventTitle(it.ev, t, solTitle)} flash={flashSeq(it.ev.seq) ? it.ev.seq : null} />
+              <FeedEvent key={it.ev.seq} ev={it.ev} title={eventTitle(it.ev, t, locale, solTitle)} flash={flashSeq(it.ev.seq) ? it.ev.seq : null} />
             ),
           )}
         </ol>

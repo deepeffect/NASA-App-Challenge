@@ -138,6 +138,10 @@ export const EventIcon = ({ type }: { type: string }) => {
           <path d="m15 9 5 5M20 9l-5 5" />
         </S>
       );
+    case "terminal.online":
+      return <TerminalIcon state="online" />;
+    case "terminal.offline":
+      return <TerminalIcon state="offline" />;
     default: // day.snapshot
       return (
         <S>
@@ -181,6 +185,21 @@ export const ChevronIcon = ({ className }: { className?: string }) => (
   </S>
 );
 /** "Aktif" rozeti: nabız çizgisi (yanında her zaman "Aktif" metni). */
+/**
+ * Astronot terminali (ekran + ayak) ve durum işareti: çevrimiçi → dolu nokta, çevrimdışı → çapraz çizgi,
+ * bilinmiyor → soru işareti, hiç bağlanmadı → kısa çizgi. Anlam her zaman yanındaki metindedir.
+ */
+export const TerminalIcon = ({ state }: { state: "online" | "offline" | "never" | "unknown" }) => (
+  <S>
+    <rect x="3" y="4" width="18" height="12" rx="2" />
+    <path d="M9 20h6M12 16v4" />
+    {state === "online" && <circle cx="12" cy="10" r="2.2" fill="currentColor" stroke="none" />}
+    {state === "offline" && <path d="m9 7 6 6M15 7l-6 6" />}
+    {state === "unknown" && <path d="M10.2 8.6a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3M12 13.6v.1" />}
+    {state === "never" && <path d="M9.5 10h5" />}
+  </S>
+);
+
 export const ActivityIcon = () => (
   <S>
     <path d="M2.5 12h4l2.5-6 4.5 12 2.5-6h5.5" />

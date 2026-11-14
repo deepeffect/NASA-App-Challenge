@@ -5,6 +5,10 @@
  * - `link`:  bağlantı durumu (heartbeat aralığında da gelir) → bağlantı çubuğu.
  * Gemi kapanırsa son veri ekranda kalır (sorgular eski veriyi tutar); bağlantı gelince Dünya alıcısı
  * kaldığı seq'ten devam eder, yeni olaylar bu akıştan gelir. Bağlantı geçişleri akışa ekran işareti olarak düşer.
+ *
+ * Geminin saati: bağlantı bilgisi geminin şu anki saatini taşır (`LinkStatus.ship_clock`); ekran saatiyle farkı
+ * (`shipOffsetMs`) tutulur. Gemi saatiyle gelen zamanlar ("son görülme", "son etkinlik") `useShipNow` ile
+ * karşılaştırılır: yerel ağda bilgisayar saatleri kaysa da doğru kalır.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -35,6 +39,8 @@ interface LiveCtx {
   /** Vurgu: astronot → son olayın seq'i (süre dolunca silinir) */
   flashFor: (astronautId: string) => number | null;
   flashSeq: (seq: number) => boolean;
+  /** Geminin saati − ekranın saati (ms); gemiden henüz haber yoksa 0 */
+  shipOffsetMs: number;
 }
 
 const Ctx = createContext<LiveCtx | null>(null);
@@ -46,6 +52,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [flashes, setFlashes] = useState<Record<string, Flash>>({});
   const [seqFlashes, setSeqFlashes] = useState<Record<number, number>>({});
   const [markers, setMarkers] = useState<LinkMarker[]>([]);
+  const [shipOffsetMs, setShipOffsetMs] = useState(0);
   const epochRef = useRef<string | null | undefined>(undefined);
   const connectedRef = useRef<boolean | undefined>(undefined);
   const markerId = useRef(0);
@@ -54,7 +61,8 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     (ev: MonitorStreamEvent) => {
       void qc.invalidateQueries({ queryKey: ["monitor", "crew"] });
       void qc.invalidateQueries({ queryKey: ["monitor", "events"] });
-      if (ev.astronaut_id) {
+      // Terminal olayları (terminal.*) gün taşımaz: şerit ve gün yeniden okunmaz
+      if (ev.astronaut_id && !ev.type?.startsWith("terminal.")) {
         void qc.invalidateQueries({ queryKey: qk.overviewAny(ev.astronaut_id) });
         void qc.invalidateQueries({ queryKey: qk.dayAny(ev.astronaut_id) });
       }
@@ -104,6 +112,11 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const link = linkQ.data;
   useEffect(() => {
     if (!link) return;
+    // Geminin saati: cevabın üretildiği andaki tahmin; 1 sn'den küçük oynamalar yok sayılır (gereksiz çizim olmasın)
+    if (link.ship_clock) {
+      const off = new Date(link.ship_clock).getTime() - Date.now();
+      setShipOffsetMs((prev) => (Math.abs(prev - off) > 1000 ? off : prev));
+    }
     if (epochRef.current !== undefined && epochRef.current !== link.epoch) void qc.invalidateQueries({ queryKey: qk.all });
     epochRef.current = link.epoch;
     const was = connectedRef.current;
@@ -144,8 +157,9 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       markers,
       flashFor: (id) => flashes[id]?.seq ?? null,
       flashSeq: (seq) => seq in seqFlashes,
+      shipOffsetMs,
     }),
-    [link, earthReachable, linkQ.dataUpdatedAt, markers, flashes, seqFlashes],
+    [link, earthReachable, linkQ.dataUpdatedAt, markers, flashes, seqFlashes, shipOffsetMs],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -164,6 +178,12 @@ export function useNow(intervalMs = 1000): number {
     return () => window.clearInterval(h);
   }, [intervalMs]);
   return now;
+}
+
+/** Geminin şu anki saati (ms), `intervalMs`'te bir güncellenir. Gemi saatiyle gelen zamanlar bununla karşılaştırılır. */
+export function useShipNow(intervalMs = 1000): number {
+  const now = useNow(intervalMs);
+  return now + useLive().shipOffsetMs;
 }
 
 /** Vurgu sınıfı: aynı öğeye üst üste olay gelirse animasyon yeniden başlasın diye seq'in paritesi. */
