@@ -22,6 +22,8 @@ from app.models.schemas import (
     CheckinRequest,
     CheckinResponse,
     CrewResponse,
+    EmergencyCheckRequest,
+    EmergencyCheckResponse,
     ErrorResponse,
     EventSource,
     ExplainRequest,
@@ -39,6 +41,7 @@ from app.models.schemas import (
     ShareRequest,
     ShareResponse,
 )
+from app.safety.emergency import detect_emergency
 from app.services import data as data_svc
 from app.services import health as health_svc
 from app.services import llm_service as llm_svc
@@ -267,6 +270,17 @@ async def post_chat(db: DB, body: ChatRequest) -> EventSourceResponse:
                 yield {"event": name, "data": json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)}
 
     return EventSourceResponse(gen(), ping=15)
+
+
+@router.post(
+    "/emergency/check",
+    response_model=EmergencyCheckResponse,
+    tags=["llm"],
+    summary="Acil belirti taraması (kural tabanlı, LLM'siz)",
+)
+def post_emergency_check(body: EmergencyCheckRequest) -> EmergencyCheckResponse:
+    """Sohbet harici bir asistan API'sine gittiğinde de acil tespit çalışsın diye ayrı uç."""
+    return EmergencyCheckResponse(notice=detect_emergency(body.text))
 
 
 # ============================================================================ veri yükleme

@@ -1,27 +1,29 @@
+/**
+ * Sohbet paneli → asistan API'si (bkz. useAssistantChat). Cevaptaki [D1]/[K1] etiketleri kaynak rozetidir.
+ * Acil belirti bandı bizim backend'in kural tabanlı taramasından gelir (LLM'den bağımsız).
+ */
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { useAsOf } from "../../app/AsOfContext";
 import { EmergencyBanner } from "../../components/ui/EmergencyBanner";
-import { DatabaseIcon, SendIcon, StopIcon } from "../../components/ui/icons";
-import { TOOL_LABELS } from "../../components/ui/labels";
+import { SendIcon, StopIcon } from "../../components/ui/icons";
 import { Button, Card } from "../../components/ui/primitives";
-import { useChatStream, type ToolActivity } from "./useChatStream";
+import { AssistantDataTag, SourceList, SourceText, Waiting } from "../assistant";
+import { useAssistantChat } from "./useAssistantChat";
 
-const SUGGESTIONS = ["How am I doing today?", "How has my sleep been lately?", "What is my radiation dose?"];
+const SUGGESTIONS = ["What is my daily report?", "How is my sleep?", "Why is my heart rate high?"];
 
-export function ChatPanel({ astronautId }: { astronautId: string }) {
-  const { asOf } = useAsOf();
-  const chat = useChatStream(astronautId, asOf);
+export function ChatPanel() {
+  const chat = useAssistantChat();
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [chat.turns]);
+  }, [chat.turns, chat.pending]);
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || chat.pending) return;
     void chat.send(input);
     setInput("");
   };
@@ -30,18 +32,21 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
     <Card
       title="Health assistant"
       actions={
-        chat.turns.length > 0 && (
-          <Button variant="ghost" onClick={chat.reset} className="text-sm">
-            Clear
-          </Button>
-        )
+        <div className="flex items-center gap-2">
+          <AssistantDataTag />
+          {chat.turns.length > 0 && (
+            <Button variant="ghost" onClick={chat.reset} className="text-sm">
+              Clear
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="space-y-4">
         {chat.emergency && <EmergencyBanner notice={chat.emergency} onDismiss={chat.dismissEmergency} />}
 
         <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1" aria-live="polite">
-          {chat.turns.length === 0 && (
+          {chat.turns.length === 0 && !chat.pending && (
             <div className="space-y-2">
               <p className="text-slate-400">Ask about your health data. The assistant does not diagnose; it provides decision support.</p>
               <div className="flex flex-wrap gap-2">
@@ -55,33 +60,25 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
           )}
           {chat.turns.map((t, i) =>
             t.role === "user" ? (
-              <div key={i} className="ml-8 rounded-2xl bg-sky-900/40 px-4 py-2">
+              <div key={i} className="ml-8 whitespace-pre-wrap rounded-2xl bg-sky-900/40 px-4 py-2">
                 {t.content}
               </div>
             ) : (
               <div key={i} className="mr-4 space-y-2">
-                {t.tools.length > 0 && <ToolChips tools={t.tools} />}
-                {t.thinking && (
-                  <details className="text-sm text-slate-500">
-                    <summary className="cursor-pointer">Reasoning</summary>
-                    <p className="whitespace-pre-wrap">{t.thinking}</p>
-                  </details>
-                )}
-                {(t.content || (chat.streaming && i === chat.turns.length - 1)) && (
-                  <div className="whitespace-pre-wrap rounded-2xl bg-slate-800/70 px-4 py-2">
-                    {t.content}
-                    {chat.streaming && i === chat.turns.length - 1 && <span className="animate-pulse">▍</span>}
+                {t.content && (
+                  <div className="space-y-2 rounded-2xl bg-slate-800/70 px-4 py-2">
+                    <SourceText text={t.content} sources={t.sources} />
+                    <SourceList text={t.content} sources={t.sources} />
                   </div>
-                )}
-                {t.degraded && (
-                  <p className="text-sm text-amber-300">Assistant offline; showing a rule-based fallback answer.</p>
-                )}
-                {t.ungrounded && t.ungrounded.length > 0 && (
-                  <p className="text-sm text-amber-300">Unverified numbers: {t.ungrounded.join(", ")}</p>
                 )}
                 {t.error && <p className="text-sm text-red-300">Error: {t.error}</p>}
               </div>
             ),
+          )}
+          {chat.pending && (
+            <div className="mr-4 rounded-2xl bg-slate-800/40 px-4 py-3">
+              <Waiting label="Assistant is thinking…" />
+            </div>
           )}
           <div ref={endRef} />
         </div>
@@ -96,9 +93,9 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message…"
             className="min-h-11 flex-1 rounded-xl border border-slate-600 bg-slate-950 px-3"
-            disabled={chat.streaming}
+            disabled={chat.pending}
           />
-          {chat.streaming ? (
+          {chat.pending ? (
             <Button variant="danger" onClick={chat.stop} aria-label="Stop">
               <StopIcon />
             </Button>
@@ -110,28 +107,5 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
         </form>
       </div>
     </Card>
-  );
-}
-
-function ToolChips({ tools }: { tools: ToolActivity[] }) {
-  return (
-    <ul className="flex flex-wrap gap-2">
-      {tools.map((tool) => (
-        <li
-          key={tool.id}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm ${
-            tool.status === "running"
-              ? "border-sky-600/60 text-sky-300"
-              : tool.status === "ok"
-                ? "border-slate-600 text-slate-400"
-                : "border-red-500/60 text-red-300"
-          }`}
-        >
-          <DatabaseIcon className={`h-4 w-4 ${tool.status === "running" ? "animate-pulse" : ""}`} />
-          {tool.status === "running" ? "Fetching: " : tool.status === "ok" ? "✓ " : "✗ "}
-          {TOOL_LABELS[tool.name] ?? tool.name}
-        </li>
-      ))}
-    </ul>
   );
 }

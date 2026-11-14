@@ -242,6 +242,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/emergency/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acil belirti taraması (kural tabanlı, LLM'siz)
+         * @description Sohbet harici bir asistan API'sine gittiğinde de acil tespit çalışsın diye ayrı uç.
+         */
+        post: operations["post_emergency_check_api_emergency_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingest": {
         parameters: {
             query?: never;
@@ -666,6 +686,19 @@ export interface components {
             snippet: string;
             /** Score */
             score: number;
+        };
+        /** EmergencyCheckRequest */
+        EmergencyCheckRequest: {
+            /**
+             * Text
+             * @description Kullanıcı mesajı (kural tabanlı tarama, LLM yok)
+             */
+            text: string;
+        };
+        /** EmergencyCheckResponse */
+        EmergencyCheckResponse: {
+            /** @description Acil belirti bulunduysa dolu, yoksa null */
+            notice?: components["schemas"]["EmergencyNotice"] | null;
         };
         /** EmergencyNotice */
         EmergencyNotice: {
@@ -2007,6 +2040,39 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_emergency_check_api_emergency_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmergencyCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmergencyCheckResponse"];
                 };
             };
             /** @description Validation Error */

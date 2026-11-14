@@ -30,6 +30,7 @@ export type CheckinRequest = S["CheckinRequest"];
 export type CheckinResponse = S["CheckinResponse"];
 export type CheckinListResponse = S["CheckinListResponse"];
 export type EmergencyNotice = S["EmergencyNotice"];
+export type EmergencyCheckResponse = S["EmergencyCheckResponse"];
 export type IngestReport = S["IngestReport"];
 export type GroundReport = S["GroundReport"];
 export type ChatRequest = S["ChatRequest"];
@@ -123,6 +124,8 @@ export const api = {
     request<FeedbackResponse>("POST", `/api/alerts/${enc(eventId)}/feedback`, { body }),
   share: (eventId: string, shareWithGround: boolean) =>
     request<ShareResponse>("PUT", `/api/alerts/${enc(eventId)}/share`, { body: { share_with_ground: shareWithGround } }),
+  emergencyCheck: (text: string) =>
+    request<EmergencyCheckResponse>("POST", "/api/emergency/check", { body: { text } }),
   checkin: (body: CheckinRequest) => request<CheckinResponse>("POST", "/api/checkin", { body }),
   ingest: (file: File, q: { adapter?: string; astronaut_id?: string } = {}) => {
     const form = new FormData();

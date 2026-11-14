@@ -1058,6 +1058,48 @@
         }
       }
     },
+    "/api/emergency/check": {
+      "post": {
+        "tags": [
+          "llm"
+        ],
+        "summary": "Acil belirti taraması (kural tabanlı, LLM'siz)",
+        "description": "Sohbet harici bir asistan API'sine gittiğinde de acil tespit çalışsın diye ayrı uç.",
+        "operationId": "post_emergency_check_api_emergency_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmergencyCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmergencyCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ingest": {
       "post": {
         "tags": [
@@ -2213,6 +2255,39 @@
           "score"
         ],
         "title": "DocRef"
+      },
+      "EmergencyCheckRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "description": "Kullanıcı mesajı (kural tabanlı tarama, LLM yok)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "EmergencyCheckRequest"
+      },
+      "EmergencyCheckResponse": {
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmergencyNotice"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Acil belirti bulunduysa dolu, yoksa null"
+          }
+        },
+        "type": "object",
+        "title": "EmergencyCheckResponse"
       },
       "EmergencyNotice": {
         "properties": {

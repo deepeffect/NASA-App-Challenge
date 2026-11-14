@@ -24,6 +24,7 @@ const BACKEND = join(FRONTEND, "..", "backend");
 const OUT = join(FRONTEND, "screenshots");
 const WEB = (process.env.SMOKE_WEB ?? "http://localhost:5173").replace(/\/$/, "");
 const API = (process.env.SMOKE_API ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const ASSISTANT_TIMEOUT = 180_000; // harici asistan API cevabı (yerel model)
 const ML_PORT = Number(process.env.SMOKE_ML_PORT ?? 8001);
 const ML_API = `http://127.0.0.1:${ML_PORT}`;
 const VENV_PY = process.platform === "win32"
@@ -40,7 +41,8 @@ const c = { red: "\x1b[31m", green: "\x1b[32m", yellow: "\x1b[33m", dim: "\x1b[2
 // ----------------------------------------------------------------------------- yardımcılar
 async function reachable(url: string): Promise<boolean> {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    // /api/health LLM erişimini LLM_HEALTH_TIMEOUT (5 sn) kadar dener → 3 sn yetmez
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
     return r.ok;
   } catch {
     return false;
@@ -171,23 +173,25 @@ const screens: Screen[] = [
     },
   },
   {
-    name: "5. Sohbet paneli (mock)",
+    // Sohbet harici asistan API'sine gider (VITE_ASSISTANT_API_URL); yerel model 10–30 sn sürebilir.
+    name: "5. Sohbet paneli (asistan API)",
     run: async ({ page, issues, shot }) => {
       await page.goto(`${WEB}/astronauts/AST-02`);
       await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
       await settle(page);
       const input = page.locator("#chat-input");
-      await input.fill("How has my sleep been lately?");
+      await input.fill("How is my sleep?");
       await input.press("Enter");
-      await expectText(page, issues, /Mock mode/, "mock cevabının tamamı");
-      await page.locator("#chat-input:enabled").waitFor();
+      await page.locator("#chat-input:enabled").waitFor({ timeout: ASSISTANT_TIMEOUT });
+      const chatErr = page.locator("section", { has: page.getByRole("heading", { name: "Health assistant" }) }).getByText(/^Error:/);
+      if (await chatErr.count()) issues.push({ kind: "check", text: `asistan cevabı yok: ${await chatErr.first().innerText()}` });
       const chat = page.locator("section", { has: page.getByRole("heading", { name: "Health assistant" }) });
       await chat.scrollIntoViewIfNeeded();
       await shot("05-chat.png", 'section:has(h2:text("Health assistant"))');
       await input.fill("I feel pressure in my chest and shortness of breath");
       await input.press("Enter");
       await expectText(page, issues, /EMERGENCY:/, "acil durum bandı");
-      await page.locator("#chat-input:enabled").waitFor();
+      await page.locator("#chat-input:enabled").waitFor({ timeout: ASSISTANT_TIMEOUT });
       await shot("05b-chat-emergency.png", 'section:has(h2:text("Health assistant"))');
     },
   },

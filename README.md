@@ -190,6 +190,27 @@ npm run dev                        # http://localhost:5173
 
 Ayrıntılar: [`frontend/README.md`](frontend/README.md).
 
+### Asistan API (sohbet, uyarı açıklamaları, günlük rapor)
+
+Arayüzdeki **sohbet**, **Assistant alerts** ve **Daily report** kartları LLM ekibinin ayrı API'sine
+doğrudan bağlanır (kural motoru, `[D]`/`[K]` kaynak etiketleri ve sayı doğrulayıcı o API'nin içinde).
+Mürettebat, metrik, check-in ekranları ve "Active alerts" listesi bizim backend'de kalır.
+
+```bash
+# frontend/.env
+VITE_ASSISTANT_API_URL=http://192.168.1.12:8000
+# VITE_ASSISTANT_ASTRONAUT_ID=      # boş: asistan API'sinde yüklü astronot (GET /health -> current)
+```
+
+- Bağlantı testi: `curl http://<IP>:8000/health` → `{"ok": true, "current": "A1", ...}`; şema: `http://<IP>:8000/docs`.
+- Uçlar: `POST /chat {"message"}` → `answer` + `sources` · `GET /alerts` → `fallback` (her zaman dolu) + `explanation`
+  · `GET /daily_report` → `report` (`force=true` yeniden üretir) · `POST /reset` (sohbet geçmişi).
+- Yerel model 10–30 sn sürebilir; istek zaman aşımı 180 sn.
+- **Veri uyumu:** asistan API'si kendi yüklediği veriyle çalışır (`POST /load`). Kartlardaki
+  "Assistant data: A1" etiketi hangi astronotun verisi olduğunu gösterir; sayfadaki astronotla aynı olmayabilir.
+- **Acil tespit LLM'den bağımsız kalır:** her sohbet mesajı ayrıca bizim backend'in kural tabanlı
+  `POST /api/emergency/check` ucuna gönderilir; banner asistan cevabını beklemez.
+
 ## 4. NASA verisi geldiğinde
 
 1. Dosyayı `data/raw/` altına koyun.

@@ -1,5 +1,6 @@
 /**
- * Astronot detayı: sistem skorları, olay kartları, metrik grafiği, brifing, sohbet.
+ * Astronot detayı: sistem skorları, olay kartları, metrik grafiği (bizim backend) +
+ * asistan uyarıları, günlük rapor ve sohbet (asistan API'si, bkz. features/assistant).
  * Bu sayfa alerts ve chat feature'larını sadece public API'leri (index.ts) üzerinden kullanır.
  */
 import { useEffect, useState } from "react";
@@ -13,8 +14,8 @@ import { fmtDateTime, fmtNum } from "../../components/ui/format";
 import { ArrowLeftIcon } from "../../components/ui/icons";
 import { Card, QueryState } from "../../components/ui/primitives";
 import { EventList } from "../alerts";
+import { AssistantAlertsCard, AssistantDataTag, DailyReportCard } from "../assistant";
 import { ChatPanel } from "../chat";
-import { BriefingCard } from "./BriefingCard";
 import { MetricPanel } from "./MetricPanel";
 import { SystemScoreCard } from "./SystemScoreCard";
 
@@ -80,6 +81,13 @@ export function AstronautPage() {
                 <EventList events={data.active_events} onShowMetric={showMetric} />
               </Card>
 
+              <section className="space-y-2">
+                <div className="flex justify-end">
+                  <AssistantDataTag />
+                </div>
+                <AssistantAlertsCard />
+              </section>
+
               {/* scroll-mt: "Grafikte göster" kaydırınca panel sabit header'ın altında kalmasın */}
               <div id="metric-panel" className="scroll-mt-40">
                 {metric && (
@@ -96,9 +104,9 @@ export function AstronautPage() {
             </div>
 
             <aside className="space-y-6">
-              <BriefingCard astronautId={data.astronaut.id} />
+              <DailyReportCard />
               <div className="scroll-mt-40 lg:sticky lg:top-40">
-                <ChatPanel astronautId={data.astronaut.id} />
+                <ChatPanel />
               </div>
             </aside>
           </div>

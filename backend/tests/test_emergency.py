@@ -28,3 +28,12 @@ def test_no_false_positive_on_normal_text():
     assert detect_emergency("Feeling fine today, a bit tired.") is None
     assert detect_emergency("") is None
     assert detect_emergency(None) is None
+
+
+def test_emergency_check_endpoint(client):
+    r = client.post("/api/emergency/check", json={"text": "I have severe chest pain"})
+    assert r.status_code == 200
+    n = r.json()["notice"]
+    assert n and "chest_pain" in n["matched_symptoms"]
+    r = client.post("/api/emergency/check", json={"text": "How is my sleep?"})
+    assert r.status_code == 200 and r.json()["notice"] is None

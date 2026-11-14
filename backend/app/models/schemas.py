@@ -483,6 +483,14 @@ class ChatRequest(BaseModel):
         return self
 
 
+class EmergencyCheckRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000, description="Kullanıcı mesajı (kural tabanlı tarama, LLM yok)")
+
+
+class EmergencyCheckResponse(BaseModel):
+    notice: EmergencyNotice | None = Field(None, description="Acil belirti bulunduysa dolu, yoksa null")
+
+
 ChatEventName = Literal["meta", "token", "thinking", "tool_call", "tool_result", "emergency", "done", "error"]
 
 

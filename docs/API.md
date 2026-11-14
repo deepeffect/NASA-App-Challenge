@@ -431,6 +431,18 @@ LLM kapalıysa: `error {code:"llm_unavailable"}` → kural tabanlı kısa yedek 
 
 ---
 
+### `POST /api/emergency/check` — acil belirti taraması (LLM'siz)
+
+Sohbet harici asistan API'sine gittiğinde (bkz. README → "Asistan API") arayüz her mesajı ayrıca buraya
+gönderir; kural tabanlı tarama anında döner, LLM beklenmez.
+
+```json
+// istek
+{ "text": "I have severe chest pain" }
+// cevap: acil belirti yoksa { "notice": null }
+{ "notice": { "triggered": true, "matched_symptoms": ["chest_pain"], "…": "…" } }
+```
+
 ## Veri yükleme
 
 ### `POST /api/ingest` (multipart/form-data)
