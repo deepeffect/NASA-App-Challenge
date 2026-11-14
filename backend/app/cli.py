@@ -1,5 +1,6 @@
 """Komut satırı araçları.
 
+    python -m app.cli reset                              # bu istasyonun (STATION_ROLE) DB'sini sıfırla
     python -m app.cli seed [--seed 42] [--spe-day 120]   # sentetik veriyi DB'ye yükle (DB'yi sıfırlar)
     python -m app.cli ingest data/raw/dosya.csv          # dosyayı API'siz yükle
     python -m app.cli analyze [--as-of 2026-10-20]       # ekip durumu konsolda
@@ -14,6 +15,20 @@ from datetime import date
 from pathlib import Path
 
 from app.config import REPO_ROOT
+
+
+def cmd_reset(args: argparse.Namespace) -> None:
+    """Seçili rolün DB'sindeki bütün tabloları silip yeniden kurar (dosya kilitliyken de çalışır)."""
+    from sqlmodel import SQLModel
+
+    from app.config import get_settings
+    from app.db import get_engine, init_db
+    from app.models import tables  # noqa: F401  (metadata'ya kayıt)
+
+    s = get_settings()
+    SQLModel.metadata.drop_all(get_engine())
+    init_db()
+    print(f"[{s.station_role}] veritabanı sıfırlandı: {s.database_url_resolved}")
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
@@ -89,6 +104,9 @@ def cmd_export_openapi(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m app.cli", description="Astronaut Health Monitor CLI")
     sub = p.add_subparsers(dest="command", required=True)
+
+    z = sub.add_parser("reset", help="Bu istasyonun (STATION_ROLE) veritabanını sıfırla")
+    z.set_defaults(func=cmd_reset)
 
     s = sub.add_parser("seed", help="Sentetik veriyi üret ve DB'ye yükle (varsayılan: DB'yi sıfırlar)")
     s.add_argument("--seed", type=int, default=42)

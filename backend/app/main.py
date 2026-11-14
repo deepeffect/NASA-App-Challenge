@@ -11,10 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app import __version__
-from app.api import router as api_router
-from app.config import get_settings
+from app.api import router as legacy_router
+from app.api.station import router as station_router
+from app.config import Settings, get_settings
 from app.db import init_db
 from app.models.schemas import SSE_MODELS
+from app.station import earth_read_only_middleware
 
 DESCRIPTION = """
 Astronot sağlık izleme sistemi — tamamen offline/gemide çalışır.
@@ -24,6 +26,10 @@ anomali, skor ve uyarıları üretir; LLM sadece yorumlar. Kural tabanlı uyarı
 kapalıyken de çalışır.
 
 Zaman kaydırıcısı: çoğu GET endpoint'i `as_of=YYYY-MM-DD` alır.
+
+**İstasyonlar:** aynı kod iki rolde çalışır (`STATION_ROLE`). `ship` (gemi) bütün veriyi tutar ve
+astronot ekranını (`/me`) servis eder; `earth` (Dünya üssü) gemiden downlink ile gelen paylaşılabilir
+veriyi tutar, `/monitor` ekranını servis eder ve salt okunurdur.
 """
 
 
@@ -53,14 +59,19 @@ def _custom_openapi(app: FastAPI):
     return openapi
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Rolüne göre uygulama. `settings` verilmezse ortamdan okunur (testte iki rol aynı süreçte kurulur)."""
+    settings = settings or get_settings()
     app = FastAPI(
         title="Astronaut Health Monitor API",
         version=__version__,
         description=DESCRIPTION,
         lifespan=lifespan,
     )
+    app.state.settings = settings
+    if settings.station_role == "earth":
+        # CORS'tan önce eklenir → CORS en dışta kalır, 403 cevabı da CORS başlığı taşır
+        app.middleware("http")(earth_read_only_middleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -68,7 +79,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(api_router, prefix="/api")
+    app.include_router(station_router, prefix="/api")
+    if settings.station_role == "ship":
+        app.include_router(legacy_router, prefix="/api")
     app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
     return app
 

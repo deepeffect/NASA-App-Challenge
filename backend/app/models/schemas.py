@@ -586,3 +586,20 @@ class GroundReport(BaseModel):
     period: DateWindow | None
     crew: list[GroundReportMember]
     note: str
+
+
+# #############################################################################
+# YENİ MİMARİ: GEMİ / DÜNYA İSTASYONLARI (feat/foundation)
+# Kurallar için tek doğru kaynak: frontend/reference/personal-artifact.html
+# #############################################################################
+StationRole = Literal["ship", "earth"]
+
+
+# =============================================================================
+# /api/station
+# =============================================================================
+class StationInfo(BaseModel):
+    role: StationRole = Field(description="ship: gemi bilgisayarı | earth: Dünya üssü (salt okunur)")
+    version: str
+    home_path: str = Field(description="Bu istasyonun ana ekranı: ship → /me, earth → /monitor")
+    read_only: bool = Field(description="true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)")

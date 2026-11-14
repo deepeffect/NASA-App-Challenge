@@ -23,6 +23,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # --- İstasyon ---
+    # ship: gemi bilgisayarı (bütün veri, astronot ekranı /me) | earth: Dünya üssü (salt okunur /monitor)
+    station_role: Literal["ship", "earth"] = "ship"
+    # earth: gemi backend'inin adresi (downlink buradan alınır), örn. http://192.168.1.10:8000
+    ship_url: str | None = None
+
     # --- Genel ---
     app_env: Literal["dev", "demo", "test"] = "dev"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173", "http://127.0.0.1:5173"]
@@ -85,9 +91,10 @@ class Settings(BaseSettings):
     # --- Türetilmiş değerler ---
     @property
     def database_url_resolved(self) -> str:
+        """DATABASE_URL verilmediyse rol başına ayrı dosya: data/processed/ship.db | earth.db."""
         if self.database_url:
             return self.database_url
-        return f"sqlite:///{(self.data_dir / 'processed' / 'health.db').as_posix()}"
+        return f"sqlite:///{(self.data_dir / 'processed' / f'{self.station_role}.db').as_posix()}"
 
     @property
     def docs_path(self) -> Path:
