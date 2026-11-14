@@ -11,7 +11,8 @@ Bilinçli farklar (kullanıcı kararları) açıkça kontrol edilir:
   D3  Dünya'da, check-in en az `scores` paylaşılmadıysa davranışsal alan skoru "Not shared";
       ana endişe davranışsalsa "behavioral area (details not shared)".
   D4  Dünya'da (paylaşılmamışsa) çözümü sadece gizli ölçümlere bağlı "veri setinin önerisi" öğesi
-      (MOOD_CONNECT, A139 23–24. gün) maskelenir; prototip gösteriyordu.
+      (MOOD_CONNECT, A139 23–24. gün) maskelenir; prototip gösteriyordu. Onaylı karar;
+      gizlilik testleri: tests/station/test_sharing_privacy.py (test_d4_*), test_downlink.py.
 """
 
 import pytest

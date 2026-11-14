@@ -149,6 +149,21 @@ def test_mood_and_stress_never_leave_ship_unshared(ship) -> None:
             assert not any(col in block for col in PRIVATE)
 
 
+def test_d4_private_suggestion_never_enters_downlink(ship) -> None:
+    """A139 23–24. gün: ruh haline bağlı veri seti önerisi (MOOD_CONNECT) snapshot'ta ve olaylarda kodsuz."""
+    app, c = ship
+    snap = c.get("/api/downlink/snapshot", headers=LINK).json()
+    days = {d["day_index"]: d for d in snap["days"] if d["astronaut_id"] == "A139"}
+    for i in (22, 23):
+        assert "MOOD_CONNECT" not in json.dumps(days[i]) and days[i]["todo_masked_count"] == 1, i
+    with Session(app.state.engine) as db:
+        series = personal_data(app.state.engine).series(db, "A139")
+        for i in (22, 23):  # o gün için olay üretilseydi taşıyacağı yük (day.snapshot)
+            ev = outbox.emit_day_event(db, app.state.settings, "day.snapshot", series, i)
+            assert "MOOD_CONNECT" not in json.dumps(ev.payload), i
+        db.rollback()  # olayları yazma: diğer testlerin outbox'ı değişmesin
+
+
 def test_cmo_record_never_enters_downlink(ship) -> None:
     app, c = ship
     secret = "sudden chest pain and dizzy XYZ"

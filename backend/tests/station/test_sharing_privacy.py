@@ -97,6 +97,55 @@ def test_earth_view_from_record_equals_ship_side_earth_view(dataset, catalog) ->
         assert earth_day_view(catalog, rec, "en") == ref
 
 
+# ---------------------------------------------------------------- D4: gizli ölçüme bağlı veri seti önerisi
+# A139 23–24. gün (indeks 22–23): MOOD_CONNECT veri setinin önerisi, hiçbir ölçüm tetiklemiyor. Çözüm sadece
+# ruh haline (gizli) bağlı olduğu için kod Dünya'ya gitmez, sadece maskeli öğe sayısı gider (onaylı karar).
+D4_ASTRONAUT, D4_CODE = "A139", "MOOD_CONNECT"
+D4_DAYS = (22, 23)
+
+
+def _row(series, i: int, share: str | None) -> CheckinSession:
+    return CheckinSession(astronaut_id=series.meta.id, day_index=i, mission_day=series.days[i].mission_day,
+                          notes=[], done=True, share=share)
+
+
+@pytest.mark.parametrize("i", D4_DAYS)
+def test_d4_precondition_suggestion_without_trigger(dataset, catalog, i) -> None:
+    """Astronot öğeyi görür: veri setinin önerisi, tetikleyicisi yok."""
+    a = dataset.by_id()[D4_ASTRONAUT]
+    assert D4_CODE in a.days[i].self_care
+    item = next(t for t in build_day_view(catalog, a, i, "en").todo if t.code == D4_CODE)
+    assert item.source == "dataset" and item.triggers == [] and item.why == "Suggested by the dataset"
+
+
+@pytest.mark.parametrize("share", [None, "private"])
+@pytest.mark.parametrize("i", D4_DAYS)
+def test_d4_private_suggestion_is_masked_on_earth(dataset, catalog, i, share) -> None:
+    a = dataset.by_id()[D4_ASTRONAUT]
+    rec = earth_day(catalog, a, i, _row(a, i, share) if share else None)
+    assert D4_CODE not in rec.model_dump_json()  # kod Dünya kaydında hiçbir yerde yok
+    assert D4_CODE not in [t.code for t in rec.todo]
+    assert rec.todo_masked_count == 1 and len(rec.todo) + rec.todo_masked_count == len(a.days[i].self_care)
+    for lang, title in (("en", "Reconnect and recharge"), ("tr", "Bağ kurun ve enerji toplayın")):
+        view = earth_day_view(catalog, rec, lang)
+        assert title not in view.model_dump_json(), lang
+        assert view.todo_masked_count == 1 and view.todo_masked_text, lang
+    # alt başlık maskeli öğeyi saymaz (durum Normal ise "N küçük şey")
+    view = earth_day_view(catalog, rec, "en")
+    if view.status == 0:
+        assert view.subtitle == f"{len(rec.todo)} small thing{'s' if len(rec.todo) > 1 else ''} to look at"
+
+
+@pytest.mark.parametrize("share", ["scores", "full"])
+@pytest.mark.parametrize("i", D4_DAYS)
+def test_d4_suggestion_visible_once_scores_are_shared(dataset, catalog, i, share) -> None:
+    a = dataset.by_id()[D4_ASTRONAUT]
+    rec = earth_day(catalog, a, i, _row(a, i, share))
+    assert D4_CODE in [t.code for t in rec.todo] and rec.todo_masked_count == 0
+    item = next(t for t in earth_day_view(catalog, rec, "en").todo if t.code == D4_CODE)
+    assert item.source == "dataset" and item.why == "Suggested by the dataset"
+
+
 def test_earth_checkin_texts() -> None:
     assert earth_checkin_view(None, "en").text == "No completed check-in for this day."
     assert earth_checkin_view(None, "tr").text == "Bu gün için tamamlanmış bir check-in yok."
