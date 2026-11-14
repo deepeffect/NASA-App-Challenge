@@ -4,22 +4,24 @@
  */
 import { AlertTriangleIcon, OctagonAlertIcon } from "../../components/ui/icons";
 import { Button, Card, ErrorBox } from "../../components/ui/primitives";
-import { type AssistantAlert, useAssistantAlerts } from "./api";
+import { type AssistantAlert, type AssistantSelection, useAssistantAlerts } from "./api";
 import { SourceList, SourceText } from "./SourceText";
-import { Waiting } from "./Waiting";
+import { SelectionPending, Waiting } from "./Waiting";
 
-export function AssistantAlertsCard() {
-  const q = useAssistantAlerts();
+export function AssistantAlertsCard({ sel }: { sel: AssistantSelection }) {
+  const q = useAssistantAlerts(sel);
   return (
     <Card
       title="Assistant alerts"
       actions={
-        <Button variant="ghost" className="text-sm" onClick={() => void q.refetch()} disabled={q.isFetching}>
+        <Button variant="ghost" className="text-sm" onClick={() => void q.refetch()} disabled={!sel.ready || q.isFetching}>
           Refresh
         </Button>
       }
     >
-      {q.isPending ? (
+      {!sel.ready ? (
+        <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />
+      ) : q.isPending ? (
         <Waiting label="Loading alerts…" />
       ) : q.isError ? (
         <ErrorBox error={q.error} />

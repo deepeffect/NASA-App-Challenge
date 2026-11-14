@@ -14,7 +14,7 @@ import { fmtDateTime, fmtNum } from "../../components/ui/format";
 import { ArrowLeftIcon } from "../../components/ui/icons";
 import { Card, QueryState } from "../../components/ui/primitives";
 import { EventList } from "../alerts";
-import { AssistantAlertsCard, AssistantDataTag, DailyReportCard } from "../assistant";
+import { AssistantAlertsCard, AssistantDataTag, DailyReportCard, useAssistantSelection } from "../assistant";
 import { ChatPanel } from "../chat";
 import { MetricPanel } from "./MetricPanel";
 import { SystemScoreCard } from "./SystemScoreCard";
@@ -23,6 +23,8 @@ export function AstronautPage() {
   const { id = "" } = useParams();
   const { asOf } = useAsOf();
   const summary = useSummary(id, asOf);
+  // Asistan API'sini sayfadaki astronot + görev gününe senkronla (POST /select)
+  const assistantSel = useAssistantSelection(id, summary.data?.mission.mission_day);
   const [metric, setMetric] = useState<string | null>(null);
   const [days, setDays] = useState(30);
 
@@ -85,7 +87,7 @@ export function AstronautPage() {
                 <div className="flex justify-end">
                   <AssistantDataTag />
                 </div>
-                <AssistantAlertsCard />
+                <AssistantAlertsCard sel={assistantSel} />
               </section>
 
               {/* scroll-mt: "Grafikte göster" kaydırınca panel sabit header'ın altında kalmasın */}
@@ -104,9 +106,9 @@ export function AstronautPage() {
             </div>
 
             <aside className="space-y-6">
-              <DailyReportCard />
+              <DailyReportCard sel={assistantSel} />
               <div className="scroll-mt-40 lg:sticky lg:top-40">
-                <ChatPanel />
+                <ChatPanel key={assistantSel.key} sel={assistantSel} />
               </div>
             </aside>
           </div>

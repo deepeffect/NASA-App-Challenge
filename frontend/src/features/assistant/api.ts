@@ -6,6 +6,7 @@
  * (kaynak: <ASSISTANT>/docs).
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export const ASSISTANT_BASE: string = (import.meta.env.VITE_ASSISTANT_API_URL ?? "http://192.168.1.12:8000").replace(
   /\/+$/,
@@ -50,8 +51,14 @@ export interface DailyReportResponse {
 }
 export interface AssistantHealth {
   ok: boolean;
+  file?: string | null;
   current?: string | null;
+  mission_day?: number | null;
   loaded?: string[];
+}
+export interface AssistantRecords {
+  file?: string | null;
+  astronauts: Record<string, { first_day: number; last_day: number; count?: number }>;
 }
 
 export class AssistantError extends Error {}
@@ -103,41 +110,113 @@ export const assistantApi = {
   dailyReport: (force = false, signal?: AbortSignal) =>
     call<DailyReportResponse>("GET", "/daily_report", { query: { force: force || undefined }, signal }),
   reset: () => call<unknown>("POST", "/reset", { timeoutMs: 10_000 }),
+  records: () => call<AssistantRecords>("GET", "/records", { timeoutMs: 10_000 }),
+  select: (astronautId: string, day: number) =>
+    call<unknown>("POST", "/select", { body: { astronaut_id: astronautId, day }, timeoutMs: 30_000 }),
 };
+
+// ---- Astronot/gün seçimi -----------------------------------------------------------
+/**
+ * Asistan API'si sunucu tarafında tek bir "seçili astronot-gün" tutar (POST /select).
+ * Sayfadaki astronot + zaman kaydırıcısının görev günü değişince seçim gönderilir; rapor/uyarı
+ * sorgularının anahtarı seçime bağlıdır (eski seçimin cevabı ekranda kalmaz).
+ * /records yoksa (eski API) veya alınamazsa seçim yapılmaz, kartlar API'nin varsayılanıyla çalışır.
+ */
+export type SelectionStatus = "syncing" | "ready" | "no_data" | "error";
+export interface AssistantSelection {
+  key: string;
+  ready: boolean;
+  status: SelectionStatus;
+  astronautId: string;
+  day: number | null;
+  message?: string;
+}
+
+const SELECT_DEBOUNCE_MS = 400; // kaydırıcı sürüklenirken her gün için istek gitmesin
+
+export function useAssistantSelection(astronautId: string, day: number | null | undefined): AssistantSelection {
+  const qc = useQueryClient();
+  const records = useQuery({ queryKey: assistantKeys.records, queryFn: assistantApi.records, staleTime: 5 * 60_000, retry: false });
+  const rec = records.data?.astronauts?.[astronautId];
+  const hasData = !!rec && day != null && day >= rec.first_day && day <= rec.last_day;
+  const want = `${astronautId}@${day ?? "-"}`;
+  const [done, setDone] = useState<{ key: string; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (!hasData || day == null) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      assistantApi
+        .select(astronautId, day)
+        .then(() => {
+          if (cancelled) return;
+          setDone({ key: want });
+          void qc.invalidateQueries({ queryKey: assistantKeys.health });
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) setDone({ key: want, error: e instanceof Error ? e.message : String(e) });
+        });
+    }, SELECT_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [hasData, astronautId, day, want, qc]);
+
+  const base = { astronautId, day: day ?? null };
+  if (records.isPending) return { ...base, key: want, ready: false, status: "syncing" };
+  if (records.isError) return { ...base, key: "default", ready: true, status: "ready" }; // /records yok → seçimsiz
+  if (!hasData) {
+    return {
+      ...base, key: want, ready: false, status: "no_data",
+      message: `The assistant has no data for ${astronautId}${day != null ? ` on mission day ${day}` : ""}.`,
+    };
+  }
+  if (done?.key !== want) return { ...base, key: want, ready: false, status: "syncing" };
+  if (done.error) return { ...base, key: want, ready: false, status: "error", message: done.error };
+  return { ...base, key: want, ready: true, status: "ready" };
+}
 
 // ---- Sorgular ------------------------------------------------------------------
 export const assistantKeys = {
   health: ["assistant", "health"] as const,
-  alerts: ["assistant", "alerts"] as const,
-  report: ["assistant", "daily_report"] as const,
+  records: ["assistant", "records"] as const,
+  alerts: (sel: string) => ["assistant", "alerts", sel] as const,
+  report: (sel: string) => ["assistant", "daily_report", sel] as const,
 };
 
 export function useAssistantHealth() {
   return useQuery({ queryKey: assistantKeys.health, queryFn: assistantApi.health, refetchInterval: 30_000, retry: false });
 }
 
-export function useAssistantAlerts() {
-  return useQuery({ queryKey: assistantKeys.alerts, queryFn: assistantApi.alerts,
+export function useAssistantAlerts(sel: AssistantSelection) {
+  return useQuery({
+    queryKey: assistantKeys.alerts(sel.key),
+    queryFn: assistantApi.alerts,
+    enabled: sel.ready,
     staleTime: 5 * 60_000,
     retry: 1,
     refetchOnWindowFocus: false, // her çağrı LLM açıklamalarını yeniden üretir (yavaş)
   });
 }
 
-export function useDailyReport() {
-  return useQuery({
-    queryKey: assistantKeys.report,
-    queryFn: ({ signal }) => assistantApi.dailyReport(false, signal),
+export function reportQuery(sel: AssistantSelection) {
+  return {
+    queryKey: assistantKeys.report(sel.key),
+    queryFn: ({ signal }: { signal: AbortSignal }) => assistantApi.dailyReport(false, signal),
     staleTime: 10 * 60_000,
-    retry: 1,
-  });
+  };
+}
+
+export function useDailyReport(sel: AssistantSelection) {
+  return useQuery({ ...reportQuery(sel), enabled: sel.ready, retry: 1 });
 }
 
 /** Raporu yeniden ürettir (force=true) ve önbelleği günceller. */
-export function useRegenerateReport() {
+export function useRegenerateReport(sel: AssistantSelection) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => assistantApi.dailyReport(true),
-    onSuccess: (data) => qc.setQueryData(assistantKeys.report, data),
+    onSuccess: (data) => qc.setQueryData(assistantKeys.report(sel.key), data),
   });
 }

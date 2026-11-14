@@ -204,10 +204,15 @@ VITE_ASSISTANT_API_URL=http://192.168.1.12:8000
 
 - Bağlantı testi: `curl http://<IP>:8000/health` → `{"ok": true, "current": "A1", ...}`; şema: `http://<IP>:8000/docs`.
 - Uçlar: `POST /chat {"message"}` → `answer` + `sources` · `GET /alerts` → `fallback` (her zaman dolu) + `explanation`
-  · `GET /daily_report` → `report` (`force=true` yeniden üretir) · `POST /reset` (sohbet geçmişi).
+  · `GET /daily_report` → `report` (`force=true` yeniden üretir) · `GET /records` · `POST /select`
+  · `POST /reset` (sohbet geçmişi).
 - Yerel model 10–30 sn sürebilir; istek zaman aşımı 180 sn.
-- **Veri uyumu:** asistan API'si kendi yüklediği veriyle çalışır (`POST /load`). Kartlardaki
-  "Assistant data: A1" etiketi hangi astronotun verisi olduğunu gösterir; sayfadaki astronotla aynı olmayabilir.
+- **Astronot/gün senkronu:** astronot sayfası açılınca veya zaman kaydırıcısı değişince arayüz
+  `GET /records` listesine bakar ve `POST /select {"astronaut_id", "day"}` gönderir (görev günü = sayfadaki
+  mission day); ardından rapor ve uyarılar yeniden çekilir. Kartlardaki "Assistant data: AST-02 · day 157"
+  etiketi asistanın o an hangi veriyle çalıştığını gösterir. Seçim sunucu tarafında **tektir** (aynı API'yi
+  kullanan iki tarayıcı birbirinin seçimini değiştirir). `/records` yoksa (eski API) seçim yapılmaz.
+- Cevaplar markdown'dır (kalın, liste, emoji); `[D1]`/`[K1]` etiketleri 📊/📄 kaynak rozetine çevrilir.
 - **Acil tespit LLM'den bağımsız kalır:** her sohbet mesajı ayrıca bizim backend'in kural tabanlı
   `POST /api/emergency/check` ucuna gönderilir; banner asistan cevabını beklemez.
 

@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import { api, type EmergencyNotice } from "../../api/client";
-import { assistantApi, assistantKeys, type DailyReportResponse, type Sources } from "../assistant/api";
+import { type AssistantSelection, assistantApi, type DailyReportResponse, reportQuery, type Sources } from "../assistant/api";
 
 export interface AssistantTurn {
   role: "user" | "assistant";
@@ -19,7 +19,7 @@ export interface AssistantTurn {
 
 const REPORT_INTENT = /\bdaily\s+report\b/i;
 
-export function useAssistantChat() {
+export function useAssistantChat(sel: AssistantSelection) {
   const qc = useQueryClient();
   const [turns, setTurns] = useState<AssistantTurn[]>([]);
   const [pending, setPending] = useState(false);
@@ -46,11 +46,7 @@ export function useAssistantChat() {
       try {
         let reply: AssistantTurn;
         if (REPORT_INTENT.test(message)) {
-          const r = await qc.fetchQuery<DailyReportResponse>({
-            queryKey: assistantKeys.report,
-            queryFn: ({ signal }) => assistantApi.dailyReport(false, signal),
-            staleTime: 10 * 60_000,
-          });
+          const r = await qc.fetchQuery<DailyReportResponse>(reportQuery(sel));
           reply = { role: "assistant", content: r.report, sources: r.sources };
         } else {
           const r = await assistantApi.chat(message, ctrl.signal);
@@ -71,7 +67,7 @@ export function useAssistantChat() {
         }
       }
     },
-    [qc],
+    [qc, sel],
   );
 
   const stop = useCallback(() => {

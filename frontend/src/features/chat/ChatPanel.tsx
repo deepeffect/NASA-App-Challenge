@@ -7,13 +7,13 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { EmergencyBanner } from "../../components/ui/EmergencyBanner";
 import { SendIcon, StopIcon } from "../../components/ui/icons";
 import { Button, Card } from "../../components/ui/primitives";
-import { AssistantDataTag, SourceList, SourceText, Waiting } from "../assistant";
+import { type AssistantSelection, AssistantDataTag, SelectionPending, SourceList, SourceText, Waiting } from "../assistant";
 import { useAssistantChat } from "./useAssistantChat";
 
 const SUGGESTIONS = ["What is my daily report?", "How is my sleep?", "Why is my heart rate high?"];
 
-export function ChatPanel() {
-  const chat = useAssistantChat();
+export function ChatPanel({ sel }: { sel: AssistantSelection }) {
+  const chat = useAssistantChat(sel);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +23,7 @@ export function ChatPanel() {
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || chat.pending) return;
+    if (!input.trim() || chat.pending || !sel.ready) return;
     void chat.send(input);
     setInput("");
   };
@@ -46,7 +46,8 @@ export function ChatPanel() {
         {chat.emergency && <EmergencyBanner notice={chat.emergency} onDismiss={chat.dismissEmergency} />}
 
         <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1" aria-live="polite">
-          {chat.turns.length === 0 && !chat.pending && (
+          {!sel.ready && <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />}
+          {sel.ready && chat.turns.length === 0 && !chat.pending && (
             <div className="space-y-2">
               <p className="text-slate-400">Ask about your health data. The assistant does not diagnose; it provides decision support.</p>
               <div className="flex flex-wrap gap-2">
@@ -93,14 +94,14 @@ export function ChatPanel() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message…"
             className="min-h-11 flex-1 rounded-xl border border-slate-600 bg-slate-950 px-3"
-            disabled={chat.pending}
+            disabled={chat.pending || !sel.ready}
           />
           {chat.pending ? (
             <Button variant="danger" onClick={chat.stop} aria-label="Stop">
               <StopIcon />
             </Button>
           ) : (
-            <Button variant="primary" type="submit" aria-label="Send" disabled={!input.trim()}>
+            <Button variant="primary" type="submit" aria-label="Send" disabled={!input.trim() || !sel.ready}>
               <SendIcon />
             </Button>
           )}

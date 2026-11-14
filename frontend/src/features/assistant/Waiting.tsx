@@ -21,3 +21,11 @@ export function Waiting({ label }: { label: string }) {
     </div>
   );
 }
+
+/** Asistan seçimi hazır değilse (senkronlanıyor / veri yok / hata) kart içeriği yerine gösterilir. */
+export function SelectionPending({ status, message, astronautId, day }: {
+  status: string; message?: string; astronautId: string; day: number | null;
+}) {
+  if (status === "syncing") return <Waiting label={`Selecting ${astronautId}${day != null ? `, day ${day}` : ""}…`} />;
+  return <p className="text-slate-400">ⓘ {message ?? "The assistant is not available for this selection."}</p>;
+}

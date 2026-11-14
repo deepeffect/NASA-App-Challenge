@@ -1,13 +1,16 @@
 /**
- * Asistan metnini gösterir: [D1]/[K1] etiketlerini kaynak rozetine çevirir
- * (D → 📊 veri etiketi, K → 📄 belge adı) ve basit markdown'ı (#, **kalın**, _satır_, - liste) işler.
- * Aynı rozet art arda tekrar ederse ([D2][D2]) bir kez gösterilir.
+ * Asistan metnini markdown olarak gösterir (kalın, liste, başlık, emoji, GFM tablo) ve
+ * [D1]/[K1] etiketlerini kaynak rozetine çevirir (D → 📊 veri etiketi, K → 📄 belge adı).
+ * Yöntem: etiketler önce `[D1](#src:D1)` linkine dönüştürülür, özel `a` bileşeni rozeti çizer.
+ * Ham HTML işlenmez (react-markdown varsayılanı) → LLM çıktısından HTML enjekte edilemez.
  */
-import { Fragment, type ReactNode } from "react";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import type { SourceRef, Sources } from "./api";
 
 const TAG = /\[([DK]\d+)\]/g;
+const SRC_PREFIX = "#src:";
 
 function sourceTitle(s: SourceRef): string {
   if (s.type === "data") {
@@ -23,7 +26,7 @@ export function SourceBadge({ tag, source }: { tag: string; source?: SourceRef }
   return (
     <span
       title={sourceTitle(source)}
-      className={`mx-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px align-baseline text-xs ${
+      className={`mx-0.5 inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px align-baseline text-xs font-normal ${
         isData ? "border-sky-700/70 bg-sky-950/60 text-sky-200" : "border-violet-700/70 bg-violet-950/60 text-violet-200"
       }`}
     >
@@ -34,76 +37,49 @@ export function SourceBadge({ tag, source }: { tag: string; source?: SourceRef }
   );
 }
 
-function bold(text: string, key: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={`${key}-b${i}`}>{part.slice(2, -2)}</strong>
-    ) : (
-      <Fragment key={`${key}-t${i}`}>{part}</Fragment>
+/** [D2][D2] → [D2]; sonra her etiketi markdown linkine çevir. */
+function linkifyTags(text: string): string {
+  return text
+    .replace(/(\[([DK]\d+)\])(?:\s*\[\2\])+/g, "$1")
+    .replace(TAG, (_m, tag: string) => `[${tag}](${SRC_PREFIX}${tag})`);
+}
+
+function components(sources: Sources | undefined): Components {
+  return {
+    a: ({ href, children }) => {
+      if (href?.startsWith(SRC_PREFIX)) {
+        const tag = href.slice(SRC_PREFIX.length);
+        return <SourceBadge tag={tag} source={sources?.[tag]} />;
+      }
+      // Çevrim dışı sistem: dış linkler tıklanabilir yapılmaz
+      return <span className="underline decoration-dotted">{children}</span>;
+    },
+    h1: ({ children }) => <p className="text-lg font-semibold text-slate-100">{children}</p>,
+    h2: ({ children }) => <p className="text-base font-semibold text-slate-100">{children}</p>,
+    h3: ({ children }) => <p className="font-semibold text-slate-100">{children}</p>,
+    p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+    em: ({ children }) => <em className="text-slate-400">{children}</em>,
+    strong: ({ children }) => <strong className="font-semibold text-slate-50">{children}</strong>,
+    ul: ({ children }) => <ul className="list-disc space-y-1 pl-5 marker:text-slate-500">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5 marker:text-slate-500">{children}</ol>,
+    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+    code: ({ children }) => <code className="rounded bg-slate-800 px-1 text-sm">{children}</code>,
+    table: ({ children }) => (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">{children}</table>
+      </div>
     ),
-  );
+    th: ({ children }) => <th className="border-b border-slate-700 px-2 py-1 text-left font-medium">{children}</th>,
+    td: ({ children }) => <td className="border-b border-slate-800 px-2 py-1">{children}</td>,
+  };
 }
 
-/** Tek satırı rozetli parçalara böler. */
-function inline(text: string, sources: Sources | undefined, key: string): ReactNode[] {
-  const out: ReactNode[] = [];
-  let last = 0;
-  let prevTag: string | null = null;
-  for (const m of text.matchAll(TAG)) {
-    const idx = m.index ?? 0;
-    const between = text.slice(last, idx);
-    if (between) {
-      out.push(...bold(between, `${key}-${idx}`));
-      if (between.trim()) prevTag = null;
-    }
-    const tag = m[1];
-    if (tag !== prevTag) out.push(<SourceBadge key={`${key}-s${idx}`} tag={tag} source={sources?.[tag]} />);
-    prevTag = tag;
-    last = idx + m[0].length;
-  }
-  if (last < text.length) out.push(...bold(text.slice(last), `${key}-end`));
-  return out;
-}
-
-/** Çok satırlı metin: başlıklar, italik meta satırı, liste ve paragraflar. */
 export function SourceText({ text, sources }: { text: string; sources?: Sources }) {
-  const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
   return (
     <div className="space-y-2">
-      {blocks.map((block, bi) => (
-        <div key={bi} className="space-y-1">
-          {block.split("\n").map((raw, li) => {
-            const line = raw.trimEnd();
-            const k = `${bi}-${li}`;
-            if (!line.trim()) return null;
-            const h = /^#{1,3}\s+(.*)$/.exec(line);
-            if (h) {
-              return (
-                <p key={k} className="text-base font-semibold text-slate-100">
-                  {inline(h[1], sources, k)}
-                </p>
-              );
-            }
-            const meta = /^_(.+)_$/.exec(line.trim());
-            if (meta) {
-              return (
-                <p key={k} className="text-sm text-slate-500">
-                  {meta[1]}
-                </p>
-              );
-            }
-            const item = /^\s*[-*]\s+(.*)$/.exec(line);
-            if (item) {
-              return (
-                <p key={k} className="pl-4 -indent-3">
-                  • {inline(item[1], sources, k)}
-                </p>
-              );
-            }
-            return <p key={k}>{inline(line, sources, k)}</p>;
-          })}
-        </div>
-      ))}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components(sources)}>
+        {linkifyTags(text)}
+      </ReactMarkdown>
     </div>
   );
 }

@@ -1,13 +1,13 @@
 /** Günlük rapor (GET /daily_report → "report"). Aynı gün tekrar üretilmez; "Regenerate" force=true gönderir. */
 import { Button, Card, ErrorBox } from "../../components/ui/primitives";
-import { useDailyReport, useRegenerateReport } from "./api";
+import { type AssistantSelection, useDailyReport, useRegenerateReport } from "./api";
 import { SourceList, SourceText } from "./SourceText";
-import { Waiting } from "./Waiting";
+import { SelectionPending, Waiting } from "./Waiting";
 
-export function DailyReportCard() {
-  const q = useDailyReport();
-  const regen = useRegenerateReport();
-  const busy = q.isFetching || regen.isPending;
+export function DailyReportCard({ sel }: { sel: AssistantSelection }) {
+  const q = useDailyReport(sel);
+  const regen = useRegenerateReport(sel);
+  const busy = !sel.ready || q.isFetching || regen.isPending;
   return (
     <Card
       title="Daily report"
@@ -17,7 +17,9 @@ export function DailyReportCard() {
         </Button>
       }
     >
-      {q.isPending || regen.isPending ? (
+      {!sel.ready ? (
+        <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />
+      ) : q.isPending || regen.isPending ? (
         <Waiting label="Preparing report…" />
       ) : q.isError ? (
         <ErrorBox error={q.error} />
