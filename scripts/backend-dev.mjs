@@ -79,13 +79,19 @@ async function restart(file) {
   start();
 }
 
+// Art arda gelen olaylar (kaydetme, git checkout, biçimleyici) tek yeniden başlatmada birleşir
+const DEBOUNCE_MS = 500;
+// Bu klasörlerdeki değişiklikler yok sayılır (önbellek, sanal ortam, veritabanı, bağımlılıklar)
+const IGNORED = new Set(["__pycache__", ".venv", "data", "node_modules"]);
+const ignored = (file) => file.split(/[\\/]/).some((part) => IGNORED.has(part));
+
 let timer = null;
 let pending = "";
 watch(WATCH_DIR, { recursive: true }, (_event, filename) => {
-  if (!filename || !filename.endsWith(".py") || filename.includes("__pycache__")) return;
+  if (!filename || !filename.endsWith(".py") || ignored(filename)) return;
   pending = relative(BACKEND, join(WATCH_DIR, filename));
   clearTimeout(timer);
-  timer = setTimeout(() => void restart(pending), 300);
+  timer = setTimeout(() => void restart(pending), DEBOUNCE_MS);
 });
 
 for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {

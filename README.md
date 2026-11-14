@@ -176,6 +176,14 @@ npm run reset -- ship    # rolün DB'sini sıfırla (earth için: npm run reset 
 
 İki rol aynı geliştirme anahtarını kullanır (`EARTH_LINK_TOKEN` ortamda yoksa `dev-link-token`).
 
+> **Otomatik yeniden başlatma (sadece `dev:*`):** `scripts/backend-dev.mjs`, `backend/app/` altındaki `.py`
+> değişikliklerinde backend'i yeniden başlatır (500 ms debounce; `__pycache__`, `.venv`, `data/`, `node_modules`
+> yok sayılır). İki rol aynı klasörü izlediği için bir değişiklik `dev:ship` ve `dev:earth`'ü birlikte yeniden
+> başlatır. Windows'ta zaman zaman içeriği değişmemiş dosyalar için de yeniden başlatma görüldü; kökü bulunamadı
+> (dosya okuma, Python import'u, git ve pytest tetiklemiyor). Ekran kısa kesintiden kendiliğinden toparlanır.
+> `npm run serve` bu izleyiciyi **kullanmaz** (uvicorn `--reload` olmadan çalışır): demo sırasında otomatik
+> yeniden başlatma olmaz.
+
 
 ## 1. Backend kurulumu
 
