@@ -5080,6 +5080,34 @@
             ],
             "title": "Share Cmo Note",
             "description": "Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "llm"
+            ],
+            "title": "Mode",
+            "description": "Bu check-in'de cevapları kim üretiyor. llm: asistan modeli | scripted: hazır sorular. Tur atıldıysa SON turun modu (auto modda LLM düşerse scripted olur); atılmadıysa ayarın öngördüğü mod",
+            "default": "scripted"
+          },
+          "mode_text": {
+            "type": "string",
+            "title": "Mode Text",
+            "description": "Kartta gösterilecek satır: 'Asistan: Qwen' / 'Hazır sorular, model çevrim dışı'",
+            "default": ""
+          },
+          "assistant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assistant Name",
+            "description": "mode = llm iken modelin görünen adı (ASSISTANT_NAME veya LLM_MODEL'den)"
           }
         },
         "type": "object",

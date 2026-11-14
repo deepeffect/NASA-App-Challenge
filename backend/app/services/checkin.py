@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from typing import Any
 
@@ -56,14 +57,56 @@ def share_options(current: str, lang: Lang) -> list[ShareOption]:
     ]
 
 
+# auto modda devre kesici: LLM bir kez başarısız olunca bu süre boyunca doğrudan scripted
+AUTO_LLM_COOLDOWN_S = 60.0
+_llm_down_until: dict[str, float] = {}
+
+
+def _llm_key(settings: Settings) -> str:
+    return f"{settings.llm_provider}:{settings.llm_base_url}"
+
+
 def _flow(row: CheckinSession | None, lang: Lang) -> FlowState:
     if row is None:
         return FlowState.initial(lang)
     return FlowState(step=row.step, options=list(row.options), msgs=list(row.messages), notes=list(row.notes), done=row.done, cmo=row.cmo)
 
 
-def state_view(series: AstronautSeries, day_index: int, row: CheckinSession | None, lang: Lang) -> CheckinState:
+def assistant_name(settings: Settings) -> str:
+    """Kartta gösterilen model adı: ASSISTANT_NAME; boşsa LLM_MODEL'in ailesi (qwen3:14b → Qwen), mock ise Mock."""
+    if settings.assistant_name.strip():
+        return settings.assistant_name.strip()
+    if settings.llm_provider == "mock":
+        return "Mock"
+    base = settings.llm_model.split("/")[-1].split(":")[0]
+    family = re.sub(r"[\d.\-_]+$", "", base) or base
+    return family[:1].upper() + family[1:]
+
+
+def expected_mode(settings: Settings) -> str:
+    """Henüz tur atılmamış bir check-in'i kimin cevaplayacağı (ayar + auto moddaki devre kesici).
+
+    LLM'e SORULMAZ: bu bilgi için model yoklanmaz (LLM katmanı check-in'i asla bekletmez). auto modda model
+    kapalıysa bu, ilk turdan sonra anlaşılır ve o andan itibaren `scripted` döner.
+    """
+    if settings.checkin_mode == "scripted":
+        return "scripted"
+    if settings.checkin_mode == "auto" and _llm_down_until.get(_llm_key(settings), 0.0) > time.monotonic():
+        return "scripted"
+    return "llm"
+
+
+def active_mode(settings: Settings, row: CheckinSession | None) -> str:
+    """Bu check-in'de cevapları kim üretiyor: son turun gerçek modu; tur atılmadıysa öngörülen mod."""
+    if row is not None and row.modes:
+        return row.modes[-1]
+    return expected_mode(settings)
+
+
+def state_view(series: AstronautSeries, day_index: int, row: CheckinSession | None, lang: Lang, settings: Settings) -> CheckinState:
     st = _flow(row, lang)
+    mode = active_mode(settings, row)
+    name = assistant_name(settings) if mode == "llm" else None
     day = series.days[day_index]
     is_today = day_index == series.today_index
     share = share_of(row)
@@ -87,12 +130,10 @@ def state_view(series: AstronautSeries, day_index: int, row: CheckinSession | No
         share_options=share_options(share, lang) if share else [],
         share_note=(t(f"share_desc_{share}", lang) + " " + t("share_irreversible", lang)) if share else None,
         share_cmo_note=t("share_cmo_note", lang) if share else None,
+        mode=mode,  # type: ignore[arg-type]
+        mode_text=t("checkin_mode_llm", lang, name=name) if mode == "llm" else t("checkin_mode_scripted", lang),
+        assistant_name=name,
     )
-
-
-# auto modda devre kesici: LLM bir kez başarısız olunca bu süre boyunca doğrudan scripted
-AUTO_LLM_COOLDOWN_S = 60.0
-_llm_down_until: dict[str, float] = {}
 
 
 async def run_mode(settings: Settings, ctx: dict[str, Any], lang: Lang) -> tuple[dict[str, Any] | None, str]:
@@ -100,7 +141,7 @@ async def run_mode(settings: Settings, ctx: dict[str, Any], lang: Lang) -> tuple
     mode = settings.checkin_mode
     if mode == "scripted":
         return assistant_turn(ctx, lang), "scripted"
-    key = f"{settings.llm_provider}:{settings.llm_base_url}"
+    key = _llm_key(settings)
     if mode == "auto" and _llm_down_until.get(key, 0.0) > time.monotonic():
         return assistant_turn(ctx, lang), "scripted"
     from app.llm.client import get_llm_client
@@ -170,7 +211,7 @@ async def turn(db: Session, settings: Settings, series: AstronautSeries, answer:
         note = CheckinNote(**out["note"]) if out["note"] else None
         nxt = CheckinNext(**out["next"]) if out["next"] else None
         done = out["done"]
-    return CheckinTurnResponse(reply=reply, note=note, next=nxt, done=done, checkin=state_view(series, i, row, lang))
+    return CheckinTurnResponse(reply=reply, note=note, next=nxt, done=done, checkin=state_view(series, i, row, lang, settings))
 
 
 def reset(db: Session, settings: Settings, series: AstronautSeries, lang: Lang) -> CheckinState:
@@ -186,7 +227,7 @@ def reset(db: Session, settings: Settings, series: AstronautSeries, lang: Lang) 
         if was_done:
             on_checkin_reset(db, settings, series, i)
         db.commit()
-    return state_view(series, i, None, lang)
+    return state_view(series, i, None, lang, settings)
 
 
 def share(db: Session, settings: Settings, series: AstronautSeries, level: str, lang: Lang) -> CheckinState:
@@ -209,7 +250,7 @@ def share(db: Session, settings: Settings, series: AstronautSeries, level: str, 
             on_checkin_shared(db, settings, series, row)
         db.commit()
         db.refresh(row)
-    return state_view(series, i, row, lang)
+    return state_view(series, i, row, lang, settings)
 
 
 # ---------------------------------------------------------------- downlink kancaları (7. bölüm)

@@ -138,6 +138,51 @@ def test_past_days_are_read_only(ship_client) -> None:
     assert ship_client.get("/api/checkin/days/31", headers=auth).status_code == 404
 
 
+# ---------------------------------------------------------------- kartta gösterilen aktif mod
+def test_checkin_state_reports_active_mode(ship_client) -> None:
+    """Varsayılan CHECKIN_MODE=scripted: kart 'Hazır sorular, model çevrim dışı' gösterir (TR/EN, her uçta)."""
+    auth = login(ship_client, "A014")
+    en = ship_client.get("/api/checkin", headers={**auth, **EN}).json()
+    assert (en["mode"], en["mode_text"], en["assistant_name"]) == ("scripted", "Scripted questions, model offline", None)
+    tr = ship_client.get("/api/checkin?lang=tr", headers=auth).json()
+    assert tr["mode_text"] == "Hazır sorular, model çevrim dışı"
+    out = ship_client.post("/api/checkin/turn?lang=tr", json={"answer": "İyi"}, headers=auth).json()
+    assert (out["checkin"]["mode"], out["checkin"]["mode_text"]) == ("scripted", tr["mode_text"])
+    past = ship_client.get("/api/checkin/days/5", headers={**auth, **EN}).json()
+    assert (past["mode"], past["mode_text"]) == ("scripted", en["mode_text"])
+    assert ship_client.post("/api/checkin/reset", headers=auth).json()["mode"] == "scripted"
+
+
+def test_active_mode_follows_last_turn_then_settings(dataset) -> None:
+    """Mod satırı: tur atıldıysa SON turun gerçek modu (auto'da LLM düştüyse scripted), atılmadıysa ayarın öngördüğü."""
+    from app.models.tables import CheckinSession
+    from app.services import checkin as svc
+
+    a = dataset.by_id()["A003"]
+    i = a.today_index
+    llm = Settings(checkin_mode="llm", llm_provider="openai", llm_model="qwen3:14b")
+    st = svc.state_view(a, i, None, "tr", llm)
+    assert (st.mode, st.mode_text, st.assistant_name) == ("llm", "Asistan: Qwen", "Qwen")
+    assert svc.state_view(a, i, None, "en", llm).mode_text == "Assistant: Qwen"
+    assert svc.state_view(a, i, None, "en", Settings(checkin_mode="scripted", llm_provider="openai")).mode == "scripted"
+
+    row = CheckinSession(astronaut_id="A003", day_index=i, mission_day=a.days[i].mission_day, modes=["llm", "scripted"])
+    st = svc.state_view(a, i, row, "en", Settings(checkin_mode="auto", llm_provider="openai", llm_base_url="http://127.0.0.1:9/v3"))
+    assert (st.mode, st.mode_text, st.assistant_name) == ("scripted", "Scripted questions, model offline", None)
+    row.modes = ["scripted", "llm"]
+    assert svc.state_view(a, i, row, "en", llm).mode == "llm"
+
+
+def test_assistant_display_name() -> None:
+    from app.services.checkin import assistant_name
+
+    assert assistant_name(Settings(llm_provider="openai", llm_model="qwen3:14b")) == "Qwen"
+    assert assistant_name(Settings(llm_provider="openai", llm_model="library/llama3.1:8b")) == "Llama"
+    assert assistant_name(Settings(llm_provider="openai", llm_model="gpt-4o-mini")) == "Gpt-4o-mini"
+    assert assistant_name(Settings(llm_provider="openai", llm_model="qwen3:14b", assistant_name=" Qwen 3 ")) == "Qwen 3"
+    assert assistant_name(Settings(llm_provider="mock")) == "Mock"  # mock sağlayıcı kendini Qwen diye tanıtmaz
+
+
 # ---------------------------------------------------------------- modlar
 def _ctx(dataset, catalog, aid="A003", answer="Badly"):
     series = dataset.by_id()[aid]
@@ -179,8 +224,12 @@ def test_auto_mode_circuit_breaker_skips_dead_llm(dataset, catalog) -> None:
     import time
 
     ctx = _ctx(dataset, catalog)
+    from app.services.checkin import expected_mode
+
     s = Settings(checkin_mode="auto", llm_provider="openai", llm_base_url="http://127.0.0.1:9/v2", llm_timeout=5)
+    assert expected_mode(s) == "llm"  # henüz denenmedi: asistan cevaplayacak diye gösterilir
     asyncio.run(run_mode(s, ctx, "en"))  # ilk hata devreyi açar
+    assert expected_mode(s) == "scripted"  # devre açıkken yeni check-in'ler de "model çevrim dışı" gösterir
     t0 = time.monotonic()
     out, mode = asyncio.run(run_mode(s, ctx, "en"))
     assert mode == "scripted" and out == assistant_turn(ctx, "en") and time.monotonic() - t0 < 0.5

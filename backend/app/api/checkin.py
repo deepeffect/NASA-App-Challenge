@@ -36,14 +36,14 @@ def _lock(request: Request, astronaut_id: str) -> asyncio.Lock:
 @router.get("/checkin", response_model=CheckinState, responses=ERRORS, summary="Bugünün check-in durumu")
 def get_today(p: AstronautDep, request: Request, db: DBSession, lang: LangDep) -> CheckinState:
     series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
-    return svc.state_view(series, series.today_index, svc.load_session(db, p.subject, series.today_index), lang)
+    return svc.state_view(series, series.today_index, svc.load_session(db, p.subject, series.today_index), lang, station_settings(request))
 
 
 @router.get("/checkin/days/{day}", response_model=CheckinState, responses=ERRORS, summary="Bir günün check-in'i (geçmiş: salt okunur)")
 def get_day(day: Day, p: AstronautDep, request: Request, db: DBSession, lang: LangDep) -> CheckinState:
     series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
     i = day_index(len(series.days), day, lang)
-    return svc.state_view(series, i, svc.load_session(db, p.subject, i), lang)
+    return svc.state_view(series, i, svc.load_session(db, p.subject, i), lang, station_settings(request))
 
 
 @router.post(

@@ -866,6 +866,13 @@ class CheckinState(BaseModel):
     share_options: list["ShareOption"] = Field([], description="Sadece tamamlanmış check-in'de")
     share_note: str | None = Field(None, description="Seçili seviyenin açıklaması + 'paylaşım geri alınamaz'")
     share_cmo_note: str | None = Field(None, description="Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez")
+    mode: Literal["scripted", "llm"] = Field(
+        "scripted",
+        description="Bu check-in'de cevapları kim üretiyor. llm: asistan modeli | scripted: hazır sorular. "
+        "Tur atıldıysa SON turun modu (auto modda LLM düşerse scripted olur); atılmadıysa ayarın öngördüğü mod",
+    )
+    mode_text: str = Field("", description="Kartta gösterilecek satır: 'Asistan: Qwen' / 'Hazır sorular, model çevrim dışı'")
+    assistant_name: str | None = Field(None, description="mode = llm iken modelin görünen adı (ASSISTANT_NAME veya LLM_MODEL'den)")
 
 
 class CheckinTurnRequest(BaseModel):
