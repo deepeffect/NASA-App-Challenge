@@ -3,6 +3,7 @@
     python -m app.cli seed [--seed 42] [--spe-day 120]   # sentetik veriyi DB'ye yükle (DB'yi sıfırlar)
     python -m app.cli ingest data/raw/dosya.csv          # dosyayı API'siz yükle
     python -m app.cli analyze [--as-of 2026-10-20]       # ekip durumu konsolda
+    python -m app.cli reindex                            # RAG belgelerini yeniden indeksle
     python -m app.cli export-openapi                     # docs/openapi.json üret
 """
 
@@ -67,6 +68,15 @@ def cmd_analyze(args: argparse.Namespace) -> None:
             print(f"   [{e.severity:<8}] {e.title}  ({e.window.start} → {e.window.end}, {e.detector})")
 
 
+def cmd_reindex(args: argparse.Namespace) -> None:
+    from app.llm.rag import reindex
+
+    stats = reindex()
+    print("RAG indeksi yeniden kuruldu:")
+    for k, v in stats.items():
+        print(f"  {k}: {v}")
+
+
 def cmd_export_openapi(args: argparse.Namespace) -> None:
     from app.main import app
 
@@ -100,6 +110,9 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--as-of", default=None, help="YYYY-MM-DD (boş → son gün)")
     a.add_argument("--all", action="store_true", help="info olayları da göster")
     a.set_defaults(func=cmd_analyze)
+
+    r = sub.add_parser("reindex", help="data/docs altındaki belgeleri yeniden indeksle (RAG)")
+    r.set_defaults(func=cmd_reindex)
 
     e = sub.add_parser("export-openapi", help="OpenAPI şemasını docs/openapi.json'a yaz")
     e.add_argument("--out", default=str(REPO_ROOT / "docs" / "openapi.json"))
