@@ -8,18 +8,23 @@
  *   1. Giriş (EARTH / EARTH), genel görünüm; 1440 ve 1920 px, TR koyu + EN açık ekran görüntüleri
  *   2. Gemide mürettebatın ilk astronotu (config DEMO_CREW[0]) adına check-in tamamlanır ve "Sadece skorlar" ile paylaşılır → Dünya ekranında
  *      gecikme + 2 sn içinde görünmeli; cevap metni hiçbir yerde görünmemeli
- *   3. Paylaşılmamış bir günde ruh hali / stres "Paylaşılmadı" görünmeli
+ *   3. Paylaşılmamış bir günde ruh hali / stres "Paylaşılmadı" görünmeli: kartta ve astronot detayında (ölçümler
+ *      tablosundaki ruh hali / stres ve "Uyku, ruh hali ve stres" alan skoru); check-in panelinde paylaşılan yok
  *   4. Gemi kapatılır → bağlantı uyarısı çıkmalı, son durum görünmeye devam etmeli; gemi açılır →
  *      bağlantı geri gelmeli ve akış kaldığı seq'ten (boşluksuz, tekrarsız) devam etmeli
+ *   5. Astronot detayı (ortak bileşenler, audience="earth"): "Sadece skorlar" check-in paneli (konu + işaret, söz
+ *      yok), grafikte kümülatif + tek gün çizgisi, önceki/sonraki ve seçili günün korunması; ortak bileşenlerin
+ *      bütün hesaplanmış stili .mon dışındakiyle (yani /me'dekiyle) aynı olmalı
+ *   6. Mürettebat kartında son etkinlik ve "Aktif" rozeti (4. adımdaki olay); akışta "Sadece mürettebat" filtresi
  *
  * Gemiyi kapatma/açma: :8000'i dinleyen süreç sonlandırılır (dev:ship'teki Vite'a dokunulmaz); gemi testte
  * smoke'un kendi alt sürecinde aynı dev ayarları ve ship.db ile açılır (Dünya backend'i hiç kapanmaz).
  * Test bitince geçici gemi kapatılır ve dev:ship'in izleyicisi tetiklenerek gemi eski yerine döner
  * (backend/app/__init__.py'nin sadece zaman damgası güncellenir; bu dev:earth backend'ini de bir kez yeniden
- * başlatır). İzleyici yoksa (örn. `npm run serve`) gemi dev ayarlarıyla arka planda açık bırakılır.
+ * başlatır). İzleyici yoksa (örn. `npm run serve`) gemi kapalı kalır ve rapor söyler; smoke arka planda sunucu bırakmaz.
  *
  * Ayrıca: sayfa gemiye hiç istek atmamalı; konsol hatası, yakalanmamış hata, 4xx/5xx olmamalı;
- * monitor.css'teki her seçici .mon ile başlamalı (dosya her rotada yüklenir, kapsamsız seçici /me'ye sızar).
+ * monitor.css'teki her seçici .mon ile başlamalı ve ortak bileşenleri (.ahc) dışlamalı (bkz. monitor.css başı).
  * Ortam değişkenleri: SMOKE_SHIP_API, SMOKE_EARTH_API, SMOKE_EARTH_WEB, SMOKE_ASTRONAUT
  * Not: Bu astronotun bugünkü check-in'i bir kez paylaşılınca geri alınamaz; ölçümü tekrarlamak için önce
  * `npm run reset -- ship` ve `npm run reset -- earth`.
@@ -139,7 +144,7 @@ function startTempShip(): ChildProcess {
  * Test bitince ortamı eski haline getir: geçici gemiyi kapat, dev:ship'in backend-dev.mjs izleyicisini tetikle
  * (backend/app/__init__.py'nin sadece zaman damgası; içerik değişmez). Not: aynı klasörü izleyen dev:earth
  * backend'i de bu sırada yeniden başlar (veri earth.db'de kalır, alıcı kaldığı seq'ten devam eder).
- * İzleyici yoksa (örn. `npm run serve`) gemi dev ayarlarıyla ayrı bir arka plan sürecinde açık bırakılır.
+ * İzleyici yoksa (örn. `npm run serve`) gemi kapalı kalır ve rapor bunu söyler: smoke arka planda sunucu bırakmaz.
  */
 async function restoreShip(temp: ChildProcess | null, notes: string[]): Promise<void> {
   if (temp && temp.exitCode === null && temp.pid) {
@@ -148,24 +153,79 @@ async function restoreShip(temp: ChildProcess | null, notes: string[]): Promise<
   }
   const now = new Date();
   utimesSync(join(ROOT, "backend", "app", "__init__.py"), now, now);
-  if (await waitUntil(() => reachable(`${SHIP}/api/station`), 15_000)) {
+  if (await waitUntil(() => reachable(`${SHIP}/api/station`), 20_000)) {
     notes.push("gemi dev:ship penceresinde yeniden açıldı (izleyici)");
     return;
   }
-  const log = join(OUT, "ship-restored.log");
-  const child = spawn(process.execPath, [join(ROOT, "scripts", "backend-dev.mjs"), "--host", "127.0.0.1", "--port", SHIP_PORT], {
-    cwd: ROOT,
-    detached: true,
-    stdio: ["ignore", openSync(log, "a"), openSync(log, "a")],
-    env: shipEnv(),
-  });
-  child.unref();
-  const ok = await waitUntil(() => reachable(`${SHIP}/api/station`), 40_000);
-  notes.push(
-    ok
-      ? `izleyici yok: gemi dev ayarlarıyla arka planda açık bırakıldı (PID ${child.pid}, log: ${log})`
-      : `gemi yeniden açılamadı; elle başlatın (npm run dev:ship). log: ${log}`,
+  notes.push(`${c.yellow}gemi kendi penceresinde yeniden açılmadı (izleyici yok veya çalışmıyor): npm run dev:ship ile başlatın${c.off}`);
+}
+
+/**
+ * Ortak bileşenlerin (.ahc) Dünya'da /me'dekiyle aynı stilde olduğunu denetler: detaydaki .ahc ağacı .mon'un
+ * dışına (body'ye, aynı genişlikte) kopyalanır ve her öğenin BÜTÜN hesaplanmış stili karşılaştırılır. Fark varsa
+ * monitor.css (veya .mon'dan miras) ortak bileşenlere sızıyor demektir. Denetimin kör olmadığını göstermek için
+ * sonra bilerek sızan bir kural eklenir: o zaman fark çıkmalı. Yerleşim bağlamından gelen iki fark türü sayılmaz
+ * (kökün flex öğesi olması, mutlak konumlu öğenin sayfadaki yeri); gerisi, her özellik, birebir aynı olmalı.
+ */
+async function sharedStyleDiffs(page: Page): Promise<{ elements: number; diffs: string[]; control: number }> {
+  await page.mouse.move(1, 1);
+  // Şerit çubukları açılışta CSS geçişiyle uzar; kopyada geçiş olmaz → önce .ahc içindeki animasyonlar bitsin
+  await page.waitForFunction(
+    `document.getAnimations().every((a) => a.playState !== "running" || !a.effect?.target?.closest?.(".ahc"))`,
+    null,
+    { timeout: 5000 },
   );
+  // Düz JS metni: tsx (esbuild) adlandırılmış fonksiyonlara tarayıcıda olmayan __name() ekler
+  return page.evaluate(`(() => {
+    document.activeElement?.blur();
+    const orig = document.querySelector(".mon .ahc");
+    if (!orig) throw new Error(".mon içinde .ahc yok");
+    const host = document.createElement("div");
+    host.style.cssText = "position:absolute;left:0;top:0;width:" + orig.getBoundingClientRect().width + "px";
+    const clone = orig.cloneNode(true);
+    host.append(clone);
+    document.body.append(host);
+    const leak = document.createElement("style");
+    try {
+      const A = [orig, ...orig.querySelectorAll("*")];
+      const B = [clone, ...clone.querySelectorAll("*")];
+      // <select>'in seçili değeri özellikte durur, kopyalanmaz
+      A.forEach((el, i) => { if (el instanceof HTMLSelectElement) B[i].value = el.value; });
+      const label = (el) => el.tagName.toLowerCase() + (el.classList.length ? "." + [...el.classList].join(".") : "");
+      // Stil değil yerleşim bağlamı (ikisi de sızma değildir):
+      //  - kök .ahc Dünya'da .mon-main'in flex öğesi, kopyada düz blok: min-* "auto" / "0px"
+      //  - mutlak/sabit konumlu öğenin top/left/inset… değeri sayfadaki yerine göre hesaplanır
+      const MIN = /^min-(width|height|inline-size|block-size)$/;
+      const INSET = /^(top|right|bottom|left|inset(-.+)?)$/;
+      const compare = (limit) => {
+        const out = [];
+        for (let i = 0; i < A.length && out.length < limit; i++) {
+          const a = getComputedStyle(A[i]);
+          const b = getComputedStyle(B[i]);
+          const positioned = /^(absolute|fixed)$/.test(a.position) && a.position === b.position;
+          for (let k = 0; k < a.length; k++) {
+            const p = a[k];
+            // Özel değişkenler (--x) .mon'dan miras gelir ama ortak bileşenler kullanmaz; etkileri gerçek özelliklerde görünür
+            if (p.startsWith("--")) continue;
+            const va = a.getPropertyValue(p), vb = b.getPropertyValue(p);
+            if (va === vb) continue;
+            if (i === 0 && MIN.test(p) && (va === "auto" || vb === "auto")) continue;
+            if (positioned && INSET.test(p)) continue;
+            out.push(label(A[i]) + " " + p + ": " + va + " ≠ " + vb);
+          }
+        }
+        return out;
+      };
+      const diffs = compare(20);
+      leak.textContent = ".mon .card { padding-top: 1px; } .mon .glyph { width: 21px; }";
+      document.head.append(leak);
+      const control = compare(5).length;
+      return { elements: A.length, diffs, control };
+    } finally {
+      leak.remove();
+      host.remove();
+    }
+  })()`);
 }
 
 function instrument(page: Page, report: (i: Issue) => void): void {
@@ -195,6 +255,10 @@ async function loginEarth(page: Page, web: string): Promise<void> {
   await page.locator("article[data-astronaut] .spark svg").first().waitFor({ timeout: 15_000 });
   await page.locator("[data-area]").first().waitFor({ timeout: 15_000 });
 }
+
+/** Detay adresi mi: /monitor/astronaut/<id> ve (verildiyse) ?day=<gün>; gün verilmezse ?day olmamalı. */
+const atDetail = (id: string, day?: number) => (u: URL) =>
+  u.pathname.endsWith(`/monitor/astronaut/${id}`) && (day === undefined ? !u.searchParams.has("day") : u.searchParams.get("day") === String(day));
 
 async function check(issues: Issue[], what: string, fn: () => Promise<unknown>): Promise<boolean> {
   try {
@@ -428,8 +492,35 @@ export async function runEarthSmoke(): Promise<number> {
         const r = day.view.readings.find((x) => x.col === col);
         if (!r?.hidden || r.value_text !== "Paylaşılmadı") current.issues.push({ kind: "check", text: `${target} ${col}: Dünya API'sinde gizli değil` });
       }
-      current.notes.push(`${target} kartı denetlendi (astronot detayı ortak bileşenlerle gelince okumalar tablosu da eklenecek)`);
       await shot("03-not-shared-card.png", { selector: `article[data-astronaut="${target}"]` });
+
+      // Astronot detayı (ortak bileşenler, audience="earth"): kartın kimlik bağlantısından
+      await page.locator(`article[data-astronaut="${target}"] a.ccard-id`).click();
+      await page.waitForURL(atDetail(target), { timeout: 5000 });
+      const table = page.locator(".ahc table.readings");
+      await table.waitFor({ timeout: 10_000 });
+      for (const [col, label] of [["beh_mood_score", "ruh hali"], ["beh_stress_score", "stres"]]) {
+        await check(current.issues, `${target} detay: ${label} ölçümü 'Paylaşılmadı'`, async () => {
+          const value = (await table.locator(`tr[data-col="${col}"] td.r`).innerText()).trim();
+          if (value !== "Paylaşılmadı") throw new Error(`değer: ${value}`);
+        });
+      }
+      await check(current.issues, `${target} detay: 'Uyku, ruh hali ve stres' alan skoru 'Paylaşılmadı'`, async () => {
+        const row = table.locator("tr").filter({ has: page.locator("td.name", { hasText: /^Uyku, ruh hali ve stres$/ }) });
+        const value = (await row.locator("td.r").innerText()).trim();
+        if (value !== "Paylaşılmadı") throw new Error(`değer: ${value}`);
+      });
+      await check(current.issues, `${target} detay: check-in panelinde paylaşılan bir şey yok`, async () => {
+        const panel = page.locator(".ahc section[data-share]");
+        const share = await panel.getAttribute("data-share", { timeout: 5000 });
+        if (share !== "none" && share !== "private") throw new Error(`paylaşım: ${share}`);
+        if (await panel.locator(".cinotes").count()) throw new Error("konu notları görünüyor");
+      });
+      await page.waitForTimeout(300);
+      await shot("03b-detail-not-shared.png", { full: true });
+      await page.locator(".ahc a.linkbtn").click(); // genel görünüme dön
+      await page.locator("article[data-astronaut] .spark svg").nth(DEMO_CREW_SIZE - 1).waitFor({ timeout: 10_000 });
+      current.notes.push(`${target}: kart, Dünya API'si ve detaydaki ölçümler tablosu denetlendi`);
     });
 
     // ------------------------------------------------------------------ 4
@@ -485,6 +576,122 @@ export async function runEarthSmoke(): Promise<number> {
       current.notes.push(`kopmadan önce son seq ${lastSeq}, sonra ${next} (boşluk ve tekrar yok)`);
       await page.waitForTimeout(300);
       await shot("05-resumed.png");
+    });
+
+    // ------------------------------------------------------------------ 5
+    await step(`5. Astronot detayı (${ID}): ortak bileşenler, paylaşıma göre check-in, iki çizgi, önceki/sonraki`, async () => {
+      // Kartın boş bir yerine tıklama da detayı açar
+      await page.locator(`article[data-astronaut="${ID}"] .ccard-foot`).click();
+      await page.waitForURL(atDetail(ID), { timeout: 5000 });
+      await page.locator(".ahc table.readings").waitFor({ timeout: 10_000 });
+      await page.locator(".ahc .chart svg").waitFor({ timeout: 10_000 });
+      await check(current.issues, "ortak bileşenler audience=earth", async () => {
+        for (const sel of ["section.status", "section.todo", "div.who", ".chart", "table.readings"]) {
+          const n = await page.locator(`.ahc ${sel}`).count();
+          if (!n) throw new Error(`${sel} yok`);
+        }
+        const aud = await page.locator(".ahc [data-audience]").evaluateAll((els) => [...new Set(els.map((e) => e.getAttribute("data-audience")))]);
+        if (aud.length !== 1 || aud[0] !== "earth") throw new Error(`audience: ${aud.join(",")}`);
+      });
+      await check(current.issues, "check-in paneli 'Sadece skorlar': konular + işaret, astronotun sözleri yok", async () => {
+        const panel = page.locator('.ahc section[data-share="scores"]');
+        await panel.waitFor({ timeout: 5000 });
+        const notes = await panel.locator(".cinotes > div").allInnerTexts();
+        if (!notes.length) throw new Error("konu notu yok");
+        const bad = notes.filter((n) => !/İşaretlendi|İşaret yok/.test(n));
+        if (bad.length) throw new Error(`işaret metni olmayan not: ${bad.join(" | ")}`);
+      });
+      await check(current.issues, "paylaşılan günde ruh hali / stres değerleri görünür", async () => {
+        for (const col of ["beh_mood_score", "beh_stress_score"]) {
+          const value = (await page.locator(`.ahc tr[data-col="${col}"] td.r`).innerText()).trim();
+          if (!value || value === "Paylaşılmadı") throw new Error(`${col}: ${value}`);
+        }
+      });
+      const html = await page.content();
+      if (/SMOKE-[0-9A-Z]+/.test(html) || /Kötü uyudum/.test(html)) current.issues.push({ kind: "check", text: "detayda check-in cevap metni görünüyor" });
+      await check(current.issues, "grafikte iki çizgi: kümülatif + tek gün", async () => {
+        const cum = await page.locator('.ahc .chart svg path[stroke="var(--series-cum)"]').count();
+        const day = await page.locator('.ahc .chart svg path[stroke="var(--series-day)"]').count();
+        if (cum !== 1 || day !== 1) throw new Error(`kümülatif ${cum}, tek gün ${day}`);
+        const legend = await page.locator(".ahc .legend").innerText();
+        if (!/Kümülatif/.test(legend) || !/Tek gün/.test(legend)) throw new Error(`açıklama: ${legend}`);
+      });
+      await check(current.issues, "ortak bileşenler /me ile aynı stil (monitor.css sızmıyor)", async () => {
+        const r = await sharedStyleDiffs(page);
+        if (r.diffs.length) throw new Error(`${r.diffs.length}+ fark: ${r.diffs.slice(0, 4).join(" | ")}`);
+        if (!r.control) throw new Error("denetim kör: bilerek sızan kural fark üretmedi");
+        current.notes.push(`ortak bileşenler: ${r.elements} öğenin bütün hesaplanmış stili .mon dışındakiyle aynı (kontrol: sızan kural ${r.control}+ fark üretti)`);
+      });
+      await page.waitForTimeout(300);
+      await shot("06-detail.png");
+      await shot("06b-detail-full.png", { full: true });
+
+      // Önceki / sonraki (mürettebat içinde, döngüsel) ve seçili günün korunması
+      const i = DEMO_CREW.indexOf(ID);
+      const nextId = DEMO_CREW[(i + 1) % DEMO_CREW_SIZE];
+      const prevId = DEMO_CREW[(i - 1 + DEMO_CREW_SIZE) % DEMO_CREW_SIZE];
+      await check(current.issues, `önceki/sonraki: ${prevId} ‹ ${ID} › ${nextId}`, async () => {
+        if (!(await page.locator('.ahc button[data-nav="prev"]').innerText()).includes(prevId)) throw new Error("önceki düğmesi");
+        await page.locator(".ahc .strip button").first().click(); // gün 1
+        await page.waitForURL(atDetail(ID, 1), { timeout: 5000 });
+        await page.locator('.ahc button[data-nav="next"]').click();
+        await page.waitForURL(atDetail(nextId, 1), { timeout: 5000 });
+        await page.locator("#detail-h").getByText(nextId, { exact: true }).waitFor({ timeout: 5000 });
+        await page.locator(".ahc .strip button[aria-current='true']").first().waitFor({ timeout: 10_000 });
+        const sel = await page.locator(".ahc .ticks .sel").innerText();
+        if (sel.trim() !== "1") throw new Error(`${nextId}'de seçili gün ${sel}`);
+        await page.locator('.ahc button[data-nav="prev"]').click();
+        await page.waitForURL(atDetail(ID, 1), { timeout: 5000 });
+      });
+      await page.locator(".ahc a.linkbtn").click();
+      await page.locator("article[data-astronaut] .spark svg").nth(DEMO_CREW_SIZE - 1).waitFor({ timeout: 10_000 });
+    });
+
+    // ------------------------------------------------------------------ 6
+    await step(`6. Mürettebat kartı: son etkinlik + 'Aktif'; akışta 'Sadece mürettebat'`, async () => {
+      const card = page.locator(`article[data-astronaut="${ID}"]`);
+      await check(current.issues, `${ID} kartında 'Aktif' rozeti (4. adımdaki öneri işareti)`, async () => {
+        await page.locator(`article[data-astronaut="${ID}"][data-active="true"] .active-badge`).getByText("Aktif").waitFor({ timeout: 10_000 });
+      });
+      await check(current.issues, `${ID} kartında 'Son etkinlik … önce'`, async () => {
+        const txt = await card.locator("[data-last-activity]").innerText();
+        if (!/Son etkinlik/.test(txt) || !/(sn|dk) önce|şimdi/.test(txt)) throw new Error(`satır: ${txt}`);
+      });
+      await check(current.issues, "etkinliği eski / olmayan kartta rozet yok", async () => {
+        const inactive = await page.locator('article[data-astronaut][data-active="false"]').count();
+        const badges = await page.locator('article[data-active="false"] .active-badge').count();
+        if (!inactive) throw new Error("bütün kartlar aktif görünüyor");
+        if (badges) throw new Error("aktif olmayan kartta rozet var");
+      });
+      await shot("07-crew-active.png", { selector: `article[data-astronaut="${ID}"]` });
+
+      const toggle = page.locator('button[data-filter="crew"]');
+      const feedIds = () => page.locator("li[data-seq]").evaluateAll((els) => els.map((e) => e.getAttribute("data-astronaut") ?? ""));
+      const before = await feedIds();
+      await toggle.click();
+      await check(current.issues, "'Sadece mürettebat' açık: akışta sadece mürettebat", async () => {
+        if ((await toggle.getAttribute("aria-pressed")) !== "true") throw new Error("aria-pressed değil");
+        await page.waitForFunction(
+          (crew) => [...document.querySelectorAll("li[data-seq]")].every((e) => crew.includes(e.getAttribute("data-astronaut") ?? "")),
+          [...DEMO_CREW],
+          { timeout: 5000 },
+        );
+        const ids = await feedIds();
+        if (!ids.length) throw new Error("akış boş");
+      });
+      const others = before.filter((x) => !DEMO_CREW.includes(x)).length;
+      current.notes.push(`akış filtresi: kapalıyken ${before.length} olaydan ${others} tanesi mürettebat dışı; açıkken hepsi mürettebattan`);
+      await shot("07b-feed-crew-only.png", { selector: ".mon-side" });
+      await toggle.click();
+      await check(current.issues, "'Sadece mürettebat' kapatılınca bütün olaylar", async () => {
+        if ((await toggle.getAttribute("aria-pressed")) !== "false") throw new Error("aria-pressed hâlâ true");
+        if (others)
+          await page.waitForFunction(
+            (crew) => [...document.querySelectorAll("li[data-seq]")].some((e) => !crew.includes(e.getAttribute("data-astronaut") ?? "")),
+            [...DEMO_CREW],
+            { timeout: 5000 },
+          );
+      });
     });
 
     await context.close();
