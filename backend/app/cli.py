@@ -2,6 +2,7 @@
 
     python -m app.cli seed [--seed 42] [--spe-day 120]   # sentetik veriyi DB'ye yükle (DB'yi sıfırlar)
     python -m app.cli ingest data/raw/dosya.csv          # dosyayı API'siz yükle
+    python -m app.cli analyze [--as-of 2026-10-20]       # ekip durumu konsolda
     python -m app.cli export-openapi                     # docs/openapi.json üret
 """
 
@@ -45,6 +46,27 @@ def cmd_ingest(args: argparse.Namespace) -> None:
     print(json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False))
 
 
+def cmd_analyze(args: argparse.Namespace) -> None:
+    """Konsolda ekip durumu ve aktif olaylar (veri/analiz sorumlusu için hızlı kontrol)."""
+    from sqlmodel import Session
+
+    from app.db import get_engine, init_db
+    from app.services.data import get_data_service
+
+    init_db()
+    with Session(get_engine()) as s:
+        res = get_data_service().analysis(s, date.fromisoformat(args.as_of) if args.as_of else None)
+    m = res.mission()
+    print(f"as_of={m.as_of}  görev günü {m.mission_day}/{m.total_days}")
+    for aid, a in res.astronauts.items():
+        flagged = ", ".join(f"{x.system}={x.status}({x.score:.0f})" for x in a.systems if x.status not in ("green",) and x.score is not None)
+        print(f"\n{aid} {a.info.name:<12} {a.overall.status.upper():<7} skor={a.overall.score}  {flagged}")
+        for e in a.active_events:
+            if e.severity == "info" and not args.all:
+                continue
+            print(f"   [{e.severity:<8}] {e.title}  ({e.window.start} → {e.window.end}, {e.detector})")
+
+
 def cmd_export_openapi(args: argparse.Namespace) -> None:
     from app.main import app
 
@@ -73,6 +95,11 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--adapter", default=None)
     i.add_argument("--astronaut-id", default=None)
     i.set_defaults(func=cmd_ingest)
+
+    a = sub.add_parser("analyze", help="Ekip durumunu ve aktif olayları konsola yaz")
+    a.add_argument("--as-of", default=None, help="YYYY-MM-DD (boş → son gün)")
+    a.add_argument("--all", action="store_true", help="info olayları da göster")
+    a.set_defaults(func=cmd_analyze)
 
     e = sub.add_parser("export-openapi", help="OpenAPI şemasını docs/openapi.json'a yaz")
     e.add_argument("--out", default=str(REPO_ROOT / "docs" / "openapi.json"))

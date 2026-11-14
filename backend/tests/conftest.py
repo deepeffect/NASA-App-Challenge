@@ -30,7 +30,19 @@ def _isolated_settings(tmp_db_url: str, tmp_path_factory: pytest.TempPathFactory
 
 
 @pytest.fixture(scope="session")
-def client(_isolated_settings):
+def seeded_db(_isolated_settings):
+    """Geçici DB'yi demo senaryosuyla doldur (seed=42, 180 gün)."""
+    from app.data.seed import seed_database
+    from app.data.synthetic import SyntheticConfig
+    from app.services.data import get_data_service
+
+    stats = seed_database(SyntheticConfig(seed=42))
+    get_data_service().invalidate()
+    return stats
+
+
+@pytest.fixture(scope="session")
+def client(seeded_db):
     from fastapi.testclient import TestClient
 
     from app.main import create_app

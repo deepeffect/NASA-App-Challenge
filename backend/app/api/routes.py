@@ -1,17 +1,17 @@
-"""REST API route'ları. Route'lar ince tutulur; iş mantığı services/ altındadır.
-
-(a) adımı: tüm endpoint'ler stub servise bağlı (sözleşme önce).
-"""
+"""REST API route'ları. Route'lar ince tutulur; iş mantığı services/ altındadır."""
 
 import json
 from datetime import date
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
+from sqlmodel import Session
 from sse_starlette.sse import EventSourceResponse
 
 from app.analysis.catalog import load_catalog
+from app.db import get_session
+from app.ingest.pipeline import IngestError
 from app.models.schemas import (
     AlertListResponse,
     AstronautSummary,
@@ -39,11 +39,13 @@ from app.models.schemas import (
     ShareRequest,
     ShareResponse,
 )
+from app.services import data as data_svc
 from app.services import health as health_svc
-from app.services import stub as svc
+from app.services import stub as llm_svc  # (e)/(f) adımında gerçek LLM servisiyle değişecek
 
 router = APIRouter()
 
+DB = Annotated[Session, Depends(get_session)]
 AsOf = Annotated[
     date | None,
     Query(description="Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."),
@@ -57,14 +59,21 @@ class SSEResponseDoc(Response):
     media_type = "text/event-stream"
 
 
-def _require_astronaut(aid: str) -> None:
-    if not svc.known_astronaut(aid):
+def _require_astronaut(db: Session, aid: str) -> None:
+    if not data_svc.known_astronaut(db, aid):
         raise HTTPException(status_code=404, detail=f"Astronot bulunamadı: {aid}")
 
 
 def _require_metric(metric: str) -> None:
     if load_catalog().get(metric) is None:
         raise HTTPException(status_code=404, detail=f"Bilinmeyen metrik: {metric}")
+
+
+def _event_or_404(db: Session, event_id: str, as_of: date | None) -> HealthEvent:
+    ev = data_svc.find_event(db, event_id, as_of)
+    if ev is None:
+        raise HTTPException(status_code=404, detail=f"Olay bulunamadı: {event_id}")
+    return ev
 
 
 # ============================================================================ sistem
@@ -81,8 +90,8 @@ def get_catalog() -> CatalogResponse:
 
 # ============================================================================ mürettebat
 @router.get("/crew", response_model=CrewResponse, tags=["crew"], summary="Tüm astronotlar + genel durum")
-def get_crew(as_of: AsOf = None) -> CrewResponse:
-    return svc.crew(as_of)
+def get_crew(db: DB, as_of: AsOf = None) -> CrewResponse:
+    return data_svc.crew(db, as_of)
 
 
 @router.get(
@@ -92,9 +101,9 @@ def get_crew(as_of: AsOf = None) -> CrewResponse:
     tags=["astronauts"],
     summary="Sistem skorları, son değerler, aktif olaylar",
 )
-def get_summary(astronaut_id: str, as_of: AsOf = None) -> AstronautSummary:
-    _require_astronaut(astronaut_id)
-    return svc.summary(astronaut_id, as_of)
+def get_summary(db: DB, astronaut_id: str, as_of: AsOf = None) -> AstronautSummary:
+    _require_astronaut(db, astronaut_id)
+    return data_svc.summary(db, astronaut_id, as_of)
 
 
 @router.get(
@@ -105,15 +114,16 @@ def get_summary(astronaut_id: str, as_of: AsOf = None) -> AstronautSummary:
     summary="Metrik zaman serisi + baseline + eşikler + ilgili olaylar",
 )
 def get_metric_series(
+    db: DB,
     astronaut_id: str,
     metric: Annotated[str, Query(description="Katalogdaki metrik adı, örn. sleep_duration")],
     days: Annotated[int, Query(ge=1, le=400, description="as_of'tan geriye kaç gün")] = 30,
     resolution: Annotated[Literal["daily", "raw"], Query(description="raw → ham (saatlik) noktalar da döner")] = "daily",
     as_of: AsOf = None,
 ) -> MetricSeriesResponse:
-    _require_astronaut(astronaut_id)
+    _require_astronaut(db, astronaut_id)
     _require_metric(metric)
-    return svc.metric_series(astronaut_id, metric, days, as_of, resolution)
+    return data_svc.metric_series(db, astronaut_id, metric, days, as_of, resolution)
 
 
 @router.get(
@@ -124,12 +134,13 @@ def get_metric_series(
     summary="Check-in geçmişi (yeniden eskiye)",
 )
 def get_checkins(
+    db: DB,
     astronaut_id: str,
     days: Annotated[int, Query(ge=1, le=400)] = 14,
     as_of: AsOf = None,
 ) -> CheckinListResponse:
-    _require_astronaut(astronaut_id)
-    return svc.checkins(astronaut_id, days, as_of)
+    _require_astronaut(db, astronaut_id)
+    return data_svc.checkins(db, astronaut_id, days, as_of)
 
 
 @router.get(
@@ -140,18 +151,20 @@ def get_checkins(
     summary="Günlük LLM brifingi (LLM yoksa kural tabanlı şablon)",
 )
 async def get_briefing(
+    db: DB,
     astronaut_id: str,
     as_of: AsOf = None,
     lang: Lang = "tr",
     refresh: Annotated[bool, Query(description="true → cache'i atla")] = False,
 ) -> BriefingResponse:
-    _require_astronaut(astronaut_id)
-    return svc.briefing(astronaut_id, as_of, lang)
+    _require_astronaut(db, astronaut_id)
+    return llm_svc.briefing(astronaut_id, as_of, lang)
 
 
 # ============================================================================ olaylar
 @router.get("/alerts", response_model=AlertListResponse, tags=["alerts"], summary="Olay/uyarı listesi")
 def list_alerts(
+    db: DB,
     astronaut_id: str | None = None,
     severity: Annotated[list[Severity] | None, Query(description="Tam eşleşme; tekrarlanabilir")] = None,
     min_severity: Annotated[Severity | None, Query(description="Bu seviye ve üstü")] = None,
@@ -162,23 +175,16 @@ def list_alerts(
     as_of: AsOf = None,
 ) -> AlertListResponse:
     if astronaut_id:
-        _require_astronaut(astronaut_id)
-    return svc.alerts(
-        astronaut_id=astronaut_id, severity=severity, min_severity=min_severity, system=system,
+        _require_astronaut(db, astronaut_id)
+    return data_svc.alerts(
+        db, astronaut_id=astronaut_id, severity=severity, min_severity=min_severity, system=system,
         source=source, metric=metric, status=status, as_of=as_of,
     )
 
 
-def _event_or_404(event_id: str, as_of: date | None) -> HealthEvent:
-    ev = svc.find_event(event_id, as_of)
-    if ev is None:
-        raise HTTPException(status_code=404, detail=f"Olay bulunamadı: {event_id}")
-    return ev
-
-
 @router.get("/alerts/{event_id}", response_model=HealthEvent, responses=NOT_FOUND, tags=["alerts"], summary="Tek olay")
-def get_alert(event_id: str, as_of: AsOf = None) -> HealthEvent:
-    return _event_or_404(event_id, as_of)
+def get_alert(db: DB, event_id: str, as_of: AsOf = None) -> HealthEvent:
+    return _event_or_404(db, event_id, as_of)
 
 
 @router.post(
@@ -188,9 +194,9 @@ def get_alert(event_id: str, as_of: AsOf = None) -> HealthEvent:
     tags=["llm"],
     summary="Olayın LLM açıklaması (AlertExplanation)",
 )
-async def explain_alert(event_id: str, body: ExplainRequest | None = None) -> ExplainResponse:
+async def explain_alert(db: DB, event_id: str, body: ExplainRequest | None = None) -> ExplainResponse:
     req = body or ExplainRequest()
-    return svc.explain(_event_or_404(event_id, req.as_of), req)
+    return llm_svc.explain(_event_or_404(db, event_id, req.as_of), req)
 
 
 @router.post(
@@ -200,9 +206,9 @@ async def explain_alert(event_id: str, body: ExplainRequest | None = None) -> Ex
     tags=["alerts"],
     summary="'Yanlış alarm' / 'Faydalı' geri bildirimi",
 )
-def post_feedback(event_id: str, body: FeedbackRequest, as_of: AsOf = None) -> FeedbackResponse:
-    _event_or_404(event_id, as_of)
-    return svc.feedback(event_id, body)
+def post_feedback(db: DB, event_id: str, body: FeedbackRequest, as_of: AsOf = None) -> FeedbackResponse:
+    _event_or_404(db, event_id, as_of)
+    return data_svc.feedback(db, event_id, body)
 
 
 @router.put(
@@ -212,9 +218,9 @@ def post_feedback(event_id: str, body: FeedbackRequest, as_of: AsOf = None) -> F
     tags=["alerts"],
     summary="Olayı yer ekibiyle paylaş / paylaşımı kaldır",
 )
-def put_share(event_id: str, body: ShareRequest, as_of: AsOf = None) -> ShareResponse:
-    _event_or_404(event_id, as_of)
-    return svc.share(event_id, body)
+def put_share(db: DB, event_id: str, body: ShareRequest, as_of: AsOf = None) -> ShareResponse:
+    _event_or_404(db, event_id, as_of)
+    return data_svc.share(db, event_id, body)
 
 
 # ============================================================================ check-in
@@ -226,9 +232,9 @@ def put_share(event_id: str, body: ShareRequest, as_of: AsOf = None) -> ShareRes
     tags=["checkin"],
     summary="Günlük öz bildirim (not acil belirti için taranır)",
 )
-def post_checkin(body: CheckinRequest) -> CheckinResponse:
-    _require_astronaut(body.astronaut_id)
-    return svc.checkin(body)
+def post_checkin(db: DB, body: CheckinRequest) -> CheckinResponse:
+    _require_astronaut(db, body.astronaut_id)
+    return data_svc.create_checkin(db, body)
 
 
 # ============================================================================ sohbet
@@ -251,11 +257,11 @@ def post_checkin(body: CheckinRequest) -> CheckinResponse:
         404: {"model": ErrorResponse},
     },
 )
-async def post_chat(body: ChatRequest) -> EventSourceResponse:
-    _require_astronaut(body.astronaut_id)
+async def post_chat(db: DB, body: ChatRequest) -> EventSourceResponse:
+    _require_astronaut(db, body.astronaut_id)
 
     async def gen():
-        async for name, payload in svc.chat_stream(body):
+        async for name, payload in llm_svc.chat_stream(body):
             yield {"event": name, "data": json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)}
 
     return EventSourceResponse(gen(), ping=15)
@@ -265,16 +271,21 @@ async def post_chat(body: ChatRequest) -> EventSourceResponse:
 @router.post(
     "/ingest",
     response_model=IngestReport,
+    responses={400: {"model": ErrorResponse}},
     tags=["ingest"],
     summary="CSV/JSON veri yükleme (format otomatik algılanır)",
 )
 async def post_ingest(
+    db: DB,
     file: Annotated[UploadFile, File(description="CSV veya JSON dosyası")],
     adapter: Annotated[str | None, Query(description="Adaptörü zorla: long_csv | wide_csv | json_records")] = None,
     astronaut_id: Annotated[str | None, Query(description="Dosyada astronaut_id kolonu yoksa kullanılır")] = None,
 ) -> IngestReport:
     content = await file.read()
-    return svc.ingest(file.filename or "upload", content)
+    try:
+        return data_svc.ingest(db, file.filename or "upload", content, adapter, astronaut_id)
+    except IngestError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============================================================================ yer raporu
@@ -285,7 +296,8 @@ async def post_ingest(
     summary="Yer ekibi raporu (sadece paylaşılan check-in ve olaylar)",
 )
 def get_ground_report(
+    db: DB,
     as_of: AsOf = None,
     days: Annotated[int, Query(ge=1, le=60)] = 7,
 ) -> GroundReport:
-    return svc.ground_report(as_of, days)
+    return data_svc.ground_report(db, as_of, days)
