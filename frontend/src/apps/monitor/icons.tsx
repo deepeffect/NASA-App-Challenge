@@ -180,3 +180,9 @@ export const ChevronIcon = ({ className }: { className?: string }) => (
     <path d="m9 6 6 6-6 6" />
   </S>
 );
+/** "Aktif" rozeti: nabız çizgisi (yanında her zaman "Aktif" metni). */
+export const ActivityIcon = () => (
+  <S>
+    <path d="M2.5 12h4l2.5-6 4.5 12 2.5-6h5.5" />
+  </S>
+);

@@ -11,7 +11,7 @@ istasyonda değil" gösterilir (`GET /api/station`):
 | Rota | İstasyon | Klasör | Durum |
 |---|---|---|---|
 | `/me` | gemi (astronot terminali) | `src/apps/personal/` | yer tutucu — kişisel ekran ekibi |
-| `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı (`feat/earth`; astronot detayı ortak bileşenleri bekliyor) |
+| `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı; astronot detayı `/monitor/astronaut/:id` (ortak bileşenler, `audience="earth"`) |
 | `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
 
 - Kurallar ve görünüm için tek doğru kaynak: `reference/personal-artifact.html` (prototip).
@@ -139,12 +139,16 @@ Gemi (:8000) ve Dünya (:8001, web :5174) lokal açıkken (`npm run dev:ship` + 
 npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: screenshots/earth/
 ```
 
-`scripts/smoke-earth.ts`: giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık) · gemide A000 check-in +
-"Sadece skorlar" → Dünya'da gecikme + 2 sn içinde, cevap metni yok · paylaşılmamış günde ruh hali / stres
-"Paylaşılmadı" · gemi kapatılır (uyarı, son durum korunur) ve açılır (akış kaldığı seq'ten, boşluksuz).
-Dünya ekranı gemiye hiç istek atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki
-yerine döner (bu sırada dev:earth backend'i de bir kez yeniden başlar). A000'ın paylaşımı geri alınamadığı için
-süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
+`scripts/smoke-earth.ts`: giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık) · gemide mürettebatın ilk
+astronotu (DEMO_CREW[0]) check-in + "Sadece skorlar" → Dünya'da gecikme + 2 sn içinde, cevap metni yok · paylaşılmamış
+günde ruh hali / stres "Paylaşılmadı" (kartta ve detayın ölçümler tablosunda, "Uyku, ruh hali ve stres" alan skoru dahil)
+· gemi kapatılır (uyarı, son durum korunur) ve açılır (akış kaldığı seq'ten, boşluksuz) · astronot detayı: paylaşıma
+göre check-in paneli, iki çizgili grafik, önceki/sonraki · mürettebat kartında "Aktif" rozeti · akışta "Sadece mürettebat".
+Ayrıca: detaydaki ortak bileşenlerin bütün hesaplanmış stili `.mon` dışındakiyle (yani /me'dekiyle) aynı olmalı ve
+`monitor.css`'teki her seçici `.mon` ile başlayıp ortak bileşenleri (`.ahc`) dışlamalı. Dünya ekranı gemiye hiç istek
+atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki yerine döner (bu sırada dev:earth
+backend'i de bir kez yeniden başlar; izleyici yoksa gemi kapalı kalır, smoke arka planda sunucu bırakmaz). Paylaşım geri
+alınamadığı için süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
 
 ## URL'de zaman
 

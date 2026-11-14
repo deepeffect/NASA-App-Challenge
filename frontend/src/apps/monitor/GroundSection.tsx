@@ -4,8 +4,10 @@
  * En düşük skor üstte. Açılınca o günün çok dışında olan görünür ölçümleri (/days/{bugün}) gösterilir.
  */
 import { useState } from "react";
+import { Link } from "react-router";
 
 import { type MonitorCrewMember, useCrew, useMonitorDay } from "./api";
+import { detailPath } from "./Detail";
 import { ChevronIcon } from "./icons";
 import { flashClass, useLive } from "./live";
 import { useT } from "./texts";
@@ -73,6 +75,11 @@ function FarOut({ member }: { member: MonitorCrewMember }) {
           <span className="sr">{r.flag_text}</span>
         </p>
       ))}
+      <p>
+        <Link className="open-link" to={detailPath(member.astronaut.id)}>
+          {t("openDetailOf", { id: member.astronaut.id })} ›
+        </Link>
+      </p>
     </div>
   );
 }
