@@ -77,6 +77,12 @@ def _l(lang: str) -> str:
     return "en" if lang == "en" else "tr"
 
 
+def _date(iso: Any, L: str) -> str:
+    """Türkçe metinde 2026-11-14 → 14.11.2026; İngilizcede ISO kalır."""
+    s = str(iso or "")
+    return ".".join(reversed(s.split("-"))) if L == "tr" and len(s) == 10 and s[4] == "-" else s
+
+
 def _val(v: Any, unit: str, decimals: int) -> str:
     u = unit_label(unit)
     return f"{fmt(v, decimals)}{u}" if u.startswith("/") else f"{fmt(v, decimals)} {u}"
@@ -197,7 +203,7 @@ def _tool_text(name: str, d: dict[str, Any], L: str) -> str:
     if name == "get_metric":
         lt, b = d.get("latest", {}), d.get("personal_baseline") or {}
         s = (f"{d['display_name']}: latest {_val(lt.get('value'), d['unit'], 1)} ({lt.get('date')})" if L == "en"
-             else f"{d['display_name']}: son değer {_val(lt.get('value'), d['unit'], 1)} ({lt.get('date')})")
+             else f"{d['display_name']}: son değer {_val(lt.get('value'), d['unit'], 1)} ({_date(lt.get('date'), L)})")
         if b.get("mean") is not None:
             s += (f", personal normal {_val(b['mean'], d['unit'], 1)}" if L == "en"
                   else f", kişisel normal {_val(b['mean'], d['unit'], 1)}")
@@ -224,7 +230,7 @@ def _tool_text(name: str, d: dict[str, Any], L: str) -> str:
         c = cks[0]
         return (f"Latest check-in ({c['date']}): mood {c['mood']}/5, stress {c['stress']}/5, sleep quality {c['sleep_quality']}/5."
                 if L == "en" else
-                f"Son check-in ({c['date']}): ruh hali {c['mood']}/5, stres {c['stress']}/5, uyku kalitesi {c['sleep_quality']}/5.")
+                f"Son check-in ({_date(c['date'], L)}): ruh hali {c['mood']}/5, stres {c['stress']}/5, uyku kalitesi {c['sleep_quality']}/5.")
     if name == "search_docs":
         res = d.get("results", [])
         if not res:
