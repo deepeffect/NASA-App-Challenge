@@ -1,18 +1,176 @@
 @import "tailwindcss";
 
-/* Koyu tema, büyük okunur font, düşük bilişsel yük. */
+/*
+ * Tema: "uçuş hekimi konsolu" — serin alet grileri, tek mavi vurgu, düz kartlar.
+ * Sistem temasını izler (açık / koyu). Bileşenler Tailwind'in slate/emerald/… sınıflarını
+ * kullanmaya devam eder; burada o paletlerin değerleri temaya göre yeniden tanımlanır:
+ *   slate-950 = sayfa zemini · slate-900 = kart yüzeyi · slate-800 = çizgi / ikincil zemin
+ *   slate-100 = ana metin   · slate-300 = ikincil metin · slate-400 = soluk metin
+ *   <renk>-950 = açık ton zemin · <renk>-300 = o tonun metni · <renk>-500/600 = kenarlık
+ * Offline kuralı: harici yazı tipi yok, sistem yazı tipleri kullanılır.
+ */
 @theme {
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Archivo", "Segoe UI Semibold", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+}
+
+:root {
+  color-scheme: light;
+
+  --color-slate-50: #0b1016;
+  --color-slate-100: #10161d;
+  --color-slate-200: #232c36;
+  --color-slate-300: #47525f;
+  --color-slate-400: #5f6b78;
+  --color-slate-500: #7b8794;
+  --color-slate-600: #b9c2cc;
+  --color-slate-700: #d0d8e0;
+  --color-slate-800: #dce2e9;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f1f4f7;
+
+  --color-sky-200: #174d90;
+  --color-sky-300: #1c5cab;
+  --color-sky-400: #2a78d6;
+  --color-sky-500: #1c5cab;
+  --color-sky-600: #2a78d6;
+  --color-sky-900: #cfe1f7;
+  --color-sky-950: #e6effa;
+
+  --color-emerald-300: #0a7a0a;
+  --color-emerald-600: #0ca30c;
+  --color-emerald-950: #e4f5e4;
+
+  --color-amber-200: #6b4700;
+  --color-amber-300: #8a5a00;
+  --color-amber-400: #c98a00;
+  --color-amber-500: #d99a00;
+  --color-amber-600: #c98a00;
+  --color-amber-950: #fdf3d7;
+
+  --color-orange-300: #a8480c;
+  --color-orange-400: #eb6834;
+  --color-orange-500: #e0602c;
+  --color-orange-950: #fdeee3;
+
+  --color-red-50: #5c1010;
+  --color-red-200: #8f1f1f;
+  --color-red-300: #b02a2a;
+  --color-red-400: #d03b3b;
+  --color-red-500: #d03b3b;
+  --color-red-600: #c23030;
+  --color-red-900: #f5c9c9;
+  --color-red-950: #fce8e8;
+
+  --color-violet-200: #4c3399;
+  --color-violet-300: #5b3fb5;
+  --color-violet-400: #7c5fd6;
+  --color-violet-500: #8b6fe0;
+  --color-violet-950: #efebfc;
+
+  /* Grafik ve durum işaretleri (SVG'de var(--…) ile kullanılır) */
+  --good: #0ca30c;
+  --warn: #e39a00;
+  --crit: #d03b3b;
+  --series: #2a78d6;
+  --chart-grid: #dce2e9;
+  --chart-axis: #7b8794;
+  --chart-value: #10161d;
+  --chart-roll: #7b8794;
+  --chart-band: #2a78d6;
+  --chart-forecast: #7c5fd6;
+  --sev-critical: #d03b3b;
+  --sev-warning: #eb6834;
+  --sev-info: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --color-slate-50: #ffffff;
+    --color-slate-100: #eef1f4;
+    --color-slate-200: #d6dce3;
+    --color-slate-300: #b7c0ca;
+    --color-slate-400: #8f9aa6;
+    --color-slate-500: #6f7a86;
+    --color-slate-600: #47525f;
+    --color-slate-700: #353f4a;
+    --color-slate-800: #2a323b;
+    --color-slate-900: #171c22;
+    --color-slate-950: #0d1115;
+
+    --color-sky-200: #c3dbf8;
+    --color-sky-300: #a9cbf4;
+    --color-sky-400: #86b6ef;
+    --color-sky-500: #86b6ef;
+    --color-sky-600: #3987e5;
+    --color-sky-900: #1d3a5f;
+    --color-sky-950: #132235;
+
+    --color-emerald-300: #6ee7a0;
+    --color-emerald-600: #0ca30c;
+    --color-emerald-950: #0d2414;
+
+    --color-amber-200: #fde08a;
+    --color-amber-300: #fcd34d;
+    --color-amber-400: #fab219;
+    --color-amber-500: #fab219;
+    --color-amber-600: #d99a00;
+    --color-amber-950: #2b2008;
+
+    --color-orange-300: #fdba74;
+    --color-orange-400: #fb923c;
+    --color-orange-500: #eb6834;
+    --color-orange-950: #2e170b;
+
+    --color-red-50: #fef2f2;
+    --color-red-200: #fecaca;
+    --color-red-300: #fca5a5;
+    --color-red-400: #f87171;
+    --color-red-500: #e25555;
+    --color-red-600: #d03b3b;
+    --color-red-900: #5a1c1c;
+    --color-red-950: #2c1010;
+
+    --color-violet-200: #ddd6fe;
+    --color-violet-300: #c4b5fd;
+    --color-violet-400: #a78bfa;
+    --color-violet-500: #8b5cf6;
+    --color-violet-950: #1f1838;
+
+    --good: #0ca30c;
+    --warn: #fab219;
+    --crit: #e25555;
+    --series: #3987e5;
+    --chart-grid: #2a323b;
+    --chart-axis: #8f9aa6;
+    --chart-value: #eef1f4;
+    --chart-roll: #6f7a86;
+    --chart-band: #3987e5;
+    --chart-forecast: #a78bfa;
+    --sev-critical: #f87171;
+    --sev-warning: #fb923c;
+    --sev-info: #86b6ef;
+  }
 }
 
 html {
-  font-size: 18px;
-  color-scheme: dark;
+  font-size: 16px;
 }
 
 body {
   @apply bg-slate-950 text-slate-100 antialiased;
   line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
 }
 
 :focus-visible {
@@ -21,5 +179,9 @@ body {
 
 /* Kaydırıcı */
 input[type="range"] {
-  accent-color: var(--color-sky-400);
+  accent-color: var(--color-sky-500);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
 }

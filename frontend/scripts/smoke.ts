@@ -9,7 +9,9 @@
  * "Örnek dedektörler" ekranı için 8001 portunda örnek dedektörleri açık ikinci bir backend başlatır
  * ve sadece o ekranın API isteklerini oraya yönlendirir (çalışan dev sunucusuna dokunmaz).
  *
- * Ortam değişkenleri: SMOKE_WEB, SMOKE_API, SMOKE_ML_PORT
+ * Ortam değişkenleri: SMOKE_WEB, SMOKE_API, SMOKE_ML_PORT, SMOKE_CHANNEL
+ *   SMOKE_CHANNEL=msedge | chrome → Playwright'ın indirdiği Chromium yerine kurulu tarayıcıyı kullanır
+ *   (`npx playwright install chromium` indirilemiyorsa, örn. kısıtlı ağda).
  * Çıkış kodu: 0 temiz · 1 hata bulundu · 2 sunucular açık değil
  */
 import { type ChildProcess, spawn } from "node:child_process";
@@ -99,7 +101,8 @@ function instrument(page: Page, issues: Issue[], warnings: string[]): void {
 /** Yükleniyor göstergeleri kaybolana ve ağ sakinleşene kadar bekle. */
 async function settle(page: Page): Promise<void> {
   // Not: Recharts tooltip'i de role="status" taşır; bu yüzden kendi Spinner'ımızın işaretine bakıyoruz
-  await page.waitForFunction(() => !document.querySelector("[data-spinner]"), null, { timeout: 15_000 });
+  // Skor geçmişi ilk açılışta gün başına bir analiz çalıştırır → cömert zaman aşımı
+  await page.waitForFunction(() => !document.querySelector("[data-spinner]"), null, { timeout: 60_000 });
   await page.waitForLoadState("networkidle").catch(() => undefined);
   await page.waitForTimeout(400); // grafik animasyonları/yerleşim
 }
@@ -114,7 +117,13 @@ async function expectText(page: Page, issues: Issue[], text: string | RegExp, wh
 
 // ----------------------------------------------------------------------------- ekranlar
 interface Ctx { page: Page; issues: Issue[]; shot: (file: string, selector?: string) => Promise<void>; dates: Record<string, string> }
-type Screen = { name: string; ml?: boolean; viewport?: { width: number; height: number }; run: (x: Ctx) => Promise<void> };
+type Screen = {
+  name: string;
+  ml?: boolean;
+  viewport?: { width: number; height: number };
+  colorScheme?: "light" | "dark";
+  run: (x: Ctx) => Promise<void>;
+};
 
 const screens: Screen[] = [
   {
@@ -145,6 +154,10 @@ const screens: Screen[] = [
       await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
       await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
+      await expectText(page, issues, "Sağlık skoru geçmişi", "skor geçmişi grafiği");
+      await expectText(page, issues, /kritik: \d+ altı/, "skor grafiğinde rules.yaml bandı");
+      await expectText(page, issues, "Bu günün ölçümleri", "ölçüm tablosu");
+      await expectText(page, issues, "Bu günün ana endişesi", "sistem kartında ana endişe etiketi");
       await page.getByRole("button", { name: "Neden?" }).first().click();
       await expectText(page, issues, "Olası etkenler", "açıklama paneli");
       await settle(page);
@@ -213,6 +226,37 @@ const screens: Screen[] = [
       await shot("07-crew-mobile.png");
     },
   },
+  {
+    name: "8. AST-02 detayı — açık tema (157. gün)",
+    colorScheme: "light",
+    run: async ({ page, issues, shot, dates }) => {
+      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await settle(page);
+      await expectText(page, issues, "Sağlık skoru geçmişi", "skor geçmişi grafiği");
+      await shot("08-ast02-light.png");
+    },
+  },
+  {
+    name: "9. Mürettebat — açık tema",
+    colorScheme: "light",
+    run: async ({ page, shot }) => {
+      await page.goto(`${WEB}/`);
+      await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
+      await settle(page);
+      await shot("09-crew-light.png");
+    },
+  },
+  {
+    name: "10. AST-02 detayı — telefon genişliği (390 px)",
+    viewport: { width: 390, height: 844 },
+    run: async ({ page, shot, dates }) => {
+      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await settle(page);
+      await shot("10-ast02-mobile.png");
+    },
+  },
 ];
 
 // ----------------------------------------------------------------------------- ana akış
@@ -233,7 +277,7 @@ async function main(): Promise<number> {
   const results: ScreenResult[] = [];
   try {
     ml = await startMlBackend();
-    browser = await chromium.launch();
+    browser = await chromium.launch(process.env.SMOKE_CHANNEL ? { channel: process.env.SMOKE_CHANNEL } : {});
     for (const s of screens) {
       const t0 = Date.now();
       const issues: Issue[] = [];
@@ -243,7 +287,7 @@ async function main(): Promise<number> {
         viewport: s.viewport ?? { width: 1440, height: 900 },
         locale: "tr-TR",
         timezoneId: "UTC",
-        colorScheme: "dark",
+        colorScheme: s.colorScheme ?? "dark",
       });
       const page = await context.newPage();
       instrument(page, issues, warnings);

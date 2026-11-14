@@ -17,11 +17,11 @@ export function CrewCard({ member }: { member: CrewMember }) {
   return (
     <Link
       to={`/astronauts/${member.id}`}
-      className={`block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 transition-colors ${RING[member.status]}`}
+      className={`block rounded-2xl border border-slate-800 bg-slate-900 px-[18px] py-4 transition-colors ${RING[member.status]}`}
       aria-label={`${member.name} detayına git`}
     >
       <div className="min-w-0">
-        <p className="truncate text-2xl font-bold" title={member.name}>{member.name}</p>
+        <p className="truncate font-[family-name:var(--font-display)] text-xl font-bold" title={member.name}>{member.name}</p>
         <p className="truncate text-slate-400" title={member.role ?? member.id}>{member.role ?? member.id}</p>
       </div>
       <div className="mt-3">

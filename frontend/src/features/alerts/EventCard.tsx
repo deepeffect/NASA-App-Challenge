@@ -39,7 +39,7 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
   const primaryMetric = event.contributors[0]?.metric;
 
   return (
-    <article className={`scroll-mt-40 space-y-4 rounded-2xl border border-l-8 border-slate-800 bg-slate-900/80 p-5 ${BORDER[event.severity]}`}>
+    <article className={`scroll-mt-40 space-y-3 rounded-xl border border-l-4 border-slate-800 bg-slate-900 px-4 py-3.5 ${BORDER[event.severity]}`}>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={event.severity} />
@@ -48,7 +48,7 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
           <Tag>{SYSTEM_LABELS[event.system]}</Tag>
           {event.status === "resolved" && <Tag>Sona erdi</Tag>}
         </div>
-        <h3 className="text-xl font-semibold">{event.title}</h3>
+        <h3 className="text-[17px] font-semibold">{event.title}</h3>
         {event.description && <p className="text-slate-300">{event.description}</p>}
         <p className="text-sm text-slate-400">
           {fmtDate(event.window.start)} – {fmtDate(event.window.end)}

@@ -11,13 +11,19 @@ export function CrewPage() {
     <QueryState query={crew} loadingLabel="Mürettebat yükleniyor…">
       {(data) => (
         <div className="space-y-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h1 className="text-3xl font-bold">Mürettebat</h1>
-            <p className="text-slate-400">
-              Görev günü {data.mission.mission_day} · {data.astronauts.length} astronot
+          <header>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h1 className="text-[28px] font-bold leading-tight tracking-tight">Mürettebat</h1>
+              <p className="text-slate-400">
+                Görev günü {data.mission.mission_day} · {data.astronauts.length} astronot
+              </p>
+            </div>
+            <p className="mt-1 max-w-[68ch] text-slate-300">
+              Seçili gün için her astronotun genel durumu. Skorları, ölçümleri ve uyarıları görmek için bir astronot
+              seçin.
             </p>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          </header>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {data.astronauts.map((m) => (
               <CrewCard key={m.id} member={m} />
             ))}

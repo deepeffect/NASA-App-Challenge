@@ -38,7 +38,7 @@ interface ThresholdLine {
   side: "low" | "high";
 }
 
-const THRESHOLD_COLORS = { warning: "#fb923c", critical: "#f87171" };
+const THRESHOLD_COLORS = { warning: "var(--sev-warning)", critical: "var(--sev-critical)" };
 const SEV_RANK = { info: 1, warning: 2, critical: 3 } as const;
 const RANK_SEV = { 1: "info", 2: "warning", 3: "critical" } as const;
 
@@ -159,18 +159,20 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
       <div style={{ height }} aria-label={`${metric.display_name} grafiği`} role="img">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={rows} margin={{ top: 12, right: 16, bottom: 4, left: 0 }}>
-            <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={fmtDateShort} stroke="#94a3b8" tick={{ fontSize: 14 }} minTickGap={24} />
+            <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 3" />
+            <XAxis dataKey="date" tickFormatter={fmtDateShort} stroke="var(--chart-axis)" tick={{ fontSize: 13 }} minTickGap={24} />
             <YAxis
               domain={domain}
               ticks={ticks}
-              stroke="#94a3b8"
-              tick={{ fontSize: 14 }}
+              stroke="var(--chart-axis)"
+              tick={{ fontSize: 13 }}
               width={56}
               tickFormatter={(v: number) => fmtNum(v, decimals)}
             />
             <Tooltip
-              contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12, fontSize: 15 }}
+              contentStyle={{ background: "var(--color-slate-900)", border: "1px solid var(--color-slate-600)", borderRadius: 8, fontSize: 14 }}
+              labelStyle={{ color: "var(--color-slate-100)" }}
+              itemStyle={{ color: "var(--color-slate-300)" }}
               labelFormatter={(d) => fmtDate(String(d))}
               formatter={(v, name) => {
                 const label = name === "value" ? "Değer" : name === "roll7" ? "7 gün ort." : name === "forecast" ? "Tahmin" : "Tahmin aralığı";
@@ -185,8 +187,8 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
               <ReferenceArea
                 y1={baseline.mean - baseline.std}
                 y2={baseline.mean + baseline.std}
-                fill="#38bdf8"
-                fillOpacity={0.1}
+                fill="var(--chart-band)"
+                fillOpacity={0.12}
                 stroke="none"
                 ifOverflow="hidden"
               />
@@ -223,19 +225,19 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
               <ReferenceLine
                 key={`cp-${e.event_id}`}
                 x={e.changepoint_date}
-                stroke="#c4b5fd"
+                stroke="var(--chart-forecast)"
                 strokeDasharray="4 4"
-                label={{ value: "Değişim noktası", position: "insideTopRight", fill: "#c4b5fd", fontSize: 13 }}
+                label={{ value: "Değişim noktası", position: "insideTopRight", fill: "var(--chart-forecast)", fontSize: 13 }}
               />
             ))}
 
             {forecastEvents.length > 0 && (
-              <Area dataKey="range" stroke="none" fill="#a78bfa" fillOpacity={0.15} isAnimationActive={false} connectNulls={false} />
+              <Area dataKey="range" stroke="none" fill="var(--chart-forecast)" fillOpacity={0.15} isAnimationActive={false} connectNulls={false} />
             )}
-            <Line dataKey="roll7" stroke="#64748b" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
-            <Line dataKey="value" stroke="#e2e8f0" strokeWidth={2.5} dot={{ r: 2 }} isAnimationActive={false} connectNulls={false} />
+            <Line dataKey="roll7" stroke="var(--chart-roll)" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
+            <Line dataKey="value" stroke="var(--chart-value)" strokeWidth={2.5} dot={{ r: 2 }} isAnimationActive={false} connectNulls={false} />
             {forecastEvents.length > 0 && (
-              <Line dataKey="forecast" stroke="#a78bfa" strokeWidth={2.5} strokeDasharray="6 5" dot={false} isAnimationActive={false} />
+              <Line dataKey="forecast" stroke="var(--chart-forecast)" strokeWidth={2.5} strokeDasharray="6 5" dot={false} isAnimationActive={false} />
             )}
           </ComposedChart>
         </ResponsiveContainer>

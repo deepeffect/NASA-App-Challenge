@@ -75,13 +75,13 @@ export function CheckinForm({ astronautId }: { astronautId: string }) {
                   key={n}
                   className={`relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border text-xl font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-sky-400 ${
                     selected
-                      ? "border-white bg-sky-500 text-slate-950 ring-2 ring-white ring-offset-2 ring-offset-slate-900"
+                      ? "border-slate-100 bg-sky-500 text-slate-950 ring-2 ring-slate-100 ring-offset-2 ring-offset-slate-900"
                       : "border-slate-600 bg-slate-800 hover:bg-slate-700"
                   }`}
                 >
                   {/* Seçim sadece renkle anlatılmaz: köşede onay işareti + çerçeve */}
                   {selected && (
-                    <span className="absolute -right-2 -top-2 rounded-full bg-white text-slate-950" aria-hidden>
+                    <span className="absolute -right-2 -top-2 rounded-full bg-slate-100 text-slate-900" aria-hidden>
                       <CheckCircleIcon className="h-5 w-5" />
                     </span>
                   )}

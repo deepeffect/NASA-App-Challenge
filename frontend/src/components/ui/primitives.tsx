@@ -15,10 +15,10 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-2xl border border-slate-800 bg-slate-900/70 p-5 ${className}`}>
+    <section className={`rounded-2xl border border-slate-800 bg-slate-900 px-[18px] py-4 ${className}`}>
       {(title || actions) && (
-        <header className="mb-4 flex items-center justify-between gap-3">
-          {title && <h2 className="text-lg font-semibold text-slate-100">{title}</h2>}
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          {title && <h2 className="text-[17px] font-semibold text-slate-100">{title}</h2>}
           {actions}
         </header>
       )}

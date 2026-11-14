@@ -47,8 +47,9 @@ export const TOOL_LABELS: Record<string, string> = {
   search_docs: "Belge araması",
 };
 
+/** Temaya göre değişen CSS değişkenleri (index.css); SVG fill/stroke ve style içinde kullanılır. */
 export const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: "#f87171", // red-400
-  warning: "#fb923c", // orange-400
-  info: "#7dd3fc", // sky-300
+  critical: "var(--sev-critical)",
+  warning: "var(--sev-warning)",
+  info: "var(--sev-info)",
 };
