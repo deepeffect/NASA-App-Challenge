@@ -29,13 +29,15 @@
  * Not: Bu astronotun bugünkü check-in'i bir kez paylaşılınca geri alınamaz; ölçümü tekrarlamak için önce
  * `npm run reset -- ship` ve `npm run reset -- earth`.
  */
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { mkdirSync, openSync, readFileSync, rmSync, utimesSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type Browser, chromium, type Page } from "playwright";
 
+// Port / süreç yardımcıları ortak modülde (npm run stop da onu kullanır): scripts/ports.mjs
+import { killPid, listeningPid } from "../../scripts/ports.mjs";
 import { DEMO_CREW, MISSION } from "../src/apps/monitor/config.ts";
 
 const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -93,26 +95,6 @@ const login = async (base: string, id: string) => (await api<{ token: string }>(
 
 interface LinkStatus { connected: boolean; last_seq: number; delay_seconds: number | null; epoch: string | null }
 interface CheckinState { done: boolean; share: string | null; can_reset: boolean; editable: boolean; options: string[] }
-
-/** Gemi API'sini dinleyen sürecin PID'i (Vite'a dokunmamak için sadece bu port). */
-function listeningPid(port: number): number | null {
-  if (isWin) {
-    const r = spawnSync("netstat", ["-ano", "-p", "tcp"], { encoding: "utf-8" });
-    for (const line of r.stdout.split(/\r?\n/)) {
-      const p = line.trim().split(/\s+/);
-      if (p.length >= 5 && p[1].endsWith(`:${port}`) && p[3] === "LISTENING") return Number(p[4]);
-    }
-    return null;
-  }
-  const r = spawnSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], { encoding: "utf-8" });
-  const pid = Number(r.stdout.trim().split(/\s+/)[0]);
-  return Number.isFinite(pid) && pid > 0 ? pid : null;
-}
-
-function killPid(pid: number): void {
-  if (isWin) spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
-  else process.kill(pid, "SIGTERM");
-}
 
 const SHIP_PORT = new URL(SHIP).port || "8000";
 const VENV_PY = isWin ? join(ROOT, "backend", ".venv", "Scripts", "python.exe") : join(ROOT, "backend", ".venv", "bin", "python");
