@@ -1,11 +1,14 @@
-"""Yerleşik adaptörler: long_csv, wide_csv, json_records.
+"""Yerleşik adaptörler: final_dataset_long, long_csv, wide_csv, json_records.
 
-Tespit sırası kayıt sırasıdır (önce long, sonra wide, sonra JSON).
+Tespit sırası kayıt sırasıdır (önce final dataset, sonra long, sonra wide, sonra JSON).
+final_dataset_long, long_csv'nin de tanıyacağı kolonları içerdiği için önce kaydedilir.
 """
 
 import json
 
 import pandas as pd
+
+import app.ingest.final_dataset  # noqa: F401  (FinalDatasetLongAdapter'ı long_csv'den ÖNCE kaydeder)
 
 from app.analysis.catalog import normalize_key
 from app.ingest.base import (

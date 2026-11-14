@@ -51,7 +51,7 @@ backend/
   app/api/routes.py        ince route'lar
   app/models/schemas.py    API sözleşmesi (Pydantic)
   app/models/tables.py     SQLModel tabloları
-  app/ingest/              adaptör registry (long_csv, wide_csv, json_records)
+  app/ingest/              adaptör registry (final_dataset_long, long_csv, wide_csv, json_records)
   app/analysis/            catalog, daily, features, episodes, detectors/, scoring, engine
   app/safety/              emergency (acil tespit), grounding (sayı denetimi)
   app/services/            analiz + DB + LLM orkestrasyonu
@@ -74,6 +74,8 @@ Backend (`backend/` içinde; venv: `.venv`):
 ```bash
 uv venv .venv && uv pip install -e ".[dev]"        # veya: python -m venv .venv && pip install -e ".[dev]"
 .venv/Scripts/python -m app.cli seed --seed 42      # sentetik veri (DB'yi sıfırlar); SPE: --spe-day 120
+.venv/Scripts/python -m app.cli seed --final-dataset [--part mission_iss180|control_iss180|mission_mars860]
+                                                    # AI Gambit final dataset v1 (data/raw/ai_gambit_final_dataset_v1)
 .venv/Scripts/python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 .venv/Scripts/python -m pytest                      # tüm testler (mock LLM, geçici DB)
 .venv/Scripts/python -m app.cli export-openapi      # docs/openapi.json

@@ -86,6 +86,24 @@ itibaren uyku süresi düşer → birkaç gün sonra stres artar, ruh hali ve HR
 Arayüzde changepoint/forecast katmanlarını görmek için örnek dedektörleri açın (gerçek ML değildir):
 `ANALYSIS_DETECTORS=threshold,baseline_deviation,trend,example_changepoint,example_forecast,system_pattern`
 
+### AI Gambit final dataset v1 ile çalışma
+
+Zip'i `data/raw/` altına açın (`data/raw/ai_gambit_final_dataset_v1/mission_iss180/...`; repoya girmez), sonra:
+
+```powershell
+.venv\Scripts\python -m app.cli seed --final-dataset                         # ISS 180 gün (demo, DB'yi sıfırlar)
+.venv\Scripts\python -m app.cli seed --final-dataset --part control_iss180   # aynı mürettebat, olay yok (yanlış alarm sayımı)
+.venv\Scripts\python -m app.cli seed --final-dataset --part mission_mars860  # Mars 860 gün
+# kök klasörden: npm run seed -- --final-dataset
+```
+
+Adaptör (`app/ingest/final_dataset.py`, `POST /api/ingest` ile `daily_long.csv` yüklenince de otomatik seçilir):
+A1–A4 / M1–M4 → AST-01–AST-04; `quality_flag=missing` satırları atlanır; `habitat` radyasyon dozu (ISS'te gerçek
+RadLab) her mürettebat üyesine kaynak etiketiyle kopyalanır; kabin CO2/gürültü/yerçekimi/gecikme şimdilik yüklenmez
+(şemada ortam yok, seed çıktısında listelenir). Check-in notları `emergency.yaml` ile taranır. Görev takvimi verinin
+kendi tarihlerinden gelir (ISS: 2026-01-01 → 2026-06-29). Testler: `pytest tests/test_final_dataset.py`
+(gerçek dataset varsa ek entegrasyon testleri de çalışır, yoksa atlanır).
+
 ### RAG belgeleri
 
 Gerçek belgeleri `data/docs/` altına koyun (PDF için `uv pip install -e ".[rag]"`), sonra
