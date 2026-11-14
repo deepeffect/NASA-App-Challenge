@@ -53,3 +53,19 @@ def client(seeded_db):
 
     with TestClient(create_app()) as c:
         yield c
+
+
+# ---------------------------------------------------------------- yeni mimari (astronaut_health)
+@pytest.fixture(scope="session")
+def dataset():
+    from app.config import get_settings
+    from app.personal.dataset import load_dataset_file
+
+    return load_dataset_file(get_settings().dataset_path)
+
+
+@pytest.fixture(scope="session")
+def catalog():
+    from app.personal.catalog import load_personal_catalog
+
+    return load_personal_catalog()

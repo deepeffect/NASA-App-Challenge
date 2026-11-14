@@ -605,3 +605,91 @@ class StationInfo(BaseModel):
     read_only: bool = Field(description="true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)")
     data_source: Literal["astronaut_health", "synthetic"]
     legacy_enabled: bool = Field(description="true → eski ekranlar (/legacy) ve eski API açık (gemi + synthetic)")
+
+
+# =============================================================================
+# Kişisel sağlık görünümü (gemi /api/me/*, Dünya /api/monitor/*)
+# =============================================================================
+Viewer = Literal["astronaut", "earth"]
+ShareLevel = Literal["private", "scores", "full"]
+
+
+class ReadingView(BaseModel):
+    col: str
+    domain: str
+    label: str
+    unit: str
+    dec: int
+    value: float | None = Field(description="Değerlendirilen değer (3 günlük ortalama; exposure → o günün değeri). Gizliyse null")
+    today: float | None = Field(description="O günün ham değeri. Gizliyse null")
+    value_text: str = Field(description="Biçimli değer veya 'Paylaşılmadı'")
+    healthy_text: str = Field(description="Sağlıklı aralık metni, örn. '7–9' / '7 to 9'")
+    level: int | None = Field(description="0 sağlıklı · 1 uyarı aralığında · 2 uyarı aralığının dışında. Gizliyse null")
+    flag_text: str = Field(description="'' | 'Aralık dışında' | 'Çok dışında'")
+    averaged: bool = Field(description="true → son 3 günün ortalaması, false → o günün değeri")
+    private: bool = Field(description="Ruh hali / stres: Dünya sadece paylaşılırsa görür")
+    hidden: bool = Field(description="Bu izleyiciden gizli (Dünya, paylaşılmadı)")
+
+
+class AreaScoreView(BaseModel):
+    area: str
+    label: str
+    score: float | None = Field(description="0–100. Dünya'da davranışsal alan paylaşılmadıysa null")
+    score_text: str
+    hidden: bool
+    main_concern: bool
+
+
+class TodoItemView(BaseModel):
+    code: str
+    title: str
+    why: str = Field(description="Tetikleyen ölçümler; tetikleyici yoksa 'Veri setinin önerisi'")
+    source: Literal["readings", "dataset"] = Field(description="dataset → veri seti önerdi, eşleşen ölçüm yok")
+    triggers: list[str] = Field(description="Görünür tetikleyici ölçüm kolonları")
+    steps: list[str]
+    when: str
+    contact_ground_if: str
+    basis: str
+    done: bool = Field(False, description="Astronot 'yaptım' olarak işaretledi")
+
+
+class StripDay(BaseModel):
+    day: int = Field(description="1'den başlar (30 günün kaçıncısı)")
+    mission_day: int
+    status: int = Field(description="Gösterilen durum 0/1/2 (bu izleyiciye göre)")
+    status_label: str
+    score: float = Field(description="Kümülatif sağlık skoru")
+    score_text: str
+    label: str = Field(description="Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'")
+
+
+class DayView(BaseModel):
+    astronaut_id: str
+    viewer: Viewer
+    day: int = Field(description="1'den başlar")
+    n_days: int
+    mission_day: int
+    is_today: bool = Field(description="Son kayıt (check-in sadece bugün yapılabilir)")
+    day_label: str = Field(description="'30 günün 30. günü · görev günü 155'")
+    status: int = Field(description="Gösterilen durum = max(health_status, ground ? 1 : 0)")
+    status_label: str = Field(description="Normal / Dikkat / Rahatsız")
+    health_status: int = Field(description="Veri setindeki durum (ground hariç)")
+    ground: bool = Field(description="Yer desteği gerekli. Dünya'da sadece görünür ölçümlerden hesaplanır")
+    subtitle: str
+    score: float = Field(description="Kümülatif sağlık skoru (her zaman görünür)")
+    score_text: str
+    daily_score: float
+    main_concern: str = Field(description="none | immune | bone_muscle | cardiovascular | behavioral")
+    main_concern_label: str | None
+    areas: list[AreaScoreView]
+    readings: list[ReadingView] = Field(description="Katalog sırasında; grup sırası `domains`")
+    todo_title: str
+    todo: list[TodoItemView] = Field(description="Görünür to-do öğeleri, veri setindeki sırayla")
+    todo_masked_count: int = Field(description="Dünya: tetikleyicisi sadece gizli ölçümler olan öğe sayısı")
+    todo_masked_text: str | None
+    calm_text: str | None = Field(description="Yapılacak bir şey yoksa")
+    ground_title: str | None
+    ground_text: str | None
+    readings_note: str
+    threshold_note: str = Field(description="Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı")
+    share: ShareLevel | None = Field(None, description="Bu günün check-in paylaşım seviyesi (tamamlandıysa)")

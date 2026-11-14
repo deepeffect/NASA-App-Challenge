@@ -29,18 +29,3 @@ def ship_app(ship_settings: Settings):
 def ship_client(ship_app) -> TestClient:
     with TestClient(ship_app) as c:  # açılışta veri seti yüklenir
         yield c
-
-
-@pytest.fixture(scope="session")
-def dataset():
-    from app.config import get_settings
-    from app.personal.dataset import load_dataset_file
-
-    return load_dataset_file(get_settings().dataset_path)
-
-
-@pytest.fixture(scope="session")
-def catalog():
-    from app.personal.catalog import load_personal_catalog
-
-    return load_personal_catalog()
