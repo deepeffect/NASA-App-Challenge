@@ -17,6 +17,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { auth, type StationInfo, stationApi } from "../../api/station";
 import { isUnauthorized } from "./api";
+import { CrewSection } from "./CrewSection";
 import { LinkBar } from "./LinkBar";
 import { LiveProvider } from "./live";
 import { Login } from "./Login";
@@ -77,7 +78,9 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
         <LinkBar />
       </div>
       <div className="mon-body">
-        <main className="mon-main" />
+        <main className="mon-main">
+          <CrewSection />
+        </main>
         <aside className="mon-side" />
       </div>
       <Footer station={station} />

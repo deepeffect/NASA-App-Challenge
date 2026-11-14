@@ -123,7 +123,7 @@ const T = {
   // alanlar (kısa)
   dom_exposure: { tr: "Ortam", en: "Environment" },
   dom_immune: { tr: "Bağışıklık", en: "Immune" },
-  dom_bone_muscle: { tr: "Kemik-kas", en: "Bone, muscle" },
+  dom_bone_muscle: { tr: "Kemik", en: "Bone" },
   dom_cardiovascular: { tr: "Kalp", en: "Heart" },
   dom_behavioral: { tr: "Davranış", en: "Behaviour" },
 
