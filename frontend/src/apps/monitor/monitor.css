@@ -237,3 +237,10 @@
 .mon .field input:not(:where(.ahc, .ahc *)) { padding: 9px 11px; }
 .mon .err:not(:where(.ahc, .ahc *)) { border-left: 3px solid var(--crit); padding-left: 10px; }
 .mon .state-msg:not(:where(.ahc, .ahc *)) { padding: 24px; text-align: center; color: var(--muted); }
+
+/* ---------------------------------------------------------------- astronot detayına geçiş (kart, satır, akış) */
+.mon a:hover:not(:where(.ahc, .ahc *)) { text-decoration: underline; text-underline-offset: 3px; }
+.mon .open-detail:not(:where(.ahc, .ahc *)) { cursor: pointer; }
+.mon .ccard.open-detail:hover:not(:where(.ahc, .ahc *)) { border-color: var(--accent); }
+.mon .fitem .who a:not(:where(.ahc, .ahc *)) { color: var(--ink); font-family: var(--font-display); font-weight: 700; }
+.mon .glist .why .open-link:not(:where(.ahc, .ahc *)) { color: var(--accent); font-weight: 600; }

@@ -1,11 +1,14 @@
 /**
  * Mürettebat: DEMO_CREW'daki astronotlar büyük kartlar halinde. Kart: durum (ikon + metin), kümülatif skor,
  * 30 günlük skor sparkline'ı, 5 alan ikon şeridi, son check-in zamanı ve paylaşım seviyesi.
- * Yeni olay gelince kart kısa süre vurgulanır (live.tsx).
+ * Yeni olay gelince kart kısa süre vurgulanır (live.tsx). Karta veya kimliğe tıklanınca astronot detayı açılır.
  */
+import { Link } from "react-router";
+
 import { AreaLegend, AreaStrip } from "./AreaStrip";
 import { type MonitorCrewMember, type MonitorEvent, useCatalog, useCheckinTimes, useCrew, useMonitorDay, useOverview } from "./api";
 import { DEMO_CREW } from "./config";
+import { detailPath, useOpenDetail } from "./Detail";
 import { flashClass, useLive } from "./live";
 import { Sparkline } from "./Sparkline";
 import { fmtTime, shareKey, useT } from "./texts";
@@ -49,6 +52,7 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
   const { t } = useT();
   const { flashFor } = useLive();
   const a = member.astronaut;
+  const open = useOpenDetail(a.id);
   const overview = useOverview(a.id);
   const day = useMonitorDay(a.id, member.today);
   const catalog = useCatalog();
@@ -61,11 +65,11 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
     : { status: member.status, label: member.status_label, subtitle: member.subtitle, score: member.score_text, ground: member.ground, share: member.share ?? null };
 
   return (
-    <article className={`card ccard is-s${now.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id}>
+    <article className={`card ccard open-detail is-s${now.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id} onClick={open}>
       <div className="ccard-top">
-        <span className="ccard-id" id={hid}>
+        <Link className="ccard-id" id={hid} to={detailPath(a.id)} aria-label={t("openDetailOf", { id: a.id })}>
           {a.id}
-        </span>
+        </Link>
         <span className="ccard-meta">{t("cardDay", { age: a.age, sex: a.sex, day: member.mission_day })}</span>
       </div>
       <div className="ccard-head">

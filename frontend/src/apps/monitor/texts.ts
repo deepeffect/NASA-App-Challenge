@@ -116,6 +116,25 @@ const T = {
   legendConcern: { tr: "Ana endişe", en: "Main concern" },
   loadError: { tr: "Veri alınamadı.", en: "Could not load data." },
   noData: { tr: "Bu astronotun verisi yok.", en: "No data for this astronaut." },
+  openDetailOf: { tr: "{id} ayrıntıları", en: "{id} details" },
+  openDetail: { tr: "Ayrıntılar", en: "Details" },
+
+  // astronot detayı (prototipin Earth görünümü)
+  backToOverview: { tr: "Genel görünüm", en: "Overview" },
+  detailViewTitle: { tr: "Dünya üssü görünümü.", en: "Earth base view." },
+  detailViewText: {
+    tr: "Yaşamsal bulgular, uyku, egzersiz, laboratuvar ve ortam her zaman görünür. Ruh hali, stres ve check-in cevapları sadece astronot paylaştıysa görünür.",
+    en: "Vital signs, sleep, exercise, labs and environment are always visible. Mood, stress and check-in answers appear only when the astronaut has shared them.",
+  },
+  pickAstronaut: { tr: "Astronot", en: "Astronaut" },
+  prevAstronaut: { tr: "Önceki astronot: {id}", en: "Previous astronaut: {id}" },
+  nextAstronaut: { tr: "Sonraki astronot: {id}", en: "Next astronaut: {id}" },
+  groupCrew: { tr: "Mürettebat", en: "Crew" },
+  groupAll: { tr: "Tüm astronotlar", en: "All astronauts" },
+  checkinTitle: { tr: "Günlük check-in", en: "Daily check-in" },
+  dayDetails: { tr: "Bu günün ayrıntıları", en: "Details for this day" },
+  unknownAstronaut: { tr: "{id} kimlikli bir astronot yok.", en: "There is no astronaut with the ID {id}." },
+  flagged: { tr: "İşaretlendi", en: "Flagged" },
 
   // paylaşım seviyeleri (Dünya'nın gözünden)
   share_none: { tr: "Check-in yok", en: "No check-in" },

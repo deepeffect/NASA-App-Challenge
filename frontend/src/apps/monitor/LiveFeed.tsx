@@ -3,8 +3,11 @@
  * zamanı ve aradaki süre. Geçmiş /api/monitor/events'ten gelir (sayfa yenilenince kaybolmaz); yeni olay SSE
  * ile tetiklenir ve kısa süre vurgulanır. Bağlantı kopma / geri gelme anları ekran işareti olarak araya girer.
  */
+import { Link } from "react-router";
+
 import { type MonitorEvent, useCatalog, useFeedEvents } from "./api";
 import { FEED_LIMIT } from "./config";
+import { detailPath } from "./Detail";
 import { EventIcon } from "./icons";
 import { flashClass, type LinkMarker, useLive } from "./live";
 import { fmtSeconds, fmtTime, shareKey, type TFn, useT } from "./texts";
@@ -87,7 +90,11 @@ function FeedEvent({ ev, title, flash }: { ev: MonitorEvent; title: string; flas
       <div>
         <p className="t">{title}</p>
         <p className="who">
-          <b>{ev.astronaut_id}</b>
+          {ev.astronaut_id ? (
+            <Link to={detailPath(ev.astronaut_id)} aria-label={t("openDetailOf", { id: ev.astronaut_id })}>
+              {ev.astronaut_id}
+            </Link>
+          ) : null}
           {ev.day != null && <span>{t("evDay", { day: ev.day, mission: ev.mission_day ?? "–" })}</span>}
         </p>
       </div>

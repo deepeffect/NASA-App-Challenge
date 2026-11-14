@@ -79,9 +79,10 @@ export const qk = {
 };
 
 export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
+export const isNotFound = (e: unknown): boolean => e instanceof StationApiError && e.status === 404;
 
-/** Kısa kesintilerde (Dünya sunucusu yeniden başlıyor) birkaç kez dene: 1, 2, 4 sn. Yetkisizse deneme. */
-const retry = (n: number, e: unknown) => !isUnauthorized(e) && n < 3;
+/** Kısa kesintilerde (Dünya sunucusu yeniden başlıyor) birkaç kez dene: 1, 2, 4 sn. İstemci hatasında (4xx) deneme. */
+const retry = (n: number, e: unknown) => !(e instanceof StationApiError && e.status >= 400 && e.status < 500) && n < 3;
 /** Yenilemede eski veri kalır; hiç veri gelmediyse sık yokla (kiosk kendini toparlasın). */
 const keep = { placeholderData: keepPreviousData, retry } as const;
 const pollUntilData = (normalMs: number | false) => (q: { state: { data: unknown; status: string } }) =>
