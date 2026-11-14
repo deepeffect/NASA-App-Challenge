@@ -244,7 +244,8 @@ def _metric_enum(params: dict) -> None:
 
 
 TOOLS: list[ToolSpec] = [
-    ToolSpec("get_health_summary", "Overall health status of an astronaut: system scores, active alerts, metrics outside the personal normal.",
+    ToolSpec("get_health_summary", "Overall health status / daily report / status report of an astronaut: overall and system scores, active alerts, "
+             "metrics outside the personal normal. Use this first for any general 'how am I' or report question.",
              AstronautArgs, get_health_summary),
     ToolSpec("get_metric", "Recent daily values of one metric with personal baseline, thresholds and related alerts.",
              MetricArgs, get_metric, _metric_enum),
@@ -252,7 +253,8 @@ TOOLS: list[ToolSpec] = [
              AlertsArgs, get_alerts),
     ToolSpec("get_radiation_dose", "Latest daily, 7-day and cumulative radiation dose with thresholds.", AstronautArgs,
              get_radiation_dose),
-    ToolSpec("get_checkins", "Recent daily self-reports (mood, stress, sleep quality 1-5 and notes).", CheckinsArgs,
+    ToolSpec("get_checkins", "Subjective check-in questionnaire answers only (mood, stress, sleep quality 1-5 and notes). Not a health "
+             "report: use it only when the user asks about mood, stress, feelings or their check-in.", CheckinsArgs,
              get_checkins),
     ToolSpec("search_docs", "Search onboard reference documents (NASA standards, procedures). Returns file/section references.",
              SearchDocsArgs, search_docs),

@@ -21,7 +21,7 @@ _CTX = re.compile(r"<context>\s*(.*?)\s*</context>", re.DOTALL)
 
 # (anahtar kelimeler (katlanmış), tool, ek argümanlar)
 _RULES: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
-    (("how am i", "how are you", "status", "doing", "overall", "summary", "today", "week"),
+    (("how am i", "how are you", "status", "doing", "overall", "summary", "report", "today", "week"),
      "get_health_summary", {}),
     (("radiation", "dose", "msv"), "get_radiation_dose", {}),
     (("sleep",), "get_metric", {"metric": "sleep_duration", "days": 14}),
