@@ -7,7 +7,7 @@ import { TOOL_LABELS } from "../../components/ui/labels";
 import { Button, Card } from "../../components/ui/primitives";
 import { useChatStream, type ToolActivity } from "./useChatStream";
 
-const SUGGESTIONS = ["Bugün nasılım?", "Son günlerde uykum nasıl?", "Radyasyon dozum ne durumda?"];
+const SUGGESTIONS = ["How am I doing today?", "How has my sleep been lately?", "What is my radiation dose?"];
 
 export function ChatPanel({ astronautId }: { astronautId: string }) {
   const { asOf } = useAsOf();
@@ -28,11 +28,11 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
 
   return (
     <Card
-      title="Sağlık asistanı"
+      title="Health assistant"
       actions={
         chat.turns.length > 0 && (
           <Button variant="ghost" onClick={chat.reset} className="text-sm">
-            Temizle
+            Clear
           </Button>
         )
       }
@@ -43,7 +43,7 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
         <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1" aria-live="polite">
           {chat.turns.length === 0 && (
             <div className="space-y-2">
-              <p className="text-slate-400">Sağlık verilerin hakkında soru sor. Asistan teşhis koymaz, karar desteği verir.</p>
+              <p className="text-slate-400">Ask about your health data. The assistant does not diagnose; it provides decision support.</p>
               <div className="flex flex-wrap gap-2">
                 {SUGGESTIONS.map((s) => (
                   <Button key={s} variant="secondary" className="text-sm" onClick={() => void chat.send(s)}>
@@ -63,7 +63,7 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
                 {t.tools.length > 0 && <ToolChips tools={t.tools} />}
                 {t.thinking && (
                   <details className="text-sm text-slate-500">
-                    <summary className="cursor-pointer">Düşünce süreci</summary>
+                    <summary className="cursor-pointer">Reasoning</summary>
                     <p className="whitespace-pre-wrap">{t.thinking}</p>
                   </details>
                 )}
@@ -74,12 +74,12 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
                   </div>
                 )}
                 {t.degraded && (
-                  <p className="text-sm text-amber-300">Asistan çevrim dışı; kural tabanlı yedek cevap gösteriliyor.</p>
+                  <p className="text-sm text-amber-300">Assistant offline; showing a rule-based fallback answer.</p>
                 )}
                 {t.ungrounded && t.ungrounded.length > 0 && (
-                  <p className="text-sm text-amber-300">Doğrulanamayan sayılar: {t.ungrounded.join(", ")}</p>
+                  <p className="text-sm text-amber-300">Unverified numbers: {t.ungrounded.join(", ")}</p>
                 )}
-                {t.error && <p className="text-sm text-red-300">Hata: {t.error}</p>}
+                {t.error && <p className="text-sm text-red-300">Error: {t.error}</p>}
               </div>
             ),
           )}
@@ -88,22 +88,22 @@ export function ChatPanel({ astronautId }: { astronautId: string }) {
 
         <form onSubmit={submit} className="flex gap-2">
           <label htmlFor="chat-input" className="sr-only">
-            Mesaj
+            Message
           </label>
           <input
             id="chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Mesajını yaz…"
+            placeholder="Type your message…"
             className="min-h-11 flex-1 rounded-xl border border-slate-600 bg-slate-950 px-3"
             disabled={chat.streaming}
           />
           {chat.streaming ? (
-            <Button variant="danger" onClick={chat.stop} aria-label="Durdur">
+            <Button variant="danger" onClick={chat.stop} aria-label="Stop">
               <StopIcon />
             </Button>
           ) : (
-            <Button variant="primary" type="submit" aria-label="Gönder" disabled={!input.trim()}>
+            <Button variant="primary" type="submit" aria-label="Send" disabled={!input.trim()}>
               <SendIcon />
             </Button>
           )}
@@ -128,7 +128,7 @@ function ToolChips({ tools }: { tools: ToolActivity[] }) {
           }`}
         >
           <DatabaseIcon className={`h-4 w-4 ${tool.status === "running" ? "animate-pulse" : ""}`} />
-          {tool.status === "running" ? "Veri alınıyor: " : tool.status === "ok" ? "✓ " : "✗ "}
+          {tool.status === "running" ? "Fetching: " : tool.status === "ok" ? "✓ " : "✗ "}
           {TOOL_LABELS[tool.name] ?? tool.name}
         </li>
       ))}

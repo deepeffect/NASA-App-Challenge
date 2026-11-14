@@ -7,6 +7,10 @@ import pytest
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["MOCK_STREAM_DELAY_MS"] = "0"
 os.environ["APP_ENV"] = "test"
+# Geliştiricinin .env'indeki LLM ayarları testleri etkilemesin (kod varsayılanları)
+os.environ["LLM_QWEN_SOFT_SWITCH"] = "true"
+os.environ["LLM_THINKING"] = "false"
+os.environ["LLM_TOOL_MODE"] = "auto"
 
 
 @pytest.fixture(scope="session")

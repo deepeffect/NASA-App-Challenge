@@ -114,12 +114,12 @@ class ThresholdDetector:
                 ref_lvl = lvl_low[ref] if side == "low" else lvl_high[ref]
                 rng = t.critical if ref_lvl == 3 else t.warning
                 thr = (rng.low if side == "low" else rng.high) if rng else None
-                kind = "kritik" if sev == 3 else "uyarı"
-                title = f"{m.label()} {'alt' if side == 'low' else 'üst'} {kind} eşiğinin {'altında' if side == 'low' else 'üstünde'}"
-                verified = "doğrulanmış" if m.threshold_verified else "placeholder, doğrulanmamış"
+                kind = "critical" if sev == 3 else "warning"
+                title = f"{m.label()} {'below lower' if side == 'low' else 'above upper'} {kind} threshold"
+                verified = "verified" if m.threshold_verified else "placeholder, not verified"
                 desc = (
-                    f"{f.index[ref].date():%d.%m.%Y}: {fmt_val(value, m.unit, m.decimals)} — "
-                    f"{'kritik' if ref_lvl == 3 else 'uyarı'} eşiği {fmt_val(thr, m.unit, m.decimals)} ({verified})."
+                    f"{f.index[ref].date():%Y-%m-%d}: {fmt_val(value, m.unit, m.decimals)} — "
+                    f"{'critical' if ref_lvl == 3 else 'warning'} threshold {fmt_val(thr, m.unit, m.decimals)} ({verified})."
                 )
                 b = sf.baseline
                 z = (value - b.mean) / b.std if b else None
@@ -152,16 +152,16 @@ class DeviationDetector:
                 z7 = float(f["z7"].iloc[ref])
                 roll = float(f["roll7"].iloc[ref])
                 peak = float(np.nanmax(bad[s : e + 1]))
-                word = "altında" if z7 < 0 else "üstünde"
+                word = "below" if z7 < 0 else "above"
                 b = sf.baseline
                 desc = (
-                    f"7 günlük ortalama {fmt_val(roll, m.unit, m.decimals)}; kişisel normal "
+                    f"7-day mean {fmt_val(roll, m.unit, m.decimals)}; personal normal "
                     f"{fmt_val(b.mean, m.unit, m.decimals)} ± {fmt_val(b.std, m.unit, m.decimals)} (z = {fmt(z7, 1)})."
                 )
                 out.append(make_rule_event(
                     ctx, sf, m, detector=self.name, start_i=s, end_i=e, level=sev,
                     score=float(np.clip(0.5 + (peak - cfg.z_warning) * 0.15, 0.3, 0.99)),
-                    title=f"{m.label()} kişisel normalin {word}",
+                    title=f"{m.label()} {word} personal normal",
                     description=desc, contrib=contributor(sf, m, roll, z7),
                 ))
         return out
@@ -228,17 +228,17 @@ class TrendDetector:
                     ref = s + int(np.flatnonzero(level[s : e + 1])[-1])
                 k = int(min(runs[ref], w))
                 delta = float(roll[ref] - roll[ref - k]) if ref - k >= 0 else float("nan")
-                word = "artış" if dirs[ref] > 0 else "düşüş"
+                word = "rising" if dirs[ref] > 0 else "falling"
                 desc = (
-                    f"{int(runs[ref])} gündür kötüleşme yönünde: 7 günlük ortalama son {k} günde "
-                    f"{fmt_val(abs(delta), m.unit, m.decimals)} {'arttı' if delta > 0 else 'azaldı'} "
-                    f"(günde ortalama {fmt(abs(delta) / max(k, 1), m.decimals + 1)})."
+                    f"Worsening for {int(runs[ref])} days: 7-day mean {'rose' if delta > 0 else 'fell'} by "
+                    f"{fmt_val(abs(delta), m.unit, m.decimals)} over the last {k} days "
+                    f"(about {fmt(abs(delta) / max(k, 1), m.decimals + 1)} per day)."
                 )
                 peak = float(np.nanmax(np.where(level[s : e + 1] > 0, change_bad[s : e + 1], np.nan)))
                 out.append(make_rule_event(
                     ctx, sf, m, detector=self.name, start_i=s, end_i=e, level=sev,
                     score=float(np.clip(peak / 4.0, 0.3, 0.95)),
-                    title=f"{m.label()}: sürekli {word} eğilimi", description=desc,
+                    title=f"{m.label()}: sustained {word} trend", description=desc,
                     contrib=contributor(sf, m, float(roll[ref]), float(f["z7"].iloc[ref])),
                 ))
         return out

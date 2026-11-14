@@ -104,7 +104,7 @@ class JsonRecordsAdapter(BaseAdapter):
             top_astronaut = next((data[k] for k in data if normalize_key(k) in ("astronaut_id", "astronaut", "subject_id")), None)
             data = next((data[k] for k in self.LIST_KEYS if isinstance(data.get(k), list)), [data])
         if not isinstance(data, list):
-            raise ValueError("JSON bir kayıt listesi olmalı")
+            raise ValueError("JSON must be a list of records")
         raw = pd.DataFrame([r for r in data if isinstance(r, dict)])
         if raw.empty:
             return _finish(pd.DataFrame(columns=LONG_COLUMNS), 1)

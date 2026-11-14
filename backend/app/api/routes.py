@@ -61,18 +61,18 @@ class SSEResponseDoc(Response):
 
 def _require_astronaut(db: Session, aid: str) -> None:
     if not data_svc.known_astronaut(db, aid):
-        raise HTTPException(status_code=404, detail=f"Astronot bulunamadı: {aid}")
+        raise HTTPException(status_code=404, detail=f"Astronaut not found: {aid}")
 
 
 def _require_metric(metric: str) -> None:
     if load_catalog().get(metric) is None:
-        raise HTTPException(status_code=404, detail=f"Bilinmeyen metrik: {metric}")
+        raise HTTPException(status_code=404, detail=f"Unknown metric: {metric}")
 
 
 def _event_or_404(db: Session, event_id: str, as_of: date | None) -> HealthEvent:
     ev = data_svc.find_event(db, event_id, as_of)
     if ev is None:
-        raise HTTPException(status_code=404, detail=f"Olay bulunamadı: {event_id}")
+        raise HTTPException(status_code=404, detail=f"Event not found: {event_id}")
     return ev
 
 
@@ -154,7 +154,7 @@ async def get_briefing(
     db: DB,
     astronaut_id: str,
     as_of: AsOf = None,
-    lang: Lang = "tr",
+    lang: Lang = "en",
     refresh: Annotated[bool, Query(description="true → cache'i atla")] = False,
 ) -> BriefingResponse:
     _require_astronaut(db, astronaut_id)

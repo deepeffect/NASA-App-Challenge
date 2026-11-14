@@ -121,10 +121,10 @@ const screens: Screen[] = [
     name: "1. Mürettebat ekranı",
     run: async ({ page, issues, shot }) => {
       await page.goto(`${WEB}/`);
-      await page.getByRole("heading", { name: "Mürettebat" }).waitFor();
-      await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
+      await page.getByRole("heading", { name: "Crew" }).waitFor();
+      await page.getByRole("link", { name: /^Open .* details$/ }).nth(3).waitFor();
       await settle(page);
-      await expectText(page, issues, "Kritik", "AST-02 kırmızı durum metni");
+      await expectText(page, issues, "Critical", "AST-02 kırmızı durum metni");
       await shot("01-crew.png");
     },
   },
@@ -132,10 +132,10 @@ const screens: Screen[] = [
     name: "2. AST-02 detayı — 150. gün (yeşil)",
     run: async ({ page, issues, shot, dates }) => {
       await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d150}`);
-      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
       await settle(page);
-      await expectText(page, issues, /Görev günü 150\b/, "başlıkta görev günü 150");
-      await expectText(page, issues, "Aktif uyarı yok", "olay listesi boş");
+      await expectText(page, issues, /Mission day 150\b/, "başlıkta görev günü 150");
+      await expectText(page, issues, "No active alerts", "olay listesi boş");
       await shot("02-ast02-day150.png");
     },
   },
@@ -143,10 +143,10 @@ const screens: Screen[] = [
     name: "3. AST-02 detayı — 157. gün (kırmızı), olay kartı açık",
     run: async ({ page, issues, shot, dates }) => {
       await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
-      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
       await settle(page);
-      await page.getByRole("button", { name: "Neden?" }).first().click();
-      await expectText(page, issues, "Olası etkenler", "açıklama paneli");
+      await page.getByRole("button", { name: "Why?" }).first().click();
+      await expectText(page, issues, "Possible factors", "açıklama paneli");
       await settle(page);
       await shot("03-ast02-day157.png");
       await shot("03b-event-card.png", "article");
@@ -157,13 +157,13 @@ const screens: Screen[] = [
     ml: true,
     run: async ({ page, issues, shot }) => {
       await page.goto(`${WEB}/astronauts/AST-02`);
-      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
-      await page.getByLabel("Metrik seç").selectOption("sleep_duration");
-      await page.getByLabel("Gün aralığı").selectOption("60");
+      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
+      await page.getByLabel("Select metric").selectOption("sleep_duration");
+      await page.getByLabel("Day range").selectOption("60");
       await settle(page);
       const panel = page.locator("#metric-panel");
       await panel.scrollIntoViewIfNeeded();
-      for (const [txt, what] of [["Kişisel normal", "baseline bandı"], ["Değişim noktası", "changepoint"], ["Tahmin", "forecast"]]) {
+      for (const [txt, what] of [["Personal normal", "baseline bandı"], ["Change point", "changepoint"], ["Forecast", "forecast"]]) {
         if (!(await panel.getByText(txt).count())) issues.push({ kind: "check", text: `grafikte katman yok: ${what}` });
       }
       await shot("04-metric-chart.png", "#metric-panel");
@@ -174,32 +174,32 @@ const screens: Screen[] = [
     name: "5. Sohbet paneli (mock)",
     run: async ({ page, issues, shot }) => {
       await page.goto(`${WEB}/astronauts/AST-02`);
-      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
       await settle(page);
       const input = page.locator("#chat-input");
-      await input.fill("Son günlerde uykum nasıl?");
+      await input.fill("How has my sleep been lately?");
       await input.press("Enter");
-      await expectText(page, issues, /Mock mod/, "mock cevabının tamamı");
+      await expectText(page, issues, /Mock mode/, "mock cevabının tamamı");
       await page.locator("#chat-input:enabled").waitFor();
-      const chat = page.locator("section", { has: page.getByRole("heading", { name: "Sağlık asistanı" }) });
+      const chat = page.locator("section", { has: page.getByRole("heading", { name: "Health assistant" }) });
       await chat.scrollIntoViewIfNeeded();
-      await shot("05-chat.png", 'section:has(h2:text("Sağlık asistanı"))');
-      await input.fill("Göğsümde baskı var, nefes darlığı çekiyorum");
+      await shot("05-chat.png", 'section:has(h2:text("Health assistant"))');
+      await input.fill("I feel pressure in my chest and shortness of breath");
       await input.press("Enter");
-      await expectText(page, issues, /ACİL:/, "acil durum bandı");
+      await expectText(page, issues, /EMERGENCY:/, "acil durum bandı");
       await page.locator("#chat-input:enabled").waitFor();
-      await shot("05b-chat-emergency.png", 'section:has(h2:text("Sağlık asistanı"))');
+      await shot("05b-chat-emergency.png", 'section:has(h2:text("Health assistant"))');
     },
   },
   {
     name: "6. Check-in formu",
     run: async ({ page, shot }) => {
       await page.goto(`${WEB}/checkin/AST-01`);
-      await page.getByRole("heading", { name: "Günlük check-in" }).waitFor();
+      await page.getByRole("heading", { name: "Daily check-in" }).waitFor();
       await settle(page);
-      await page.getByRole("group", { name: "Ruh halin" }).getByText("4", { exact: true }).click();
-      await page.getByRole("group", { name: "Stres düzeyin" }).getByText("2", { exact: true }).click();
-      await page.locator("#note").fill("Bugün deney planına uyduk, biraz yorgunum.");
+      await page.getByRole("group", { name: "Your mood" }).getByText("4", { exact: true }).click();
+      await page.getByRole("group", { name: "Your stress level" }).getByText("2", { exact: true }).click();
+      await page.locator("#note").fill("We stayed on the experiment plan today, a bit tired.");
       await shot("06-checkin.png");
     },
   },
@@ -208,7 +208,7 @@ const screens: Screen[] = [
     viewport: { width: 390, height: 844 },
     run: async ({ page, shot }) => {
       await page.goto(`${WEB}/`);
-      await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
+      await page.getByRole("link", { name: /^Open .* details$/ }).nth(3).waitFor();
       await settle(page);
       await shot("07-crew-mobile.png");
     },

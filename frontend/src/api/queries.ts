@@ -47,7 +47,7 @@ export function useAlerts(q: AlertsQuery) {
   return useQuery({ queryKey: qk.alerts(q), queryFn: () => api.alerts(q), placeholderData: keepPreviousData });
 }
 
-export function useBriefing(id: string, asOf: string | null, lang: Lang = "tr") {
+export function useBriefing(id: string, asOf: string | null, lang: Lang = "en") {
   return useQuery({
     queryKey: qk.briefing(id, asOf, lang),
     queryFn: () => api.briefing(id, { as_of: asOf, lang }),

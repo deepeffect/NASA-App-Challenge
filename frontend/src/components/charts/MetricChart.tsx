@@ -143,7 +143,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
   }, [events, dates]);
 
   if (!rows.length) {
-    return <p className="text-slate-400">Bu aralıkta veri yok.</p>;
+    return <p className="text-slate-400">No data in this range.</p>;
   }
 
   const first = dates[0];
@@ -152,11 +152,11 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
   const changepoints = events.filter((e): e is HealthEvent & { changepoint_date: string } =>
     Boolean(e.changepoint_date && inRange(e.changepoint_date) && dates.includes(e.changepoint_date)),
   );
-  const verifiedNote = metric.threshold_verified ? "" : " (doğrulanmamış)";
+  const verifiedNote = metric.threshold_verified ? "" : " (not verified)";
 
   return (
     <figure className="space-y-3">
-      <div style={{ height }} aria-label={`${metric.display_name} grafiği`} role="img">
+      <div style={{ height }} aria-label={`${metric.display_name} chart`} role="img">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={rows} margin={{ top: 12, right: 16, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
@@ -173,7 +173,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
               contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12, fontSize: 15 }}
               labelFormatter={(d) => fmtDate(String(d))}
               formatter={(v, name) => {
-                const label = name === "value" ? "Değer" : name === "roll7" ? "7 gün ort." : name === "forecast" ? "Tahmin" : "Tahmin aralığı";
+                const label = name === "value" ? "Value" : name === "roll7" ? "7-day avg." : name === "forecast" ? "Forecast" : "Forecast range";
                 const text = Array.isArray(v)
                   ? `${fmtNum(Number(v[0]), decimals)} – ${fmtNum(Number(v[1]), decimals)} ${unit}`
                   : `${fmtNum(Number(v), decimals)} ${unit}`;
@@ -211,7 +211,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
                 stroke={THRESHOLD_COLORS[t.level]}
                 strokeDasharray="6 4"
                 label={{
-                  value: `${t.level === "critical" ? "Kritik" : "Uyarı"} eşiği${verifiedNote}`,
+                  value: `${t.level === "critical" ? "Critical" : "Warning"} threshold${verifiedNote}`,
                   position: t.side === "low" ? "insideBottomLeft" : "insideTopLeft",
                   fill: THRESHOLD_COLORS[t.level],
                   fontSize: 13,
@@ -225,7 +225,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
                 x={e.changepoint_date}
                 stroke="#c4b5fd"
                 strokeDasharray="4 4"
-                label={{ value: "Değişim noktası", position: "insideTopRight", fill: "#c4b5fd", fontSize: 13 }}
+                label={{ value: "Change point", position: "insideTopRight", fill: "#c4b5fd", fontSize: 13 }}
               />
             ))}
 
@@ -242,35 +242,35 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
       </div>
 
       <figcaption className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-400">
-        <span><span className="mr-1 inline-block h-0.5 w-5 bg-slate-200 align-middle" />Günlük değer</span>
-        <span><span className="mr-1 inline-block h-0.5 w-5 bg-slate-500 align-middle" />7 gün ortalaması</span>
+        <span><span className="mr-1 inline-block h-0.5 w-5 bg-slate-200 align-middle" />Daily value</span>
+        <span><span className="mr-1 inline-block h-0.5 w-5 bg-slate-500 align-middle" />7-day average</span>
         {baseline && (
           <span>
             <span className="mr-1 inline-block h-3 w-5 bg-sky-400/20 align-middle" />
-            Kişisel normal ({fmtNum(baseline.mean, decimals)} ± {fmtNum(baseline.std, decimals)} {unit})
+            Personal normal ({fmtNum(baseline.mean, decimals)} ± {fmtNum(baseline.std, decimals)} {unit})
           </span>
         )}
         {visibleThresholds.length > 0 && (
-          <span><span className="mr-1 inline-block w-5 border-t-2 border-dashed border-orange-400 align-middle" />Eşik{verifiedNote}</span>
+          <span><span className="mr-1 inline-block w-5 border-t-2 border-dashed border-orange-400 align-middle" />Threshold{verifiedNote}</span>
         )}
         {windowBands.length > 0 && (
           <span>
             <span className="mr-1 inline-block h-3 w-5 bg-orange-400/25 align-middle" />
-            Olay dönemi (turuncu: uyarı, kırmızı: kritik)
+            Event period (orange: warning, red: critical)
           </span>
         )}
         {changepoints.length > 0 && (
-          <span><span className="mr-1 inline-block h-3 w-0 border-l-2 border-dashed border-violet-300 align-middle" />Değişim noktası</span>
+          <span><span className="mr-1 inline-block h-3 w-0 border-l-2 border-dashed border-violet-300 align-middle" />Change point</span>
         )}
         {forecastEvents.length > 0 && (
-          <span><span className="mr-1 inline-block w-5 border-t-2 border-dashed border-violet-400 align-middle" />Tahmin</span>
+          <span><span className="mr-1 inline-block w-5 border-t-2 border-dashed border-violet-400 align-middle" />Forecast</span>
         )}
       </figcaption>
       {hiddenThresholds.length > 0 && (
         <p className="text-sm text-slate-500">
-          Grafik aralığı dışındaki eşikler:{" "}
+          Thresholds outside the chart range:{" "}
           {hiddenThresholds
-            .map((t) => `${t.level === "critical" ? "kritik" : "uyarı"} ${t.side === "low" ? "alt" : "üst"} ${fmtNum(t.y, decimals)} ${unit}`)
+            .map((t) => `${t.level === "critical" ? "critical" : "warning"} ${t.side === "low" ? "lower" : "upper"} ${fmtNum(t.y, decimals)} ${unit}`)
             .join(" · ")}
           {verifiedNote}
         </p>

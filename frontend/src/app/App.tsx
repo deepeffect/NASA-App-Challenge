@@ -24,7 +24,7 @@ export function App() {
               <Route path="astronauts/:id" element={<AstronautPage />} />
               <Route path="checkin" element={<CheckinPage />} />
               <Route path="checkin/:id" element={<CheckinPage />} />
-              <Route path="*" element={<p>Sayfa bulunamadı.</p>} />
+              <Route path="*" element={<p>Page not found.</p>} />
             </Route>
           </Routes>
         </AsOfProvider>

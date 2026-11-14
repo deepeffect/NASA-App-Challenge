@@ -25,17 +25,17 @@
 # =============================================================================
 
 systems:
-  cardiovascular: {tr: Kardiyovasküler, en: Cardiovascular}
-  musculoskeletal: {tr: Kas-iskelet, en: Musculoskeletal}
-  immune: {tr: Bağışıklık, en: Immune}
-  behavioral: {tr: Davranışsal sağlık, en: Behavioral health}
-  sleep: {tr: Uyku, en: Sleep}
-  radiation: {tr: Radyasyon, en: Radiation}
+  cardiovascular: {en: Cardiovascular}
+  musculoskeletal: {en: Musculoskeletal}
+  immune: {en: Immune}
+  behavioral: {en: Behavioral health}
+  sleep: {en: Sleep}
+  radiation: {en: Radiation}
 
 metrics:
   # ---------------------------------------------------------------- kardiyovasküler
   resting_hr:
-    display_name: {tr: İstirahat nabzı, en: Resting heart rate}
+    display_name: {en: Resting heart rate}
     unit: bpm
     system: cardiovascular
     frequency: daily
@@ -52,7 +52,7 @@ metrics:
       critical: {low: 35, high: 120}             # TODO: NASA-STD-3001 ile doğrula
 
   heart_rate:
-    display_name: {tr: Nabız (saatlik), en: Heart rate (hourly)}
+    display_name: {en: Heart rate (hourly)}
     unit: bpm
     system: cardiovascular
     frequency: hourly
@@ -65,7 +65,7 @@ metrics:
     rules: []
 
   hrv_rmssd:
-    display_name: {tr: Kalp hızı değişkenliği (RMSSD), en: Heart rate variability (RMSSD)}
+    display_name: {en: Heart rate variability (RMSSD)}
     unit: ms
     system: cardiovascular
     frequency: daily
@@ -81,7 +81,7 @@ metrics:
       warning: {low: 15}                         # TODO: NASA-STD-3001 ile doğrula
 
   bp_systolic:
-    display_name: {tr: Sistolik kan basıncı, en: Systolic blood pressure}
+    display_name: {en: Systolic blood pressure}
     unit: mmHg
     system: cardiovascular
     frequency: daily
@@ -98,7 +98,7 @@ metrics:
       critical: {high: 180}                      # TODO: NASA-STD-3001 ile doğrula
 
   bp_diastolic:
-    display_name: {tr: Diyastolik kan basıncı, en: Diastolic blood pressure}
+    display_name: {en: Diastolic blood pressure}
     unit: mmHg
     system: cardiovascular
     frequency: daily
@@ -115,7 +115,7 @@ metrics:
       critical: {high: 120}                      # TODO: NASA-STD-3001 ile doğrula
 
   spo2:
-    display_name: {tr: Oksijen satürasyonu (SpO2), en: Oxygen saturation (SpO2)}
+    display_name: {en: Oxygen saturation (SpO2)}
     unit: "%"
     system: cardiovascular
     frequency: hourly
@@ -133,7 +133,7 @@ metrics:
 
   # ---------------------------------------------------------------- bağışıklık
   body_temp:
-    display_name: {tr: Vücut ısısı, en: Body temperature}
+    display_name: {en: Body temperature}
     unit: degC
     system: immune
     frequency: daily
@@ -151,7 +151,7 @@ metrics:
 
   # ---------------------------------------------------------------- kas-iskelet
   body_mass:
-    display_name: {tr: Vücut kütlesi, en: Body mass}
+    display_name: {en: Body mass}
     unit: kg
     system: musculoskeletal
     frequency: daily
@@ -164,7 +164,7 @@ metrics:
     rules: [baseline_deviation, trend]
 
   exercise_minutes:
-    display_name: {tr: Egzersiz süresi, en: Exercise duration}
+    display_name: {en: Exercise duration}
     unit: min
     system: musculoskeletal
     frequency: daily
@@ -181,7 +181,7 @@ metrics:
 
   # ---------------------------------------------------------------- uyku
   sleep_duration:
-    display_name: {tr: Uyku süresi, en: Sleep duration}
+    display_name: {en: Sleep duration}
     unit: h
     system: sleep
     frequency: daily
@@ -198,7 +198,7 @@ metrics:
       critical: {low: 4.0}                       # TODO: NASA-STD-3001 ile doğrula
 
   sleep_quality:
-    display_name: {tr: Uyku kalitesi (öz bildirim), en: Sleep quality (self-report)}
+    display_name: {en: Sleep quality (self-report)}
     unit: score_1_5
     system: sleep
     frequency: daily
@@ -215,7 +215,7 @@ metrics:
 
   # ---------------------------------------------------------------- davranışsal
   mood:
-    display_name: {tr: Ruh hali (öz bildirim), en: Mood (self-report)}
+    display_name: {en: Mood (self-report)}
     unit: score_1_5
     system: behavioral
     frequency: daily
@@ -231,7 +231,7 @@ metrics:
       warning: {low: 2}                          # TODO: doğrula
 
   stress:
-    display_name: {tr: Stres (öz bildirim), en: Stress (self-report)}
+    display_name: {en: Stress (self-report)}
     unit: score_1_5
     system: behavioral
     frequency: daily
@@ -247,7 +247,7 @@ metrics:
       warning: {high: 4}                         # TODO: doğrula
 
   reaction_time:
-    display_name: {tr: Reaksiyon süresi (PVT), en: Reaction time (PVT)}
+    display_name: {en: Reaction time (PVT)}
     unit: ms
     system: behavioral
     frequency: daily
@@ -264,7 +264,7 @@ metrics:
 
   # ---------------------------------------------------------------- radyasyon
   radiation_daily_dose:
-    display_name: {tr: Günlük radyasyon dozu, en: Daily radiation dose}
+    display_name: {en: Daily radiation dose}
     unit: mSv
     system: radiation
     frequency: daily
@@ -281,7 +281,7 @@ metrics:
       critical: {high: 50}                       # TODO: NASA-STD-3001 ile doğrula
 
   radiation_cumulative:
-    display_name: {tr: Kümülatif radyasyon dozu (kariyer), en: Cumulative radiation dose (career)}
+    display_name: {en: Cumulative radiation dose (career)}
     unit: mSv
     system: radiation
     frequency: daily

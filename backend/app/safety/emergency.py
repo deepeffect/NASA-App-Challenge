@@ -13,16 +13,12 @@ import yaml
 from app.config import get_settings
 from app.models.schemas import EmergencyNotice, EmergencyProtocol
 
-_TR_FOLD = str.maketrans({"ç": "c", "ğ": "g", "ı": "i", "ö": "o", "ş": "s", "ü": "u", "â": "a", "î": "i", "û": "u"})
-
-
 def fold_text(text: str) -> str:
-    """Büyük/küçük harf + Türkçe karakter + aksan duyarsız normalizasyon.
+    """Büyük/küçük harf + aksan duyarsız normalizasyon: "CHEST  Pain" → "chest pain".
 
-    "Göğüs AĞRISI" → "gogus agrisi". Türkçe 'İ' → 'i' (Python lower() 'i̇' üretir, düzeltilir).
+    RAG anahtar kelime araması da bunu kullanır; noktasız ı/İ NFKD ile ayrışmadığı için elle katlanır.
     """
-    s = text.replace("İ", "i").replace("I", "ı").lower().translate(_TR_FOLD)
-    s = unicodedata.normalize("NFKD", s)
+    s = unicodedata.normalize("NFKD", text.replace("İ", "i").replace("I", "i").lower().replace("ı", "i"))
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
     s = s.replace("’", "'").replace("`", "'")
     return " ".join(s.split())
@@ -39,19 +35,18 @@ def _config(path: Path | None = None) -> dict:
     return _load(str(p), p.stat().st_mtime)
 
 
-def get_protocol(lang: str = "tr", path: Path | None = None) -> EmergencyProtocol:
+def get_protocol(lang: str = "en", path: Path | None = None) -> EmergencyProtocol:
     proto = _config(path).get("protocol", {})
-    pick = lambda d: (d or {}).get(lang) or (d or {}).get("tr")  # noqa: E731
     return EmergencyProtocol(
         id=proto.get("id", "EMERGENCY"),
-        title=pick(proto.get("title")) or "Emergency",
-        steps=pick(proto.get("steps")) or [],
+        title=proto.get("title") or "Emergency",
+        steps=proto.get("steps") or [],
         contacts=proto.get("contacts") or [],
         verified=bool(proto.get("verified", False)),
     )
 
 
-def detect_emergency(text: str | None, lang: str = "tr", path: Path | None = None) -> EmergencyNotice | None:
+def detect_emergency(text: str | None, lang: str = "en", path: Path | None = None) -> EmergencyNotice | None:
     """Metin acil belirti içeriyorsa EmergencyNotice, yoksa None."""
     if not text or not text.strip():
         return None
@@ -65,23 +60,15 @@ def detect_emergency(text: str | None, lang: str = "tr", path: Path | None = Non
             if fold_text(term) in folded:
                 if sid not in symptoms:
                     symptoms.append(sid)
-                    label = (spec.get("label") or {}).get(lang) or (spec.get("label") or {}).get("tr") or sid
-                    labels.append(label)
+                    labels.append(spec.get("label") or sid)
                 terms.append(term)
     if not symptoms:
         return None
-    if lang == "en":
-        message = (
-            f"Possible emergency symptom detected ({', '.join(labels)}). "
-            "Start the emergency protocol and contact the crew medical officer now. "
-            "This alert is rule-based and works without the AI assistant."
-        )
-    else:
-        message = (
-            f"Olası acil belirti tespit edildi ({', '.join(labels)}). "
-            "Acil protokolü başlatın ve mürettebat sağlık sorumlusuna hemen haber verin. "
-            "Bu uyarı kural tabanlıdır, yapay zekâ asistanından bağımsız çalışır."
-        )
+    message = (
+        f"Possible emergency symptom detected ({', '.join(labels)}). "
+        "Start the emergency protocol and contact the crew medical officer now. "
+        "This alert is rule-based and works without the AI assistant."
+    )
     return EmergencyNotice(
         matched_symptoms=symptoms,
         matched_labels=labels,

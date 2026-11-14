@@ -94,9 +94,9 @@ class OpenAICompatClient:
         import openai
 
         if isinstance(e, (openai.APIConnectionError, openai.APITimeoutError)):
-            return LLMUnavailable(f"LLM sunucusuna ulaşılamadı ({self.s.llm_base_url}): {e}")
+            return LLMUnavailable(f"Could not reach the LLM server ({self.s.llm_base_url}): {e}")
         if isinstance(e, openai.NotFoundError):
-            return LLMUnavailable(f"Model bulunamadı: {self.model} — `ollama pull {self.model}`")
+            return LLMUnavailable(f"Model not found: {self.model} — `ollama pull {self.model}`")
         if isinstance(e, openai.BadRequestError):
             msg = str(e).lower()
             if tools and ("tool" in msg or "function" in msg):
@@ -104,7 +104,7 @@ class OpenAICompatClient:
             if structured and ("response_format" in msg or "json_schema" in msg or "format" in msg):
                 return StructuredOutputUnsupported(str(e))
         if isinstance(e, openai.APIStatusError) and e.status_code >= 500:
-            return LLMUnavailable(f"LLM sunucu hatası {e.status_code}: {e}")
+            return LLMUnavailable(f"LLM server error {e.status_code}: {e}")
         return e
 
     # ------------------------------------------------------------------ çağrılar

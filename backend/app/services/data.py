@@ -348,7 +348,7 @@ def ground_report(session: Session, as_of: date | None, days: int) -> GroundRepo
     res = _service.analysis(session, as_of)
     now = datetime.now(UTC)
     if res.as_of is None:
-        return GroundReport(generated_at=now, as_of=None, period=None, crew=[], note="Veri yok.")
+        return GroundReport(generated_at=now, as_of=None, period=None, crew=[], note="No data.")
     start = res.as_of - timedelta(days=days - 1)
     end = _as_of_day_end(session, as_of)
     period_start = datetime.combine(start, datetime.min.time(), UTC)
@@ -364,7 +364,7 @@ def ground_report(session: Session, as_of: date | None, days: int) -> GroundRepo
                                       shared_checkins=[_checkin_record(c) for c in cks], shared_events=evs))
     return GroundReport(
         generated_at=now, as_of=res.as_of, period=DateWindow(start=start, end=res.as_of), crew=out,
-        note="Sadece astronotun share_with_ground=true işaretlediği check-in'ler ve olaylar dahildir; genel durum renkleri her zaman paylaşılır.",
+        note="Only check-ins and events the astronaut marked share_with_ground=true are included; overall status colors are always shared.",
     )
 
 

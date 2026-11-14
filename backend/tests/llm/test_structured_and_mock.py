@@ -57,7 +57,7 @@ def test_extract_json():
 def test_mock_plans_tools_by_keyword_and_answers():
     m = MockClient(delay_ms=0)
     tools = [{"type": "function", "function": {"name": n}} for n in ("get_metric", "get_radiation_dose", "get_health_summary")]
-    msgs = [{"role": "system", "content": "astronaut_id: AST-02"}, {"role": "user", "content": "Uykum ve radyasyon dozum nasıl?"}]
+    msgs = [{"role": "system", "content": "astronaut_id: AST-02"}, {"role": "user", "content": "How is my sleep and radiation dose?"}]
     r = asyncio.run(m.chat(msgs, tools=tools))
     assert {c.name for c in r.tool_calls} == {"get_metric", "get_radiation_dose"}
     assert all(c.parsed_arguments().get("astronaut_id") == "AST-02" for c in r.tool_calls)
@@ -65,25 +65,25 @@ def test_mock_plans_tools_by_keyword_and_answers():
     follow = msgs + [
         {"role": "assistant", "content": None, "tool_calls": [metric_call.as_openai()]},
         {"role": "tool", "tool_call_id": metric_call.id, "content": json.dumps(
-            {"display_name": "Uyku süresi", "unit": "h", "latest": {"value": 5.1, "date": "2026-11-14"},
+            {"display_name": "Sleep duration", "unit": "h", "latest": {"value": 5.1, "date": "2026-11-14"},
              "personal_baseline": {"mean": 7.2}, "active_alerts": []})},
     ]
     ans = asyncio.run(m.chat(follow, tools=tools))
-    assert not ans.tool_calls and "5,1 sa" in ans.content and "Mock mod" in ans.content
+    assert not ans.tool_calls and "5.1 h" in ans.content and "Mock mode" in ans.content
 
 
 def test_mock_structured_uses_context():
-    ctx = {"event": {"event_id": "evt_x", "severity": "critical", "system": "sleep", "title": "Uyku süresi kişisel normalin altında",
-                     "description": "7 günlük ortalama 5,1 sa.", "window": {"start": "2026-10-18", "end": "2026-11-14"},
+    ctx = {"event": {"event_id": "evt_x", "severity": "critical", "system": "sleep", "title": "Sleep duration below personal normal",
+                     "description": "7-day mean 5.1 h.", "window": {"start": "2026-10-18", "end": "2026-11-14"},
                      "contributors": [{"metric": "sleep_duration", "value": 5.1, "baseline": 7.2, "z": -6.0, "weight": 1}]},
-           "metrics": {"sleep_duration": {"display_name": "Uyku süresi", "display_name_en": "Sleep duration", "unit": "h",
+           "metrics": {"sleep_duration": {"display_name": "Sleep duration", "display_name_en": "Sleep duration", "unit": "h",
                                           "decimals": 1, "threshold_verified": False}},
-           "related_active_events": [], "recent_checkin_notes": ["Uyuyamıyorum"], "docs": []}
+           "related_active_events": [], "recent_checkin_notes": ["Can't fall asleep"], "docs": []}
     m = MockClient(delay_ms=0)
-    msg = [{"role": "user", "content": f"Write all text fields in Turkish.\n<context>\n{json.dumps(ctx)}\n</context>"}]
+    msg = [{"role": "user", "content": f"Write all text fields in English.\n<context>\n{json.dumps(ctx)}\n</context>"}]
     rf = {"type": "json_schema", "json_schema": {"name": "AlertExplanation", "schema": {}}}
     r: LLMResponse = asyncio.run(m.chat(msg, response_format=rf))
     exp = AlertExplanation.model_validate_json(r.content)
     assert exp.escalate_to_ground is True
-    assert any("Uyuyamıyorum" in f for f in exp.likely_factors)
+    assert any("Can't fall asleep" in f for f in exp.likely_factors)
     assert "placeholder" in exp.uncertainty

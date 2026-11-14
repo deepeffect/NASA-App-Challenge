@@ -18,7 +18,7 @@ export function EventList({ events, onShowMetric }: { events: HealthEvent[]; onS
   if (!visible.length) {
     return (
       <p className="flex items-center gap-2 text-emerald-300">
-        <CheckCircleIcon /> Aktif uyarı yok.
+        <CheckCircleIcon /> No active alerts.
       </p>
     );
   }
@@ -31,7 +31,7 @@ export function EventList({ events, onShowMetric }: { events: HealthEvent[]; onS
       ))}
       {visible.length > INITIAL && (
         <Button variant="secondary" className="w-full" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
-          {showAll ? "Daha az göster" : `Tüm uyarıları göster (${hidden} uyarı daha)`}
+          {showAll ? "Show less" : `Show all alerts (${hidden} more)`}
         </Button>
       )}
     </div>

@@ -28,7 +28,7 @@ def _default_session() -> Session:
 class ToolContext:
     astronaut_id: str  # sohbetin bağlamındaki astronot (argüman verilmezse bu kullanılır)
     as_of: date | None = None
-    lang: str = "tr"
+    lang: str = "en"
     session_factory: Callable[[], Session] = field(default=_default_session)
 
 

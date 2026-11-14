@@ -46,7 +46,7 @@ Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
   "system": "sleep",
   "severity": "critical",
   "score": 0.99,
-  "title": "Uyku süresi kişisel normalin altında",
+  "title": "Sleep duration below personal normal",
   "window": { "start": "2026-10-19", "end": "2026-11-14" },
   "contributors": [
     { "metric": "sleep_duration", "value": 4.97, "baseline": 7.18, "z": -5.12, "weight": 1.0, "threshold_verified": false }
@@ -56,7 +56,7 @@ Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
   "share_with_ground": false,
   "status": "active",
   "detector": "rule.baseline_deviation",
-  "description": "7 günlük ortalama 5,0 sa; kişisel normal 7,2 sa ± 0,4 sa (z = -5,1).",
+  "description": "7-day mean 5.0 h; personal normal 7.2 h ± 0.4 h (z = -5.1).",
   "feedback": null
 }
 ```
@@ -64,7 +64,7 @@ Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
 Çok metrikli olay örneği (`rule.system_pattern` — ML dedektörleri de böyle katkı listesi döner):
 
 ```json
-"title": "Uyku: 2 göstergede eşzamanlı olumsuz değişim",
+"title": "Sleep: 2 metrics worsening at the same time",
 "contributors": [
   { "metric": "sleep_duration", "value": 4.97, "baseline": 7.18, "z": -5.12, "weight": 0.62, "threshold_verified": false },
   { "metric": "sleep_quality",  "value": 2.57, "baseline": 4.14, "z": -3.14, "weight": 0.38, "threshold_verified": false }
@@ -72,7 +72,7 @@ Cevaplardaki `mission.as_of` her zaman **etkin** günü döner.
 ```
 
 Kullanıcının verdiği şemaya **eklenen** alanlar: `status` (`active`/`resolved`), `detector`
-(olayı üreten modül), `description` (kuralın ürettiği sayısal açıklama, Türkçe), `feedback` (son geri bildirim).
+(olayı üreten modül), `description` (kuralın ürettiği sayısal açıklama, İngilizce), `feedback` (son geri bildirim).
 
 - `event_id` deterministiktir (astronot + kaynak + dedektör + metrik/sistem + başlangıç günü). Zaman kaydırıcısında aynı olay aynı ID'yi korur.
 - `contributors[].weight` toplamı 1'dir. Tek metrikli kural olaylarında tek katkı vardır (`1.0`).
@@ -125,7 +125,7 @@ Metrik adları, birimleri, sistemleri, normal aralıkları ve eşikler. Grafik e
   "systems": [ { "id": "sleep", "display_name": "Uyku", "display_name_en": "Sleep", "metrics": ["sleep_duration", "sleep_quality"] } ],
   "metrics": [
     {
-      "name": "sleep_duration", "display_name": "Uyku süresi", "display_name_en": "Sleep duration",
+      "name": "sleep_duration", "display_name": "Sleep duration", "display_name_en": "Sleep duration",
       "unit": "h", "system": "sleep", "frequency": "daily", "bad_direction": "down", "aggregation": "sum",
       "normal_range": { "low": 7.0, "high": 9.0 },
       "thresholds": { "verified": false, "source": "placeholder", "warning": { "low": 6.0, "high": null }, "critical": { "low": 4.0, "high": null } },
@@ -146,7 +146,7 @@ Metrik adları, birimleri, sistemleri, normal aralıkları ve eşikler. Grafik e
   "mission": { "start_date": "2026-05-19", "latest_date": "2026-11-14", "as_of": "2026-11-14", "mission_day": 180, "total_days": 180 },
   "astronauts": [
     {
-      "id": "AST-02", "name": "Astronot 2", "role": "Uçuş mühendisi",
+      "id": "AST-02", "name": "Astronaut 2", "role": "Flight engineer",
       "status": "red", "score": 10.0,
       "active_events": { "critical": 8, "warning": 3, "info": 0 },
       "attention_systems": ["cardiovascular", "sleep", "behavioral"],
@@ -163,19 +163,19 @@ Metrik adları, birimleri, sistemleri, normal aralıkları ve eşikler. Grafik e
 
 ```json
 {
-  "astronaut": { "id": "AST-02", "name": "Astronot 2", "role": "Uçuş mühendisi" },
+  "astronaut": { "id": "AST-02", "name": "Astronaut 2", "role": "Flight engineer" },
   "mission": { "...": "crew ile aynı" },
   "overall": { "status": "red", "score": 35.0, "worst_system": "sleep" },
   "systems": [
     {
       "system": "sleep", "display_name": "Uyku", "score": 35.0, "status": "red",
       "metrics": ["sleep_duration", "sleep_quality"],
-      "penalties": [ { "event_id": "evt_…", "title": "Uyku süresi kişisel normalin altında", "metric": "sleep_duration", "severity": "critical", "penalty": 45 } ]
+      "penalties": [ { "event_id": "evt_…", "title": "Sleep duration below personal normal", "metric": "sleep_duration", "severity": "critical", "penalty": 45 } ]
     }
   ],
   "latest": [
     {
-      "metric": "sleep_duration", "display_name": "Uyku süresi", "unit": "h", "system": "sleep",
+      "metric": "sleep_duration", "display_name": "Sleep duration", "unit": "h", "system": "sleep",
       "date": "2026-11-14", "value": 5.0, "baseline_mean": 7.25, "baseline_std": 0.33,
       "z": -6.8, "z7": -6.5, "slope7": -0.02, "threshold_verified": false, "state": "alert"
     }
@@ -250,7 +250,7 @@ LLM yüzünden hata vermez. Sonuç cache'lenir (`refresh: true` ile yeniden üre
 İstek (gövde opsiyonel):
 
 ```json
-{ "lang": "tr", "as_of": null, "refresh": false }
+{ "lang": "en", "as_of": null, "refresh": false }
 ```
 
 Cevap:
@@ -260,12 +260,12 @@ Cevap:
   "event_id": "evt_3f9a1c2b7d10",
   "event": "HealthEvent…",
   "explanation": {
-    "summary": "Son 7 günde uyku süreniz kişisel normalinizin belirgin altında (ort. 5,1 sa, baseline 7,2 sa).",
-    "likely_factors": ["Aynı dönemde stres öz bildiriminde artış", "Çalışma/uyku programında değişiklik olasılığı"],
-    "recommended_actions": ["Uyku programını mürettebat sağlık sorumlusu (CMO) ile gözden geçirin", "Önümüzdeki 3 gün uyku süresini izleyin"],
+    "summary": "Over the last 7 days your sleep duration was clearly below your personal normal (mean 5.1 h, baseline 7.2 h).",
+    "likely_factors": ["Self-reported stress rose in the same period", "Possible change in the work/sleep schedule"],
+    "recommended_actions": ["Review the sleep schedule with the crew medical officer (CMO)", "Monitor sleep duration over the next 3 days"],
     "escalate_to_ground": true,
     "sources": ["metric:sleep_duration", "event:evt_3f9a1c2b7d10"],
-    "uncertainty": "Eşik değerleri placeholder; NASA-STD-3001 ile doğrulanmadı."
+    "uncertainty": "Thresholds are placeholders, not yet validated against NASA-STD-3001."
   },
   "generated_by": "llm",
   "model": "qwen3:14b",
@@ -277,17 +277,17 @@ Cevap:
 ```
 
 - `generated_by`: `llm` | `mock` | `template_fallback` — UI şablon cevabını belirtmeli.
-- `ungrounded_numbers`: çıktıda olup bağlam verisinde bulunmayan sayılar ("sayıları LLM üretmez" denetimi). Tolerans: max(metindeki hassasiyetin yarısı, değerin %2'si) — "5,1 sa" ↔ 5 eşleşir. Yok sayılanlar: tarih/saat/kimlik/standart kodu, paydalar (`35/100`), birimsiz 0–10 tam sayılar (`3 gün`). Birimli her sayı (`5 saat`, `9 bpm`, `%5`, `2 mSv`) değeri ne olursa olsun aranır.
+- `ungrounded_numbers`: çıktıda olup bağlam verisinde bulunmayan sayılar ("sayıları LLM üretmez" denetimi). Tolerans: max(metindeki hassasiyetin yarısı, değerin %2'si) — "5.1 h" ↔ 5 eşleşir. Yok sayılanlar: tarih/saat/kimlik/standart kodu, paydalar (`35/100`), birimsiz 0–10 tam sayılar (`3 gün`). Birimli her sayı (`5 saat`, `9 bpm`, `%5`, `2 mSv`) değeri ne olursa olsun aranır.
 - `escalate_to_ground`: critical olaylarda kural gereği her zaman `true`.
 
 ### `POST /api/alerts/{event_id}/feedback` — "Yanlış alarm" butonu
 
 ```json
-{ "verdict": "false_alarm", "comment": "Sensör kayması" }
+{ "verdict": "false_alarm", "comment": "Sensor drift" }
 ```
 
 ```json
-{ "feedback_id": 7, "event_id": "evt_3f9a1c2b7d10", "verdict": "false_alarm", "comment": "Sensör kayması", "created_at": "2026-11-14T09:01:00Z" }
+{ "feedback_id": 7, "event_id": "evt_3f9a1c2b7d10", "verdict": "false_alarm", "comment": "Sensor drift", "created_at": "2026-11-14T09:01:00Z" }
 ```
 
 `verdict`: `false_alarm` | `useful`. Olayın `feedback` alanı son geri bildirimi gösterir.
@@ -306,19 +306,19 @@ Cevap:
 
 ## Brifing
 
-### `GET /api/astronauts/{id}/briefing?as_of=&lang=tr&refresh=false`
+### `GET /api/astronauts/{id}/briefing?as_of=&lang=en&refresh=false`
 
 Explain ile aynı boru hattı (deterministik bağlam → `json_schema` → retry → şablon).
 
 ```json
 {
-  "astronaut_id": "AST-02", "as_of": "2026-11-14", "lang": "tr",
+  "astronaut_id": "AST-02", "as_of": "2026-11-14", "lang": "en",
   "briefing": {
-    "summary": "Görev günü 180: genel durum kırmızı; uyku ve davranışsal göstergelerde kötüleşme var.",
-    "highlights": ["Radyasyon dozu ve vücut ısısı kişisel normal aralıkta."],
-    "concerns": ["Uyku süresi kişisel normalin altında (kritik)"],
-    "recommended_actions": ["Uyku programını CMO ile gözden geçirin."],
-    "info_notes": ["Egzersiz süresi: sürekli düşüş eğilimi"],
+    "summary": "Mission day 180: overall status red; sleep and behavioral metrics are worsening.",
+    "highlights": ["Radiation dose and body temperature are within the personal normal range."],
+    "concerns": ["Sleep duration below personal normal (critical)"],
+    "recommended_actions": ["Review the sleep schedule with the CMO."],
+    "info_notes": ["Exercise duration: sustained falling trend"],
     "escalate_to_ground": true,
     "sources": ["event:evt_…"],
     "uncertainty": null
@@ -338,7 +338,7 @@ Explain ile aynı boru hattı (deterministik bağlam → `json_schema` → retry
 ```json
 {
   "astronaut_id": "AST-02", "mood": 2, "stress": 4, "sleep_quality": 2,
-  "note": "Uyuyamıyorum, kafam çok dolu.", "share_with_ground": false, "lang": "tr"
+  "note": "Can't fall asleep, too much on my mind.", "share_with_ground": false, "lang": "en"
 }
 ```
 
@@ -357,14 +357,14 @@ Acil belirti varsa `emergency` dolu gelir (`EmergencyNotice`, sohbetteki `emerge
 ```json
 {
   "triggered": true,
-  "matched_symptoms": ["chest_pain"], "matched_labels": ["Göğüs ağrısı"], "matched_terms": ["göğüs ağrısı"],
+  "matched_symptoms": ["chest_pain"], "matched_labels": ["Chest pain"], "matched_terms": ["chest pain"],
   "protocol": {
-    "id": "EMERGENCY-PLACEHOLDER-01", "title": "Olası acil durum — tıbbi acil protokolü başlatın",
-    "steps": ["Mürettebat sağlık sorumlusunu (CMO) hemen çağırın; kişiyi yalnız bırakmayın.", "…"],
-    "contacts": ["Mürettebat sağlık sorumlusu (CMO)", "Yer ekibi: uçuş cerrahı"],
+    "id": "EMERGENCY-PLACEHOLDER-01", "title": "Possible emergency — start the medical emergency protocol",
+    "steps": ["Call the crew medical officer (CMO) immediately; do not leave the person alone.", "…"],
+    "contacts": ["Crew medical officer (CMO)", "Ground team: flight surgeon"],
     "verified": false
   },
-  "message": "Olası acil belirti tespit edildi (Göğüs ağrısı). Acil protokolü başlatın …"
+  "message": "Possible emergency symptom detected (Chest pain). Start the emergency protocol …"
 }
 ```
 
@@ -383,13 +383,13 @@ Acil belirti varsa `emergency` dolu gelir (`EmergencyNotice`, sohbetteki `emerge
 ```json
 {
   "astronaut_id": "AST-02",
-  "messages": [ { "role": "user", "content": "Son günlerde uykum nasıl?" } ],
+  "messages": [ { "role": "user", "content": "How has my sleep been lately?" } ],
   "as_of": null,
   "lang": null
 }
 ```
 
-Son mesaj `user` olmalı (yoksa 422). `lang` boşsa mesaj dilinden tahmin edilir.
+Son mesaj `user` olmalı (yoksa 422). `lang` tek değer alır: `"en"` (boşsa İngilizce). Kullanıcıya görünen tüm metinler İngilizcedir; `"tr"` 422 döner.
 
 > Tarayıcının `EventSource`'u POST desteklemez → `@microsoft/fetch-event-source` kullanın.
 
@@ -406,13 +406,13 @@ event: tool_result
 data: {"id":"call_1","name":"get_metric","ok":true,"duration_ms":18.2,"preview":"{\"metric\":\"sleep_duration\",…}","error":null}
 
 event: token
-data: {"text":"Son 7 günde "}
+data: {"text":"Over the last 7 days "}
 
 event: token
-data: {"text":"uyku süreniz ortalama 5,1 saat…"}
+data: {"text":"your sleep averaged 5.1 hours…"}
 
 event: done
-data: {"message":"Son 7 günde uyku süreniz …","finish_reason":"stop","steps":2,"tool_calls":1,"ungrounded_numbers":[],"doc_refs":[],"degraded":false}
+data: {"message":"Over the last 7 days your sleep …","finish_reason":"stop","steps":2,"tool_calls":1,"ungrounded_numbers":[],"doc_refs":[],"degraded":false}
 ```
 
 | Olay | Payload şeması | UI davranışı |
@@ -465,7 +465,7 @@ Cevap:
   "rows_total": 1200, "rows_accepted": 1180, "rows_duplicate": 12, "rows_rejected": 8,
   "unknown_metrics": ["cortisol"], "astronauts": ["AST-01", "AST-02"],
   "date_range": { "start": "2026-11-01", "end": "2026-11-14" },
-  "warnings": ["Bilinmeyen metrik atlandı: cortisol (8 satır)"],
+  "warnings": ["Skipped unknown metric: cortisol (8 rows)"],
   "errors_sample": [ { "row": 17, "reason": "unknown_metric", "value": "cortisol" } ]
 }
 ```
@@ -485,7 +485,7 @@ Sadece `share_with_ground: true` olan check-in'ler ve olaylar.
   "generated_at": "2026-11-14T09:00:00Z", "as_of": "2026-11-14",
   "period": { "start": "2026-11-08", "end": "2026-11-14" },
   "crew": [
-    { "astronaut": { "id": "AST-02", "name": "Astronot 2", "role": "Uçuş mühendisi" },
+    { "astronaut": { "id": "AST-02", "name": "Astronaut 2", "role": "Flight engineer" },
       "status": "red", "score": 35.0, "shared_checkins": [], "shared_events": [ "HealthEvent…" ] }
   ],
   "note": "Sadece share_with_ground=true olan check-in'ler ve olaylar dahildir."

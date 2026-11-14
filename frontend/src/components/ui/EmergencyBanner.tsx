@@ -8,22 +8,22 @@ export function EmergencyBanner({ notice, onDismiss }: { notice: EmergencyNotice
       <div className="flex items-start gap-3">
         <OctagonAlertIcon className="mt-0.5 h-8 w-8 shrink-0 text-red-300" />
         <div className="space-y-3">
-          <p className="text-xl font-bold">ACİL: {notice.protocol.title}</p>
+          <p className="text-xl font-bold">EMERGENCY: {notice.protocol.title}</p>
           <p className="text-lg">{notice.message}</p>
           <ol className="list-decimal space-y-1 pl-6 text-lg">
             {notice.protocol.steps.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ol>
-          <p className="text-base text-red-200">İletişim: {notice.protocol.contacts.join(" · ")}</p>
+          <p className="text-base text-red-200">Contacts: {notice.protocol.contacts.join(" · ")}</p>
           {!notice.protocol.verified && (
             <p className="text-sm text-red-300">
-              Not: Protokol metni placeholder'dır, mürettebat tıbbi prosedürleriyle doğrulanmamıştır.
+              Note: the protocol text is a placeholder and has not been validated against crew medical procedures.
             </p>
           )}
           {onDismiss && (
             <button type="button" onClick={onDismiss} className="text-sm text-red-200 underline underline-offset-4">
-              Bandı gizle (protokol devam ediyor)
+              Hide banner (protocol still in progress)
             </button>
           )}
         </div>

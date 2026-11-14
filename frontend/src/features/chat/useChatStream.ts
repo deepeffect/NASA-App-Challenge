@@ -79,7 +79,7 @@ export function useChatStream(astronautId: string, asOf: string | null) {
           ctrl.signal,
         );
       } catch (err) {
-        patchLast((t) => ({ ...t, error: err instanceof Error ? err.message : "Bağlantı hatası" }));
+        patchLast((t) => ({ ...t, error: err instanceof Error ? err.message : "Connection error" }));
       } finally {
         setStreaming(false);
         abortRef.current = null;

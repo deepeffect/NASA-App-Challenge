@@ -31,7 +31,7 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
 4. **Belge içeriği uydurulmaz.** RAG için `data/docs/`'a sadece gerçek kaynak belgeler girer.
    Test belgeleri `backend/tests/fixtures/docs/` altındadır ve açıkça "ÖRNEK" yazar.
 5. **Asistan teşhis koymaz**, karar desteği verir; belirsizliği açıkça söyler; ciddi belirtide acil
-   protokole ve CMO / yer ekibine yönlendirir; kullanıcının dilinde (TR/EN) cevap verir.
+   protokole ve CMO / yer ekibine yönlendirir; her zaman İngilizce cevap verir.
 6. **Offline.** Çalışma zamanında internet erişimi yok: harici API, CDN, telemetri ekleme.
 7. **Önce sözleşme.** `backend/app/models/schemas.py` arayüzle sözleşmedir. Değiştirirsen:
    `python -m app.cli export-openapi` → `docs/API.md` güncelle → `frontend: npm run gen:api`.
@@ -43,7 +43,7 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
 backend/
   config/metrics.yaml      metrik kataloğu + placeholder eşikler (tek doğru kaynak)
   config/rules.yaml        baseline/z/trend/skor parametreleri
-  config/emergency.yaml    acil belirti terimleri (TR/EN) + placeholder protokol
+  config/emergency.yaml    acil belirti terimleri (EN) + placeholder protokol
   app/main.py              FastAPI app (CORS, OpenAPI'ye SSE modelleri eklenir)
   app/config.py            pydantic-settings (.env)
   app/db.py                SQLite (WAL) engine
@@ -134,8 +134,10 @@ npm run build       # tip kontrolü + üretim derlemesi
 
 ## Kod kuralları
 
-- Python 3.11+, tip ipuçları, Pydantic v2. Kod tanımlayıcıları İngilizce; yorumlar, UI metinleri ve
-  hata mesajları Türkçe. Prompt'lar İngilizce (model için), cevap kullanıcının dilinde.
+- Python 3.11+, tip ipuçları, Pydantic v2. Kod tanımlayıcıları İngilizce; kod yorumları ve dokümanlar Türkçe.
+  **Kullanıcının gördüğü her metin İngilizce** (UI, uyarı başlıkları/açıklamaları, LLM cevapları, şablonlar,
+  acil protokol, API hata mesajları, sentetik veri). Türkçe dil desteği yok (`Lang = Literal["en"]`).
+  Prompt'lar İngilizce.
 - Route'lar ince; iş mantığı `services/`. Analiz fonksiyonları saf (DB'siz) ve test edilebilir.
 - pandas 3.x kullanılıyor (copy-on-write varsayılan): zincirleme atama yapma, `.loc` kullan.
 - Her davranış değişikliğine test: `backend/tests/`. Analiz değişikliğinde demo senaryosu testleri

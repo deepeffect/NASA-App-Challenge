@@ -40,18 +40,18 @@ export function AstronautPage() {
   };
 
   return (
-    <QueryState query={summary} loadingLabel="Astronot verisi yükleniyor…">
+    <QueryState query={summary} loadingLabel="Loading astronaut data…">
       {(data) => (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link to="/" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800" aria-label="Mürettebata dön">
+              <Link to="/" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800" aria-label="Back to crew">
                 <ArrowLeftIcon className="h-6 w-6" />
               </Link>
               <div>
                 <h1 className="text-3xl font-bold">{data.astronaut.name}</h1>
                 <p className="text-slate-400">
-                  {data.astronaut.role} · Görev günü {data.mission.mission_day} · Son ölçüm{" "}
+                  {data.astronaut.role} · Mission day {data.mission.mission_day} · Last measurement{" "}
                   {fmtDateTime(data.last_measurement_at)}
                 </p>
               </div>
@@ -63,7 +63,7 @@ export function AstronautPage() {
                 to={`/checkin/${data.astronaut.id}`}
                 className="inline-flex min-h-11 items-center rounded-xl border border-slate-600 bg-slate-800 px-4 hover:bg-slate-700"
               >
-                Günlük check-in
+                Daily check-in
               </Link>
             </div>
           </div>
@@ -76,7 +76,7 @@ export function AstronautPage() {
                 ))}
               </div>
 
-              <Card title="Aktif uyarılar">
+              <Card title="Active alerts">
                 <EventList events={data.active_events} onShowMetric={showMetric} />
               </Card>
 

@@ -30,7 +30,7 @@ EventSource = Literal["rule", "anomaly", "changepoint", "forecast"]
 StatusColor = Literal["green", "yellow", "red", "unknown"]
 EventStatus = Literal["active", "resolved"]
 Verdict = Literal["false_alarm", "useful"]
-Lang = Literal["tr", "en"]
+Lang = Literal["en"]
 GeneratedBy = Literal["llm", "mock", "template_fallback"]
 Direction = Literal["up", "down", "both"]
 Frequency = Literal["hourly", "daily", "weekly", "event"]
@@ -339,7 +339,7 @@ class CheckinRequest(BaseModel):
     note: str | None = Field(None, max_length=2000)
     share_with_ground: bool = False
     timestamp: dt.datetime | None = Field(None, description="Boşsa sunucu zamanı (UTC)")
-    lang: Lang = "tr"
+    lang: Lang = "en"
 
 
 class CheckinRecord(BaseModel):
@@ -374,7 +374,7 @@ class AlertListResponse(BaseModel):
 
 
 class ExplainRequest(BaseModel):
-    lang: Lang = "tr"
+    lang: Lang = "en"
     as_of: dt.date | None = None
     refresh: bool = Field(False, description="true → cache'i atla, yeniden üret")
 
@@ -474,12 +474,12 @@ class ChatRequest(BaseModel):
     astronaut_id: str
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
     as_of: dt.date | None = None
-    lang: Lang | None = Field(None, description="Boşsa kullanıcının dilinden tahmin edilir")
+    lang: Lang | None = Field(None, description="Empty means English (the only supported language)")
 
     @model_validator(mode="after")
     def _last_is_user(self) -> "ChatRequest":
         if self.messages[-1].role != "user":
-            raise ValueError("son mesaj 'user' rolünde olmalı")
+            raise ValueError("the last message must have role 'user'")
         return self
 
 

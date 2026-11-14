@@ -24,7 +24,7 @@ def check_db() -> DBHealth:
                 measurements = conn.execute(text("SELECT COUNT(*) FROM measurement")).scalar_one()
                 latest = conn.execute(text("SELECT MAX(timestamp) FROM measurement")).scalar_one()
             except Exception:  # tablolar henüz yok
-                return DBHealth(ok=True, error="tablolar henüz oluşturulmadı")
+                return DBHealth(ok=True, error="tables not created yet")
         latest_date = None
         if latest:
             latest_date = (latest if isinstance(latest, datetime) else datetime.fromisoformat(str(latest))).date()
@@ -84,7 +84,7 @@ def check_llm(settings: Settings | None = None, use_cache: bool = True) -> LLMHe
             tool_mode=s.llm_tool_mode,
             thinking=s.llm_thinking,
             latency_ms=round(latency, 1),
-            error=None if model_matches(s.llm_model, models) else f"'{s.llm_model}' sunucuda yüklü değil",
+            error=None if model_matches(s.llm_model, models) else f"'{s.llm_model}' is not installed on the server",
             checked_at=now,
         )
     except Exception as e:  # noqa: BLE001

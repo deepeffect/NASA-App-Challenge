@@ -1,8 +1,8 @@
-"""Kural olaylarının başlık/açıklama metinleri için biçimlendirme yardımcıları (Türkçe)."""
+"""Kural olaylarının başlık/açıklama metinleri için biçimlendirme yardımcıları (İngilizce)."""
 
 import math
 
-_UNITS = {"degC": "°C", "h": "sa", "min": "dk", "score_1_5": "/5"}
+_UNITS = {"degC": "°C", "score_1_5": "/5"}
 
 
 def unit_label(unit: str) -> str:
@@ -10,11 +10,10 @@ def unit_label(unit: str) -> str:
 
 
 def fmt(x: float | None, decimals: int = 1) -> str:
-    """Türkçe ondalık virgül: 5.12 → '5,1'."""
+    """Ondalık nokta: 5.12 → '5.1'."""
     if x is None or (isinstance(x, float) and not math.isfinite(x)):
         return "—"
-    s = f"{x:.{decimals}f}"
-    return s.replace(".", ",")
+    return f"{x:.{decimals}f}"
 
 
 def fmt_val(x: float | None, unit: str, decimals: int = 1) -> str:

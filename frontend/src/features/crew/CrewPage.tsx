@@ -8,13 +8,13 @@ export function CrewPage() {
   const crew = useCrew(asOf);
 
   return (
-    <QueryState query={crew} loadingLabel="Mürettebat yükleniyor…">
+    <QueryState query={crew} loadingLabel="Loading crew…">
       {(data) => (
         <div className="space-y-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h1 className="text-3xl font-bold">Mürettebat</h1>
+            <h1 className="text-3xl font-bold">Crew</h1>
             <p className="text-slate-400">
-              Görev günü {data.mission.mission_day} · {data.astronauts.length} astronot
+              Mission day {data.mission.mission_day} · {data.astronauts.length} astronauts
             </p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">

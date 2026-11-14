@@ -95,7 +95,7 @@ def test_checkins_list_and_create(client):
     ts = [c["timestamp"] for c in lst]
     assert ts == sorted(ts, reverse=True)
 
-    body = {"astronaut_id": "AST-03", "mood": 2, "stress": 5, "sleep_quality": 2, "note": "Nefes darlığı var",
+    body = {"astronaut_id": "AST-03", "mood": 2, "stress": 5, "sleep_quality": 2, "note": "I have shortness of breath",
             "share_with_ground": True}
     r = client.post("/api/checkin", json=body)
     assert r.status_code == 201

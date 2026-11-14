@@ -407,12 +407,9 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "tr",
-                "en"
-              ],
+              "const": "en",
               "type": "string",
-              "default": "tr",
+              "default": "en",
               "title": "Lang"
             }
           },
@@ -1465,10 +1462,7 @@
           },
           "lang": {
             "type": "string",
-            "enum": [
-              "tr",
-              "en"
-            ],
+            "const": "en",
             "title": "Lang"
           },
           "briefing": {
@@ -1611,17 +1605,14 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": [
-                  "tr",
-                  "en"
-                ]
+                "const": "en"
               },
               {
                 "type": "null"
               }
             ],
             "title": "Lang",
-            "description": "Boşsa kullanıcının dilinden tahmin edilir"
+            "description": "Empty means English (the only supported language)"
           }
         },
         "type": "object",
@@ -1772,12 +1763,9 @@
           },
           "lang": {
             "type": "string",
-            "enum": [
-              "tr",
-              "en"
-            ],
+            "const": "en",
             "title": "Lang",
-            "default": "tr"
+            "default": "en"
           }
         },
         "type": "object",
@@ -2352,12 +2340,9 @@
         "properties": {
           "lang": {
             "type": "string",
-            "enum": [
-              "tr",
-              "en"
-            ],
+            "const": "en",
             "title": "Lang",
-            "default": "tr"
+            "default": "en"
           },
           "as_of": {
             "anyOf": [
