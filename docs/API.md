@@ -29,6 +29,7 @@ her istasyon sadece kendi rolünün uçlarını açar (diğerleri `404`).
 | `GET /api/me`, `GET /api/me/days/{gün}`, `GET /api/personal/{id}[/days/{gün}]` | ✓ | | astronot (başka astronot → `403`) |
 | `GET /api/checkin`, `GET /api/checkin/days/{gün}`, `POST /api/checkin/turn`, `/share`, `/reset` | ✓ | | astronot |
 | `POST /api/actions/done`, `POST /api/chat` (SSE) | ✓ | | astronot |
+| `POST /api/me/presence` (terminal sinyali) | ✓ | | astronot |
 | `GET /api/downlink/snapshot`, `GET /api/downlink/stream` (SSE) | ✓ | | `EARTH_LINK_TOKEN` |
 | `GET /api/monitor/crew`, `/api/monitor/astronauts/{id}[/days/{gün}]`, `/api/monitor/events` | | ✓ | Dünya |
 | `GET /api/link/status`, `GET /api/stream/monitor` (SSE) | | ✓ | Dünya |
@@ -111,6 +112,16 @@ Kurallar (`app/personal/evaluate.py`, prototiple golden testli):
 
 Bugünün to-do öğesini işaretler/kaldırır; Dünya'ya `action.done` gider (öğe Dünya'da maskeliyse kodsuz).
 
+### `POST /api/me/presence` `[{"leaving": false}]` → `PresenceResponse` `{state, interval_seconds, timeout_seconds}`
+
+Astronot terminalinin varlık sinyali: `/me` açıkken girişte hemen, sonra `interval_seconds`'ta bir
+(`PRESENCE_HEARTBEAT_SECONDS`, varsayılan 30) gönderilir; sekme görünür olunca ve ağ geri gelince de hemen.
+Gövde yok veya `{"leaving": false}`: sinyal. `{"leaving": true}`: "Çıkış" → terminal beklemeden çevrimdışı.
+
+Gemi her astronot için son görülme zamanını `ship.db`'de tutar. `timeout_seconds` (`PRESENCE_TIMEOUT_SECONDS`,
+varsayılan 120) boyunca sinyal gelmezse terminal çevrimdışı sayılır (gemide `PRESENCE_SWEEP_SECONDS`'ta bir denetlenir).
+Dünya'ya sinyalin kendisi değil, sadece **durum değişimi** gider: `terminal.online` / `terminal.offline` (aşağıda).
+
 ## Check-in (gemi) — prototipin `assistantTurn` sözleşmesi
 
 Sadece **bugün** yapılır; geçmiş günler `GET /api/checkin/days/{gün}` ile salt okunur. Mod: `CHECKIN_MODE`
@@ -155,13 +166,15 @@ basit olumsuzlamayı ayırt eder ("göğüs ağrım yok" tetiklemez); eşleşirs
 
 `Authorization: Bearer <EARTH_LINK_TOKEN>` (gemide ayarlı değilse `503 downlink_disabled`).
 
-- `GET /api/downlink/snapshot` → `DownlinkSnapshot` `{epoch, seq, astronauts[], days[]: EarthDay}` (gzip).
-  Sadece **yayınlanmış** durumu içerir; stream `since=seq` ile devam eder.
+- `GET /api/downlink/snapshot` → `DownlinkSnapshot` `{epoch, seq, astronauts[], days[]: EarthDay, presence[]: EarthPresence}`
+  (gzip). Sadece **yayınlanmış** durumu içerir (`presence`: her terminalin yayınlanmış son durumu); stream
+  `since=seq` ile devam eder.
 - `GET /api/downlink/stream?since=<seq>[&follow=false]` → SSE. Her olay `id: <seq>`, `event: <tür>`,
   `data: DownlinkEvent`; ayrıca `event: link.heartbeat` (`DownlinkHeartbeat`: `last_seq`, `pending`).
 
-Olay türleri: `checkin.completed`, `checkin.shared`, `action.done`, `day.snapshot`, `link.heartbeat`.
-Her olay ilgili günün **gizlilik filtresinden geçmiş** güncel halini (`payload.day: EarthDay`) taşır:
+Olay türleri: `checkin.completed`, `checkin.shared`, `action.done`, `day.snapshot`, `terminal.online`,
+`terminal.offline`, `link.heartbeat`. Gün olayları ilgili günün **gizlilik filtresinden geçmiş** güncel halini
+(`payload.day: EarthDay`) taşır:
 
 ```json
 {"seq": 2, "type": "checkin.shared", "epoch": "5d55f41562ce6482", "astronaut_id": "A003", "day_index": 29,
@@ -174,11 +187,21 @@ Her olay ilgili günün **gizlilik filtresinden geçmiş** güncel halini (`payl
    "checkin": {"share": "scores", "notes": [{"topic_key": "sleep", "flag": true, "text": null}]}}}}
 ```
 
+Terminal olayları gün taşımaz (`day_index: null`, `payload.day: null`); yük sadece varlıktır (`EarthPresence`):
+
+```json
+{"seq": 7, "type": "terminal.offline", "astronaut_id": "A003", "day_index": null, "ship_time": "2026-11-15T10:04:05Z",
+ "payload": {"day": null, "presence": {"astronaut_id": "A003", "state": "offline", "last_seen": "2026-11-15T10:02:03Z"}, "…": null}}
+```
+
+`ship_time` geçişin fark edildiği an, `presence.last_seen` terminalden gelen son sinyal (ikisi de gemi saati).
+
 **Gizlilik (gemide, outbox'a yazmadan önce):** ruh hali / stres ve "uyku, ruh hali ve stres" alan skoru sadece o
 günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli ölçümler olan to-do öğeleri maskeli
 (sadece `todo_masked_count`); ground sadece görünür ölçümlerden; check-in: yok / `private` / `scores` (konu + flag)
 / `full` (+ metin). Mesajlar, `urgent` ve CMO bilgisi hiçbir zaman gitmez. Genel sağlık skoru (`cumulative_score`
-ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider.
+ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider. Terminal varlığı: sadece kimlik,
+çevrimiçi / çevrimdışı ve son sinyal zamanı; terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) gitmez.
 
 `DOWNLINK_DELAY_SECONDS`: olaylar `ship_time + gecikme` anında yayınlanır (sıra atlanmaz).
 `DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES`: gerçek ışık gecikmesi etiketi (bekletmez).
@@ -190,9 +213,10 @@ ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider.
 - `GET /api/monitor/astronauts/{id}/days/{gün}` → `{view: DayView (viewer=earth, gizliler hidden), checkin: EarthCheckinView, updated_seq, received_at}`
 - `GET /api/monitor/events?limit=100&astronaut_id=&type=&before_seq=` → `{events: [MonitorEvent], total, last_seq}`:
   Dünya'nın aldığı olaylar (canlı akışın geçmişi), yeniden eskiye. `MonitorEvent`: `seq, type, astronaut_id, day,
-  mission_day, ship_time, publish_time, earth_received_time, simulated_light_delay_minutes, share, code, masked, done`.
-  Gün içeriği taşımaz (ekran günü `/days/{gün}` ile okur). `type` tekrarlanabilir (`checkin.completed`,
-  `checkin.shared`, `action.done`, `day.snapshot`); `before_seq` ile sayfalanır. Snapshot'la gelen durum olay sayılmaz;
+  mission_day, ship_time, publish_time, earth_received_time, simulated_light_delay_minutes, share, code, masked, done,
+  last_seen` (`terminal.*`: son sinyal, gemi saati). Gün içeriği taşımaz (ekran günü `/days/{gün}` ile okur). `type`
+  tekrarlanabilir (`checkin.completed`, `checkin.shared`, `action.done`, `day.snapshot`, `terminal.online`,
+  `terminal.offline`); `before_seq` ile sayfalanır. Snapshot'la gelen durum olay sayılmaz;
   gemi dönemi değişince liste sıfırlanır.
 - `GET /api/link/status` → `LinkStatus` (`connected`, `last_contact`, `last_seq`, `ship_last_seq`, `pending_on_ship`, `behind`, `events_received`)
 - `GET /api/stream/monitor?access_token=…` → SSE: `event: event` (`MonitorStreamEvent`: yeni olay) ve `event: link` (bağlantı durumu)

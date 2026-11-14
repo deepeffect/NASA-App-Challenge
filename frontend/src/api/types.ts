@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminal sinyali: /me açıkken düzenli aralıkla (Dünya sadece çevrimiçi / çevrimdışı ve son görülmeyi görür) */
+        post: operations["post_presence_api_me_presence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/checkin": {
         parameters: {
             query?: never;
@@ -1483,6 +1500,11 @@ export interface components {
             astronauts: components["schemas"]["EarthAstronaut"][];
             /** Days */
             days: components["schemas"]["EarthDay"][];
+            /**
+             * Presence
+             * @description Sinyal göndermiş her terminalin yayınlanmış son durumu (terminal.* olaylarından)
+             */
+            presence?: components["schemas"]["EarthPresence"][];
         };
         /** EarthAstronaut */
         EarthAstronaut: {
@@ -1603,6 +1625,26 @@ export interface components {
             /** Todo Masked Count */
             todo_masked_count: number;
             checkin: components["schemas"]["EarthCheckin"] | null;
+        };
+        /**
+         * EarthPresence
+         * @description Terminal varlığının Dünya'ya giden hali (gizlilik filtresi gemide): sadece kimlik, çevrimiçi/çevrimdışı ve
+         *     son sinyalin zamanı. Terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) YOKTUR.
+         */
+        EarthPresence: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "online" | "offline";
+            /**
+             * Last Seen
+             * Format: date-time
+             * @description Terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen: string;
         };
         /** EarthReading */
         EarthReading: {
@@ -2317,7 +2359,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot";
+            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline";
             /** Astronaut Id */
             astronaut_id: string | null;
             /**
@@ -2368,6 +2410,11 @@ export interface components {
              * @description action.done: işaretlendi / kaldırıldı
              */
             done?: boolean | null;
+            /**
+             * Last Seen
+             * @description terminal.*: terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen?: string | null;
         };
         /** MonitorEventsResponse */
         MonitorEventsResponse: {
@@ -2435,6 +2482,34 @@ export interface components {
             strip: components["schemas"]["StripDay"][];
             /** Threshold Note */
             threshold_note: string;
+        };
+        /** PresenceRequest */
+        PresenceRequest: {
+            /**
+             * Leaving
+             * @description true → terminal kapanıyor (çıkış): beklemeden çevrimdışı sayılır
+             * @default false
+             */
+            leaving: boolean;
+        };
+        /** PresenceResponse */
+        PresenceResponse: {
+            /**
+             * State
+             * @description Bu sinyalden sonra terminalin durumu
+             * @enum {string}
+             */
+            state: "online" | "offline";
+            /**
+             * Interval Seconds
+             * @description Sonraki sinyal bu kadar saniye sonra gönderilmeli (PRESENCE_HEARTBEAT_SECONDS)
+             */
+            interval_seconds: number;
+            /**
+             * Timeout Seconds
+             * @description Bu kadar saniye sinyal gelmezse terminal çevrimdışı sayılır (PRESENCE_TIMEOUT_SECONDS)
+             */
+            timeout_seconds: number;
         };
         /** PrincipalInfo */
         PrincipalInfo: {
@@ -2880,10 +2955,20 @@ export interface components {
         };
         /**
          * DownlinkPayload
-         * @description Olay yükü: her olay ilgili günün filtrelenmiş güncel halini (`day`) taşır.
+         * @description Olay yükü. Gün olayları ilgili günün filtrelenmiş güncel halini (`day`) taşır; terminal olayları
+         *     (`terminal.online` / `terminal.offline`) gün taşımaz, sadece varlığı (`presence`).
          */
         DownlinkPayload: {
-            day: components["schemas"]["EarthDay"];
+            /**
+             * @description Gün olayları: günün filtrelenmiş güncel hali (terminal.* olaylarında yok)
+             * @default null
+             */
+            day: components["schemas"]["EarthDay"] | null;
+            /**
+             * @description terminal.*: terminalin durumu ve son sinyali
+             * @default null
+             */
+            presence: components["schemas"]["EarthPresence"] | null;
             /**
              * Share
              * @description checkin.*: paylaşım seviyesi
@@ -2920,7 +3005,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "link.heartbeat";
+            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline" | "link.heartbeat";
             /**
              * Epoch
              * @description Gemi DB dönemi; değişirse Dünya baştan senkronize olur
@@ -3533,6 +3618,71 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_presence_api_me_presence_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PresenceRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenceResponse"];
                 };
             };
             /** @description Unauthorized */
@@ -4451,7 +4601,7 @@ export interface operations {
                 /** @description Sadece bu astronotun olayları */
                 astronaut_id?: string | null;
                 /** @description Tekrarlanabilir: type=checkin.completed&type=checkin.shared */
-                type?: ("checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot")[] | null;
+                type?: ("checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline")[] | null;
                 /** @description Sayfalama: bu seq'ten ÖNCEKİ olaylar */
                 before_seq?: number | null;
                 /** @description Sadece SSE için: EventSource başlık gönderemez */

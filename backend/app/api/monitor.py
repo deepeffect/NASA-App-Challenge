@@ -174,6 +174,7 @@ def get_events(
                 code=p.get("code"),
                 masked=bool(p.get("masked", False)),
                 done=p.get("done"),
+                last_seen=_dt((p.get("presence") or {}).get("last_seen")),
             )
         )
     return MonitorEventsResponse(events=events, total=total, last_seq=int(earth_store.link_state(db)["last_seq"] or 0))

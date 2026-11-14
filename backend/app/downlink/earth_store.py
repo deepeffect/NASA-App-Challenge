@@ -82,13 +82,14 @@ def apply_event(db: Session, ev: DownlinkEvent) -> EarthEvent | None:
         return None
     now = utcnow()
     day = ev.payload.day
-    row = db.get(EarthDayRow, (day.astronaut_id, day.day_index))
-    if row is None:
-        row = EarthDayRow(astronaut_id=day.astronaut_id, day_index=day.day_index)
-    row.data = day.model_dump(mode="json")
-    row.updated_seq = ev.seq
-    row.received_at = now
-    db.add(row)
+    if day is not None:  # gün olayı (terminal.* olayları gün taşımaz)
+        row = db.get(EarthDayRow, (day.astronaut_id, day.day_index))
+        if row is None:
+            row = EarthDayRow(astronaut_id=day.astronaut_id, day_index=day.day_index)
+        row.data = day.model_dump(mode="json")
+        row.updated_seq = ev.seq
+        row.received_at = now
+        db.add(row)
     stored = EarthEvent(
         seq=ev.seq,
         epoch=ev.epoch,

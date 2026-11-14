@@ -942,6 +942,131 @@
         }
       }
     },
+    "/api/me/presence": {
+      "post": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Terminal sinyali: /me açıkken düzenli aralıkla (Dünya sadece çevrimiçi / çevrimdışı ve son görülmeyi görür)",
+        "operationId": "post_presence_api_me_presence_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PresenceRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Req"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresenceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/checkin": {
       "get": {
         "tags": [
@@ -2554,7 +2679,9 @@
                       "checkin.completed",
                       "checkin.shared",
                       "action.done",
-                      "day.snapshot"
+                      "day.snapshot",
+                      "terminal.online",
+                      "terminal.offline"
                     ],
                     "type": "string"
                   }
@@ -5946,6 +6073,14 @@
             },
             "type": "array",
             "title": "Days"
+          },
+          "presence": {
+            "items": {
+              "$ref": "#/components/schemas/EarthPresence"
+            },
+            "type": "array",
+            "title": "Presence",
+            "description": "Sinyal göndermiş her terminalin yayınlanmış son durumu (terminal.* olaylarından)"
           }
         },
         "type": "object",
@@ -6249,6 +6384,36 @@
         ],
         "title": "EarthDay",
         "description": "Bir günün Dünya'ya giden hali. Gizlilik filtresi GEMİDE uygulanır; bu kayıtta gizli ölçümler,\nmaskeli to-do kodları, paylaşılmamış davranışsal skor, check-in mesajları ve CMO bilgisi YOKTUR."
+      },
+      "EarthPresence": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ],
+            "title": "State"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Seen",
+            "description": "Terminalden gelen son sinyal (gemi saati)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "state",
+          "last_seen"
+        ],
+        "title": "EarthPresence",
+        "description": "Terminal varlığının Dünya'ya giden hali (gizlilik filtresi gemide): sadece kimlik, çevrimiçi/çevrimdışı ve\nson sinyalin zamanı. Terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) YOKTUR."
       },
       "EarthReading": {
         "properties": {
@@ -8007,7 +8172,9 @@
               "checkin.completed",
               "checkin.shared",
               "action.done",
-              "day.snapshot"
+              "day.snapshot",
+              "terminal.online",
+              "terminal.offline"
             ],
             "title": "Type"
           },
@@ -8113,6 +8280,19 @@
             ],
             "title": "Done",
             "description": "action.done: işaretlendi / kaldırıldı"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen",
+            "description": "terminal.*: terminalden gelen son sinyal (gemi saati)"
           }
         },
         "type": "object",
@@ -8307,6 +8487,48 @@
           "threshold_note"
         ],
         "title": "PersonalOverview"
+      },
+      "PresenceRequest": {
+        "properties": {
+          "leaving": {
+            "type": "boolean",
+            "title": "Leaving",
+            "description": "true → terminal kapanıyor (çıkış): beklemeden çevrimdışı sayılır",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "PresenceRequest"
+      },
+      "PresenceResponse": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ],
+            "title": "State",
+            "description": "Bu sinyalden sonra terminalin durumu"
+          },
+          "interval_seconds": {
+            "type": "number",
+            "title": "Interval Seconds",
+            "description": "Sonraki sinyal bu kadar saniye sonra gönderilmeli (PRESENCE_HEARTBEAT_SECONDS)"
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "title": "Timeout Seconds",
+            "description": "Bu kadar saniye sinyal gelmezse terminal çevrimdışı sayılır (PRESENCE_TIMEOUT_SECONDS)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "interval_seconds",
+          "timeout_seconds"
+        ],
+        "title": "PresenceResponse"
       },
       "PrincipalInfo": {
         "properties": {
@@ -9264,10 +9486,31 @@
         "type": "object"
       },
       "DownlinkPayload": {
-        "description": "Olay yükü: her olay ilgili günün filtrelenmiş güncel halini (`day`) taşır.",
+        "description": "Olay yükü. Gün olayları ilgili günün filtrelenmiş güncel halini (`day`) taşır; terminal olayları\n(`terminal.online` / `terminal.offline`) gün taşımaz, sadece varlığı (`presence`).",
         "properties": {
           "day": {
-            "$ref": "#/components/schemas/EarthDay"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarthDay"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Gün olayları: günün filtrelenmiş güncel hali (terminal.* olaylarında yok)"
+          },
+          "presence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarthPresence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "terminal.*: terminalin durumu ve son sinyali"
           },
           "share": {
             "anyOf": [
@@ -9320,9 +9563,6 @@
             "title": "Done"
           }
         },
-        "required": [
-          "day"
-        ],
         "title": "DownlinkPayload",
         "type": "object"
       },
@@ -9339,6 +9579,8 @@
               "checkin.shared",
               "action.done",
               "day.snapshot",
+              "terminal.online",
+              "terminal.offline",
               "link.heartbeat"
             ],
             "title": "Type",
