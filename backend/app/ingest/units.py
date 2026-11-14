@@ -15,8 +15,6 @@ UNIT_ALIASES: dict[str, str] = {
     "min": "min", "mins": "min", "minute": "min", "minutes": "min", "dk": "min",
     "ms": "ms", "s": "s", "sec": "s", "seconds": "s",
     "msv": "mSv", "usv": "uSv", "µsv": "uSv", "μsv": "uSv", "sv": "Sv",
-    "msv/day": "mSv", "msv/d": "mSv",  # günlük doz dosyaları (final dataset v1)
-    "breaths/min": "breaths/min", "brpm": "breaths/min",
     "mmhg": "mmHg",
     "score": "score_1_5", "score_1_5": "score_1_5", "1-5": "score_1_5", "likert": "score_1_5",
 }

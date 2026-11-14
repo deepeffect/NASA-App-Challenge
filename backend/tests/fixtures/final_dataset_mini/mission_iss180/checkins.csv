@@ -1,4 +1,0 @@
-astronaut_id,timestamp,mission_day,mood,stress,sleep_quality,note,note_category,share_with_ground,source,is_synthetic
-A1,2026-01-01T20:00:00+00:00,1,4,2,4,All good.,normal,True,synthetic,True
-A2,2026-01-01T20:00:00+00:00,1,2,4,1,Barely slept again. My heart feels like it is racing when I lie down.,low,False,synthetic,True
-A2,2026-01-02T20:00:00+00:00,2,3,3,3,,normal,True,synthetic,True

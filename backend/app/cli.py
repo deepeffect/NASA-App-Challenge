@@ -1,7 +1,6 @@
 """Komut satırı araçları.
 
     python -m app.cli seed [--seed 42] [--spe-day 120]   # sentetik veriyi DB'ye yükle (DB'yi sıfırlar)
-    python -m app.cli seed --final-dataset [KLASÖR] [--part mission_iss180|control_iss180|mission_mars860]
     python -m app.cli ingest data/raw/dosya.csv          # dosyayı API'siz yükle
     python -m app.cli analyze [--as-of 2026-10-20]       # ekip durumu konsolda
     python -m app.cli reindex                            # RAG belgelerini yeniden indeksle
@@ -18,18 +17,6 @@ from app.config import REPO_ROOT
 
 
 def cmd_seed(args: argparse.Namespace) -> None:
-    if args.final_dataset is not None:
-        from app.data.seed import seed_final_dataset
-
-        try:
-            stats = seed_final_dataset(args.final_dataset, args.part, reset=not args.keep)
-        except FileNotFoundError as e:
-            sys.exit(f"HATA: {e}")
-        print(f"Final dataset yüklendi ({args.part}):")
-        for k, v in stats.items():
-            print(f"  {k}: {v}")
-        return
-
     from app.data.seed import seed_database
     from app.data.synthetic import SyntheticConfig
 
@@ -111,12 +98,6 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--no-scenario", action="store_true", help="Demo senaryosunu kapat (herkes normal)")
     s.add_argument("--spe-day", type=int, default=None, help="Güneş parçacık olayı (SPE) günü; boş → kapalı")
     s.add_argument("--keep", action="store_true", help="DB'yi sıfırlama, üzerine ekle")
-    s.add_argument("--final-dataset", nargs="?", const=str(REPO_ROOT / "data" / "raw" / "ai_gambit_final_dataset_v1"),
-                   default=None, metavar="KLASÖR",
-                   help="Sentetik üretici yerine AI Gambit final dataset v1'i yükle "
-                        "(klasör verilmezse data/raw/ai_gambit_final_dataset_v1)")
-    s.add_argument("--part", default="mission_iss180", choices=["mission_iss180", "control_iss180", "mission_mars860"],
-                   help="--final-dataset ile: hangi senaryo (varsayılan mission_iss180)")
     s.set_defaults(func=cmd_seed)
 
     i = sub.add_parser("ingest", help="CSV/JSON dosyasını DB'ye yükle")

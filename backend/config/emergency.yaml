@@ -62,16 +62,6 @@ symptoms:
       - shortness of breath
       - short of breath
       - choking
-  palpitations:
-    # final dataset v1, EVT-REDFLAG-NOTE: "My heart feels like it is racing" -> rule-based CMO referral
-    # TODO: uçuş cerrahıyla doğrula (bu terimler acil sayılmalı mı?)
-    label: Palpitations
-    terms:
-      - palpitation
-      - heart is racing
-      - heart racing
-      - heart feels like it is racing
-      - heart is pounding
   stroke_signs:
     label: Stroke signs
     terms:

@@ -89,7 +89,7 @@ metrics:
     aggregation: mean
     min_std: 2.0
     decimals: 0
-    aliases: [sbp, systolic, systolic_bp]
+    aliases: [sbp, systolic]
     normal_range: {low: 90, high: 130}           # TODO: NASA-STD-3001 ile doğrula
     thresholds:
       verified: false
@@ -106,7 +106,7 @@ metrics:
     aggregation: mean
     min_std: 2.0
     decimals: 0
-    aliases: [dbp, diastolic, diastolic_bp]
+    aliases: [dbp, diastolic]
     normal_range: {low: 60, high: 85}            # TODO: NASA-STD-3001 ile doğrula
     thresholds:
       verified: false
@@ -141,7 +141,7 @@ metrics:
     aggregation: mean
     min_std: 0.1
     decimals: 1
-    aliases: [temperature, temp, core_temp, body_temperature]
+    aliases: [temperature, temp, core_temp]
     normal_range: {low: 36.1, high: 37.5}        # TODO: NASA-STD-3001 ile doğrula (uçuşta çekirdek ısı yükselebilir)
     thresholds:
       verified: false
@@ -272,8 +272,7 @@ metrics:
     aggregation: sum
     min_std: 0.05
     decimals: 2
-    # final dataset v1: ISS'te estimated_daily_dose_equivalent (RadLab, gerçek), diğer senaryolarda daily_radiation_dose
-    aliases: [daily_dose, dose_daily, estimated_daily_dose_equivalent, daily_radiation_dose, daily_dose_equivalent]
+    aliases: [daily_dose, dose_daily]
     rules: [threshold, baseline_deviation]
     thresholds:
       verified: false
@@ -290,7 +289,7 @@ metrics:
     aggregation: last
     min_std: 0.05
     decimals: 1
-    aliases: [cumulative_dose, dose_cumulative, cumulative_radiation_dose]
+    aliases: [cumulative_dose, dose_cumulative]
     # Sürekli artan bir seri: baseline/trend anlamsız, sadece eşik.
     rules: [threshold]
     thresholds:
@@ -298,127 +297,3 @@ metrics:
       source: placeholder
       warning: {high: 400}                       # TODO: NASA-STD-3001 ile doğrula
       critical: {high: 600}                      # TODO: NASA-STD-3001 ile doğrula (kariyer limiti)
-
-  # =============================================================================
-  # AI Gambit final dataset v1 ile gelen metrikler (dataset'in metrics_additions.yaml önerisinden)
-  # Hiçbirinde eşik YOK ve uydurulmadı. rules: [] → sadece grafik/tool bağlamı, uyarı üretmez.
-  # Tahlil normal_range'leri NASA OSD-575 (Inspiration4) dosyasındaki yer laboratuvarı referans
-  # aralıklarıdır (cinsiyetler arası en geniş aralık); uzay uçuşu için doğrulanmamıştır.
-  # =============================================================================
-  respiratory_rate:
-    display_name: {en: Respiratory rate}
-    unit: breaths/min
-    system: cardiovascular
-    frequency: daily
-    bad_direction: both
-    aggregation: mean
-    min_std: 0.5
-    decimals: 1
-    aliases: [resp_rate, breathing_rate]
-    rules: []                                    # TODO: NASA-STD-3001 ile doğrula (kaynaklı eşik yok)
-
-  sleep_medication:
-    display_name: {en: Sleep medication}
-    unit: flag_0_1
-    system: sleep
-    frequency: daily
-    bad_direction: up
-    aggregation: max
-    decimals: 0
-    aliases: [sleep_med, sleep_aid]
-    # 1 = o gece uyku ilacı alındı. Bağlam (Barger 2014: ISS mürettebatının %75'i kullanmış). Eşik yok.
-    rules: []
-
-  bone_density_change:
-    display_name: {en: Bone density change}
-    unit: "%"
-    system: musculoskeletal
-    frequency: event
-    bad_direction: down
-    aggregation: last
-    decimals: 2
-    aliases: [bmd_change, bone_change]
-    # Uçuş öncesine göre % değişim; tüm mürettebatta beklenen yavaş kayıp (anomali değil). Eşik yok.
-    rules: []                                    # TODO: NASA-STD-3001 ile doğrula
-
-  muscle_strength_change:
-    display_name: {en: Muscle strength change}
-    unit: "%"
-    system: musculoskeletal
-    frequency: event
-    bad_direction: down
-    aggregation: last
-    decimals: 1
-    aliases: [strength_change]
-    rules: []                                    # TODO: NASA-STD-3001 ile doğrula
-
-  vo2peak_change:
-    display_name: {en: Peak oxygen uptake change}
-    unit: "%"
-    system: musculoskeletal
-    frequency: event
-    bad_direction: down
-    aggregation: last
-    decimals: 1
-    aliases: [vo2max_change, vo2_change]
-    rules: []                                    # TODO: NASA-STD-3001 [V2 4015] ile doğrula
-
-  calcium_serum:
-    display_name: {en: Serum calcium}
-    unit: mg/dL
-    system: musculoskeletal
-    frequency: event
-    bad_direction: both
-    aggregation: last
-    decimals: 2
-    aliases: [calcium, ca_serum]
-    normal_range: {low: 8.6, high: 10.4}         # OSD-575 lab referansı (yer); uzay için doğrulanmadı
-    rules: []
-
-  alkaline_phosphatase:
-    display_name: {en: Alkaline phosphatase}
-    unit: U/L
-    system: musculoskeletal
-    frequency: event
-    bad_direction: both
-    aggregation: last
-    decimals: 0
-    aliases: [alp]
-    normal_range: {low: 31, high: 153}           # OSD-575 lab referansı (yer); uzay için doğrulanmadı
-    rules: []
-
-  creatinine:
-    display_name: {en: Creatinine}
-    unit: mg/dL
-    system: musculoskeletal
-    frequency: event
-    bad_direction: both
-    aggregation: last
-    decimals: 2
-    aliases: [creat]
-    normal_range: {low: 0.5, high: 1.35}         # OSD-575 lab referansı (yer); uzay için doğrulanmadı
-    rules: []
-
-  albumin:
-    display_name: {en: Albumin}
-    unit: g/dL
-    system: immune
-    frequency: event
-    bad_direction: both
-    aggregation: last
-    decimals: 2
-    aliases: [alb]
-    normal_range: {low: 3.6, high: 5.1}          # OSD-575 lab referansı (yer); uzay için doğrulanmadı
-    rules: []
-
-  il6:
-    display_name: {en: Interleukin-6 (IL-6)}
-    unit: pg/mL
-    system: immune
-    frequency: event
-    bad_direction: up
-    aggregation: last
-    decimals: 2
-    aliases: [il_6, interleukin_6]
-    # Araştırma paneli: OSD-575 klinik referans aralığı vermiyor. Sadece kişisel bağlam.
-    rules: []
