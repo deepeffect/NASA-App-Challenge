@@ -3,19 +3,193 @@
 Arayüz ekibiyle backend arasındaki sözleşme budur. Makine tarafından okunur hali `docs/openapi.json`
 (çalışan sunucuda: `http://127.0.0.1:8000/docs` ve `/openapi.json`).
 
-> **Branch durumu:** `main`'de endpoint'ler şemaya uygun **stub** veri döner (v0, aynı şema).
-> `feat/backend-core`'da hepsi gerçek: SQLite + analiz motoru + LLM katmanı (mock veya gerçek model).
-> Aşağıdaki örnekler `feat/backend-core` + `seed --seed 42` çıktısıdır.
+> **İki bölüm:** (A) yeni mimari — gemi (`/me`) ve Dünya üssü (`/monitor`) istasyonları, veri seti
+> `data/raw/astronaut_health.json`; (B) eski ekranlar — sentetik veri ve eski analiz motoru (`/legacy`).
+> `docs/openapi.json` ikisini birlikte içerir (`python -m app.cli export-openapi`).
 
 - **Base URL:** `http://<backend-host>:8000/api`
 - **Format:** JSON, UTF-8. Tarihler `YYYY-MM-DD`, zaman damgaları ISO-8601 UTC (`2026-11-14T08:00:00Z`).
-- **Kimlik doğrulama:** yok (hackathon). Roller (astronot / CMO) sadece arayüz seviyesinde.
-- **Hatalar:** `{"detail": "..."}` — `404` bilinmeyen astronot/metrik/olay, `422` doğrulama hatası
-  (FastAPI formatı: `{"detail": [{"loc": [...], "msg": "...", "type": "..."}]}`).
+- **Kimlik doğrulama:** yeni mimaride token (A → "Giriş"); eski ekranlarda yok.
+- **Hatalar:** yeni uçlar `{"detail", "code"}` (A); eski uçlar `{"detail": "..."}` — `404` bilinmeyen
+  astronot/metrik/olay, `422` doğrulama hatası (FastAPI formatı: `{"detail": [{"loc": [...], "msg": "...", "type": "..."}]}`).
 - **TS tipleri:** `frontend/` içinde `npm run gen:api` → `src/api/types.ts`.
 
 > **Sözleşme değişikliği kuralı:** `backend/app/models/schemas.py` değişirse
 > `python -m app.cli export-openapi` → bu dosyayı güncelle → frontend'de `npm run gen:api`.
+
+# A. Yeni mimari: gemi ve Dünya istasyonları
+
+Kurallar için tek doğru kaynak: `frontend/reference/personal-artifact.html`. Aynı backend iki rolde çalışır;
+her istasyon sadece kendi rolünün uçlarını açar (diğerleri `404`).
+
+| Uç | Gemi (`ship`) | Dünya (`earth`) | Yetki |
+|---|:-:|:-:|---|
+| `GET /api/station`, `GET /api/catalog` | ✓ | ✓ | yok |
+| `POST /api/auth/login`, `GET /api/auth/hint`, `GET /api/auth/me` | ✓ | ✓ | login/hint yok; me: token |
+| `GET /api/me`, `GET /api/me/days/{gün}`, `GET /api/personal/{id}[/days/{gün}]` | ✓ | | astronot (başka astronot → `403`) |
+| `GET /api/checkin`, `GET /api/checkin/days/{gün}`, `POST /api/checkin/turn`, `/share`, `/reset` | ✓ | | astronot |
+| `POST /api/actions/done`, `POST /api/chat` (SSE) | ✓ | | astronot |
+| `GET /api/downlink/snapshot`, `GET /api/downlink/stream` (SSE) | ✓ | | `EARTH_LINK_TOKEN` |
+| `GET /api/monitor/crew`, `/api/monitor/astronauts/{id}[/days/{gün}]` | | ✓ | Dünya |
+| `GET /api/link/status`, `GET /api/stream/monitor` (SSE) | | ✓ | Dünya |
+
+- **Dil:** bütün metinler TR/EN. Öncelik `?lang=` (veya gövdedeki `lang`) > `Accept-Language` > `tr`.
+  Frontend dili her istekte `lang` ile açıkça gönderir (`frontend/src/api/station.ts`).
+- **Hatalar:** `{"detail": "<kullanıcının dilinde>", "code": "<makine kodu>"}`. `422` ek olarak `errors` listesi taşır.
+- **Dünya salt okunur:** `/api` altında GET dışı her istek `403 {"code": "read_only"}` (giriş hariç).
+- **Gün numarası:** 1'den başlar; son gün = **bugün** (her astronotun son kaydı). Görev günü ayrıca
+  `mission_day` olarak gelir; arayüz "30 günün X. günü · görev günü Y" gösterir (`day_label`).
+- **Aralıklar:** simüle veri setinden, tıbbi doğrulama yok (`threshold_source: dataset`, `verified: false`).
+  Arayüzde tek dipnot: `threshold_note`.
+
+## Giriş
+
+`GET /api/auth/hint` (giriş kartı):
+
+```json
+{"station": "ship", "astronauts": {"first_id": "A000", "last_id": "A199", "count": 200}, "earth_id": null,
+ "text": "Astronotlar: A000 – A199 (200 hesap); şifre kimlikle aynıdır."}
+```
+
+`POST /api/auth/login` `{"id": "a003", "password": "A003"}` — kimlik = şifre, büyük/küçük harf duyarsız.
+Dünya istasyonunda `EARTH` / `EARTH_PASSWORD` (varsayılan `EARTH`).
+
+```json
+{"token": "eyJr…", "kind": "astronaut", "subject": "A003", "astronaut_id": "A003", "station": "ship",
+ "home_path": "/me", "expires_at": "2026-11-15T13:49:24Z"}
+```
+
+Sonraki isteklerde `Authorization: Bearer <token>` (SSE'de `?access_token=`). Hata kodları:
+
+| `code` | HTTP | Ne zaman |
+|---|---|---|
+| `empty_id` | 400 | kimlik boş |
+| `unknown_id` | 401 | bilinmeyen kimlik — mesaj geçerli aralığı söyler |
+| `wrong_password` | 401 | şifre yanlış |
+| `wrong_station` | 403 | gemide `EARTH` / Dünya'da astronot kimliği |
+| `auth_required` / `auth_invalid` | 401 | token yok / geçersiz, süresi dolmuş veya başka istasyonun |
+| `forbidden_other_astronaut` | 403 | başka astronotun verisi |
+| `forbidden_kind` | 403 | hesap türü bu işlemi yapamaz |
+
+## Astronotun ekranı (gemi)
+
+### `GET /api/me` → `PersonalOverview`
+
+Astronot bilgisi (`mission_label`, `profile_label` dilde), `today` (= `n_days`), 30 günlük şerit
+(`strip[]`: `day`, `mission_day`, `status` 0/1/2, `status_label`, `score` = kümülatif skor, `label`).
+
+### `GET /api/me/days/{gün}` → `DayView`
+
+Prototipteki `render()`'ın verisi. Kısaltılmış örnek (A003, gün 30, `lang=tr`):
+
+```json
+{"day": 30, "n_days": 30, "mission_day": 30, "is_today": true, "day_label": "30 günün 30. günü · görev günü 30",
+ "status": 2, "status_label": "Rahatsız", "health_status": 2, "ground": false,
+ "subtitle": "Ana endişe: uyku, ruh hali ve stres", "score": 60.3, "score_text": "60",
+ "main_concern": "behavioral", "main_concern_label": "Uyku, ruh hali ve stres",
+ "areas": [{"area": "behavioral", "label": "Uyku, ruh hali ve stres", "score": 66.3, "score_text": "66", "hidden": false, "main_concern": true}],
+ "readings": [{"col": "beh_sleep_h", "label": "Uyku", "unit": "saat", "value": 6.9, "today": 7.1, "value_text": "6,9",
+               "healthy_text": "7–9", "level": 1, "flag_text": "Aralık dışında", "averaged": true, "private": false, "hidden": false}],
+ "todo_title": "Yapılacaklar",
+ "todo": [{"code": "SYMPTOM_CARE", "title": "Belirtileri tedavi edin ve izleyin", "why": "Belirti puanı 4,3, sağlıklı aralık 0–2",
+           "source": "readings", "triggers": ["imm_symptom_score"], "steps": ["…"], "contact_ground_if": "…", "done": false}],
+ "todo_masked_count": 0, "calm_text": null, "ground_title": null, "ground_text": null,
+ "readings_note": "Sağlık ölçümleri son 3 günün ortalamasını gösterir. …",
+ "threshold_note": "Aralıklar simüle veri setinden alınmıştır, tıbbi doğrulama yapılmamıştır.", "share": null}
+```
+
+Kurallar (`app/personal/evaluate.py`, prototiple golden testli):
+- Sağlık ölçümleri son 3 günün ortalaması (başta pencere daralır); `exposure` (radyasyon, kabin CO2) o günün değeri.
+- `level`: 0 sağlıklı aralıkta · 1 uyarı aralığında · 2 uyarı aralığının dışında; üst sınırı `null` olanın üst sınırı yok.
+- `status` = max(`health_status`, ground ? 1 : 0). Etiketler Normal / Dikkat / Rahatsız (Normal / Needs attention / Unwell).
+- `todo`: o günün self-care kodları (veri setindeki sırayla); tetikleyiciler: `action == kod` ve `level >= trig`.
+  Tetikleyicisi olmayan kod: `source: "dataset"`, `why`: "Veri setinin önerisi".
+- `subtitle`: durum varsa ana endişe (yoksa "Bir ölçüm aralığın çok dışında"), yoksa "Bakılacak N küçük şey" / "Bugün yapılacak bir şey yok".
+
+### `POST /api/actions/done` `{"code": "PROTECT_SLEEP", "done": true}` → `{code, done, day: DayView}`
+
+Bugünün to-do öğesini işaretler/kaldırır; Dünya'ya `action.done` gider (öğe Dünya'da maskeliyse kodsuz).
+
+## Check-in (gemi) — prototipin `assistantTurn` sözleşmesi
+
+Sadece **bugün** yapılır; geçmiş günler `GET /api/checkin/days/{gün}` ile salt okunur. Mod: `CHECKIN_MODE`
+(`scripted` prototip kuralları · `llm` JSON şemalı LLM · `auto` LLM'e ulaşılamazsa scripted).
+
+`GET /api/checkin` → `CheckinState` (ilk soru, hızlı cevaplar `options`, `messages`, `notes`, `done`, `share`,
+`can_reset`, `cmo_notified` / `cmo_notice`, bitince `share_options` / `share_note` / `share_cmo_note`).
+
+`POST /api/checkin/turn` `{"answer": "Kötü"}` → prototip çıktısı aynen + güncel durum:
+
+```json
+{"reply": "Not edildi. Ölçümleriniz de bunu gösteriyor: uyku ortalaması 6,9 saat. \"Uykunuzu koruyun\" yapılacaklar listenizde.",
+ "note": {"topic": "Uyku", "topic_key": "sleep", "text": "Kötü", "flag": true, "urgent": false},
+ "next": {"text": "Bugün ruh haliniz nasıl?", "options": ["İyi", "Şöyle böyle", "Düşük"]},
+ "done": false, "checkin": {"…": "CheckinState"}}
+```
+
+- Konular: uyku, ruh hali, stres, belirtiler, diğer. Bitince özet mesajı: "Check-in tamamlandı. Bugün işaretlenenler: …".
+- **Acil belirti** (belirti sorusunda; göğüs ağrısı, bayılma, baş dönmesi, çarpıntı, nefes, kan): gemide CMO
+  kaydı, `note.urgent: true`, ekranda `cmo_notice` "Gemideki sağlık sorumlusu bilgilendirildi". Dünya'ya **gönderilmez**.
+- Hata kodları: `empty_answer` (400), `checkin_done` (409).
+
+`POST /api/checkin/share` `{"level": "private" | "scores" | "full"}` — sadece **artar**, geri alınamaz
+(`409 share_downgrade`); tamamlanmamışsa `409 checkin_not_done`.
+`POST /api/checkin/reset` — "Baştan başla", sadece paylaşım `private` iken (`409 reset_locked`). CMO kayıtları silinmez.
+
+## "Asistana sor" (gemi) — `POST /api/chat` → `text/event-stream`
+
+Gövde `{"messages": [{"role": "user", "content": "…"}], "lang": "tr"}`; astronot token'dan gelir (`astronaut_id`
+verilirse aynı olmalı, yoksa `403`). Olaylar eski sohbetle aynı (`meta`, `token`, `tool_call`, `tool_result`,
+`emergency`, `done`, `error`). Tool'lar sadece giriş yapan astronotun verisine erişir: `get_today_summary`,
+`get_recent_readings`, `get_todo`, `get_selfcare_solutions`, `search_docs`. Acil belirti taraması LLM'den önce,
+basit olumsuzlamayı ayırt eder ("göğüs ağrım yok" tetiklemez); eşleşirse gemide CMO kaydı
+(`emergency.cmo_notified: true`), Dünya'ya gitmez.
+
+## Downlink (gemi → Dünya)
+
+`Authorization: Bearer <EARTH_LINK_TOKEN>` (gemide ayarlı değilse `503 downlink_disabled`).
+
+- `GET /api/downlink/snapshot` → `DownlinkSnapshot` `{epoch, seq, astronauts[], days[]: EarthDay}` (gzip).
+  Sadece **yayınlanmış** durumu içerir; stream `since=seq` ile devam eder.
+- `GET /api/downlink/stream?since=<seq>[&follow=false]` → SSE. Her olay `id: <seq>`, `event: <tür>`,
+  `data: DownlinkEvent`; ayrıca `event: link.heartbeat` (`DownlinkHeartbeat`: `last_seq`, `pending`).
+
+Olay türleri: `checkin.completed`, `checkin.shared`, `action.done`, `day.snapshot`, `link.heartbeat`.
+Her olay ilgili günün **gizlilik filtresinden geçmiş** güncel halini (`payload.day: EarthDay`) taşır:
+
+```json
+{"seq": 2, "type": "checkin.shared", "epoch": "5d55f41562ce6482", "astronaut_id": "A003", "day_index": 29,
+ "ship_time": "2026-11-14T13:49:24.957Z", "publish_time": "2026-11-14T13:49:24.957Z", "earth_received_time": null,
+ "simulated_light_delay_minutes": 20.0,
+ "payload": {"share": "scores", "day": {"day_index": 29, "status": 2, "ground": false, "cumulative_score": 60.3,
+   "behavioral_hidden": false, "area_scores": {"behavioral": 66.3, "…": 0},
+   "readings": {"exp_radiation_mSv_day": {"today": 0.798, "used": 0.798, "level": 1}},
+   "todo": [{"code": "SYMPTOM_CARE", "triggers": ["imm_symptom_score"], "done": false}], "todo_masked_count": 0,
+   "checkin": {"share": "scores", "notes": [{"topic_key": "sleep", "flag": true, "text": null}]}}}}
+```
+
+**Gizlilik (gemide, outbox'a yazmadan önce):** ruh hali / stres ve "uyku, ruh hali ve stres" alan skoru sadece o
+günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli ölçümler olan to-do öğeleri maskeli
+(sadece `todo_masked_count`); ground sadece görünür ölçümlerden; check-in: yok / `private` / `scores` (konu + flag)
+/ `full` (+ metin). Mesajlar, `urgent` ve CMO bilgisi hiçbir zaman gitmez.
+
+`DOWNLINK_DELAY_SECONDS`: olaylar `ship_time + gecikme` anında yayınlanır (sıra atlanmaz).
+`DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES`: gerçek ışık gecikmesi etiketi (bekletmez).
+
+## Dünya üssü
+
+- `GET /api/monitor/crew` → `{link: LinkStatus, astronauts: [{astronaut, today, status, status_label, subtitle, score, ground, share, checkin_text}]}`
+- `GET /api/monitor/astronauts/{id}` → `PersonalOverview` (Dünya şeridi)
+- `GET /api/monitor/astronauts/{id}/days/{gün}` → `{view: DayView (viewer=earth, gizliler hidden), checkin: EarthCheckinView, updated_seq, received_at}`
+- `GET /api/link/status` → `LinkStatus` (`connected`, `last_contact`, `last_seq`, `ship_last_seq`, `pending_on_ship`, `behind`, `events_received`)
+- `GET /api/stream/monitor?access_token=…` → SSE: `event: event` (`MonitorStreamEvent`: yeni olay) ve `event: link` (bağlantı durumu)
+
+---
+
+# B. Eski ekranlar (`DATA_SOURCE=synthetic`, `/legacy`)
+
+Aşağıdaki uçlar sadece **gemi + `DATA_SOURCE=synthetic`** iken açıktır (eski analiz motoru, sentetik veri,
+`data/processed/health.db`). `astronaut_health` modunda kapalıdır (`404`).
 
 ## Zaman kaydırıcısı (`as_of`)
 

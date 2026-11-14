@@ -7,9 +7,13 @@
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "dev": "concurrently --kill-others --names api,web --prefix-colors cyan.bold,magenta.bold \"npm:dev:backend\" \"npm:dev:frontend\"",
-    "dev:backend": "node scripts/backend-dev.mjs --host 127.0.0.1 --port 8000",
-    "dev:backend:lan": "node scripts/backend-dev.mjs --host 0.0.0.0 --port 8000",
+    "dev:backend": "node scripts/backend-dev.mjs --legacy --host 127.0.0.1 --port 8000",
+    "dev:backend:lan": "node scripts/backend-dev.mjs --legacy --host 0.0.0.0 --port 8000",
     "dev:frontend": "npm --prefix frontend run dev",
+    "dev:ship": "node scripts/station.mjs dev ship",
+    "dev:earth": "node scripts/station.mjs dev earth",
+    "reset": "node scripts/station.mjs reset",
+    "serve": "node scripts/station.mjs serve",
     "seed": "node scripts/py.mjs -m app.cli seed --seed 42",
     "test": "node scripts/py.mjs -m pytest && npm --prefix frontend run typecheck",
     "smoke": "npm --prefix frontend run smoke"

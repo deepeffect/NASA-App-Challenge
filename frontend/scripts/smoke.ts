@@ -120,7 +120,7 @@ const screens: Screen[] = [
   {
     name: "1. Mürettebat ekranı",
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/`);
+      await page.goto(`${WEB}/legacy`);
       await page.getByRole("heading", { name: "Mürettebat" }).waitFor();
       await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
       await settle(page);
@@ -131,7 +131,7 @@ const screens: Screen[] = [
   {
     name: "2. AST-02 detayı — 150. gün (yeşil)",
     run: async ({ page, issues, shot, dates }) => {
-      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d150}`);
+      await page.goto(`${WEB}/legacy/astronauts/AST-02?as_of=${dates.d150}`);
       await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
       await expectText(page, issues, /Görev günü 150\b/, "başlıkta görev günü 150");
@@ -142,7 +142,7 @@ const screens: Screen[] = [
   {
     name: "3. AST-02 detayı — 157. gün (kırmızı), olay kartı açık",
     run: async ({ page, issues, shot, dates }) => {
-      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
+      await page.goto(`${WEB}/legacy/astronauts/AST-02?as_of=${dates.d157}`);
       await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
       await page.getByRole("button", { name: "Neden?" }).first().click();
@@ -156,7 +156,7 @@ const screens: Screen[] = [
     name: "4. Metrik grafiği — örnek dedektörler açık",
     ml: true,
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/astronauts/AST-02`);
+      await page.goto(`${WEB}/legacy/astronauts/AST-02`);
       await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await page.getByLabel("Metrik seç").selectOption("sleep_duration");
       await page.getByLabel("Gün aralığı").selectOption("60");
@@ -173,7 +173,7 @@ const screens: Screen[] = [
   {
     name: "5. Sohbet paneli (mock)",
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/astronauts/AST-02`);
+      await page.goto(`${WEB}/legacy/astronauts/AST-02`);
       await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
       const input = page.locator("#chat-input");
@@ -194,7 +194,7 @@ const screens: Screen[] = [
   {
     name: "6. Check-in formu",
     run: async ({ page, shot }) => {
-      await page.goto(`${WEB}/checkin/AST-01`);
+      await page.goto(`${WEB}/legacy/checkin/AST-01`);
       await page.getByRole("heading", { name: "Günlük check-in" }).waitFor();
       await settle(page);
       await page.getByRole("group", { name: "Ruh halin" }).getByText("4", { exact: true }).click();
@@ -207,7 +207,7 @@ const screens: Screen[] = [
     name: "7. Mürettebat — telefon genişliği (390 px)",
     viewport: { width: 390, height: 844 },
     run: async ({ page, shot }) => {
-      await page.goto(`${WEB}/`);
+      await page.goto(`${WEB}/legacy`);
       await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
       await settle(page);
       await shot("07-crew-mobile.png");

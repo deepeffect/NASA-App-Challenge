@@ -2,10 +2,2621 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Astronaut Health Monitor API",
-    "description": "\nAstronot sağlık izleme sistemi — tamamen offline/gemide çalışır.\n\n**Mimari ilke:** Sayısal analizi LLM yapmaz. Analiz motoru (Python) baseline, trend,\nanomali, skor ve uyarıları üretir; LLM sadece yorumlar. Kural tabanlı uyarılar LLM\nkapalıyken de çalışır.\n\nZaman kaydırıcısı: çoğu GET endpoint'i `as_of=YYYY-MM-DD` alır.\n",
+    "description": "\nAstronot sağlık izleme sistemi — tamamen offline/gemide çalışır.\n\n**Mimari ilke:** Sayısal analizi LLM yapmaz. Analiz motoru (Python) baseline, trend,\nanomali, skor ve uyarıları üretir; LLM sadece yorumlar. Kural tabanlı uyarılar LLM\nkapalıyken de çalışır.\n\nZaman kaydırıcısı: çoğu GET endpoint'i `as_of=YYYY-MM-DD` alır.\n\n**İstasyonlar:** aynı kod iki rolde çalışır (`STATION_ROLE`). `ship` (gemi) bütün veriyi tutar ve\nastronot ekranını (`/me`) servis eder; `earth` (Dünya üssü) gemiden downlink ile gelen paylaşılabilir\nveriyi tutar, `/monitor` ekranını servis eder ve salt okunurdur.\n",
     "version": "0.1.0"
   },
   "paths": {
+    "/api/station": {
+      "get": {
+        "tags": [
+          "station"
+        ],
+        "summary": "Bu istasyonun rolü ve ana ekranı",
+        "operationId": "get_station_api_station_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Giriş (gemi: astronot, Dünya: EARTH)",
+        "operationId": "login_api_auth_login_post",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/hint": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Giriş kartı ipucu: kimlik aralığı ve hesap sayısı",
+        "operationId": "hint_api_auth_hint_get",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthHint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Token'ın sahibi",
+        "operationId": "me_api_auth_me_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrincipalInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Ölçümler ve bütün self-care çözümleri",
+        "operationId": "get_catalog_api_catalog_get",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Kendi genel bakışım: 30 günlük şerit",
+        "operationId": "my_overview_api_me_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me/days/{day}": {
+      "get": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Kendi günüm (durum, to-do, ölçümler)",
+        "operationId": "my_day_api_me_days__day__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1'den başlar; son gün = bugün",
+              "title": "Day"
+            },
+            "description": "1'den başlar; son gün = bugün"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayView"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/personal/{astronaut_id}": {
+      "get": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Genel bakış (sadece kendi kimliğiniz)",
+        "operationId": "overview_api_personal__astronaut_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/personal/{astronaut_id}/days/{day}": {
+      "get": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Gün (sadece kendi kimliğiniz)",
+        "operationId": "personal_day_api_personal__astronaut_id__days__day__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1'den başlar; son gün = bugün",
+              "title": "Day"
+            },
+            "description": "1'den başlar; son gün = bugün"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayView"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/done": {
+      "post": {
+        "tags": [
+          "personal"
+        ],
+        "summary": "Bugünün to-do öğesini 'yaptım' olarak işaretle (veya kaldır)",
+        "operationId": "post_action_done_api_actions_done_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionDoneRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionDoneResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin": {
+      "get": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Bugünün check-in durumu",
+        "operationId": "get_today_api_checkin_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinState"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Günlük öz bildirim (not acil belirti için taranır)",
+        "operationId": "post_checkin_api_checkin_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin/days/{day}": {
+      "get": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Bir günün check-in'i (geçmiş: salt okunur)",
+        "operationId": "get_day_api_checkin_days__day__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1'den başlar",
+              "title": "Day"
+            },
+            "description": "1'den başlar"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinState"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin/turn": {
+      "post": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Check-in cevabı → asistanın dönüşü (prototipin assistantTurn sözleşmesi)",
+        "operationId": "post_turn_api_checkin_turn_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinTurnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinTurnResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin/reset": {
+      "post": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Baştan başla (sadece paylaşılmadıysa)",
+        "operationId": "post_reset_api_checkin_reset_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinState"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin/share": {
+      "post": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Bitmiş check-in'i Dünya ile paylaş: private / scores / full (sadece artar, geri alınamaz)",
+        "operationId": "post_share_api_checkin_share_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinShareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinState"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downlink/snapshot": {
+      "get": {
+        "tags": [
+          "downlink"
+        ],
+        "summary": "Yayınlanmış durumun tamamı",
+        "operationId": "get_snapshot_api_downlink_snapshot_get",
+        "parameters": [
+          {
+            "name": "link_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Başlık gönderilemiyorsa EARTH_LINK_TOKEN",
+              "title": "Link Token"
+            },
+            "description": "Başlık gönderilemiyorsa EARTH_LINK_TOKEN"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer <EARTH_LINK_TOKEN>",
+              "title": "Authorization"
+            },
+            "description": "Bearer <EARTH_LINK_TOKEN>"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownlinkSnapshot"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downlink/stream": {
+      "get": {
+        "tags": [
+          "downlink"
+        ],
+        "summary": "SSE olay akışı (since=<seq>), link.heartbeat ile",
+        "operationId": "get_stream_api_downlink_stream_get",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Bu seq'ten SONRAKİ olaylar",
+              "default": 0,
+              "title": "Since"
+            },
+            "description": "Bu seq'ten SONRAKİ olaylar"
+          },
+          {
+            "name": "follow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "false → mevcut olayları verip kapan",
+              "default": true,
+              "title": "Follow"
+            },
+            "description": "false → mevcut olayları verip kapan"
+          },
+          {
+            "name": "link_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Başlık gönderilemiyorsa EARTH_LINK_TOKEN",
+              "title": "Link Token"
+            },
+            "description": "Başlık gönderilemiyorsa EARTH_LINK_TOKEN"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer <EARTH_LINK_TOKEN>",
+              "title": "Authorization"
+            },
+            "description": "Bearer <EARTH_LINK_TOKEN>"
+          },
+          {
+            "name": "last-event-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "'Asistana sor': streaming sohbet (SSE), sadece kendi verinizle",
+        "operationId": "post_chat_api_chat_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "text/event-stream: meta, token, thinking, tool_call, tool_result, emergency, done, error",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/link/status": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Gemi bağlantısı: bağlı mı, son temas, kuyruk",
+        "operationId": "get_link_status_api_link_status_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitor/crew": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Bütün astronotların bugünü (Dünya görünümü)",
+        "operationId": "get_crew_api_monitor_crew_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorCrewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitor/astronauts/{astronaut_id}": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Astronotun 30 günlük şeridi (Dünya)",
+        "operationId": "get_overview_api_monitor_astronauts__astronaut_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitor/astronauts/{astronaut_id}/days/{day}": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Bir gün (Dünya görünümü + check-in)",
+        "operationId": "get_day_api_monitor_astronauts__astronaut_id__days__day__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1'den başlar",
+              "title": "Day"
+            },
+            "description": "1'den başlar"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorDay"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stream/monitor": {
+      "get": {
+        "tags": [
+          "monitor"
+        ],
+        "summary": "Dünya ekranı için yerel SSE: yeni olaylar ve bağlantı durumu (EventSource: ?access_token=)",
+        "operationId": "stream_monitor_api_stream_monitor_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "follow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "false → anlık bağlantı durumunu verip kapan",
+              "default": true,
+              "title": "Follow"
+            },
+            "description": "false → anlık bağlantı durumunu verip kapan"
+          },
+          {
+            "name": "access_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sadece SSE için: EventSource başlık gönderemez",
+              "title": "Access Token"
+            },
+            "description": "Sadece SSE için: EventSource başlık gönderemez"
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr",
+              "title": "Lang"
+            },
+            "description": "Cevap dili; boşsa Accept-Language, o da yoksa tr"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -407,14 +3018,22 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": [
-                "tr",
-                "en"
+              "anyOf": [
+                {
+                  "enum": [
+                    "tr",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "type": "string",
-              "default": "tr",
+              "description": "Boşsa Accept-Language, o da yoksa tr",
               "title": "Lang"
-            }
+            },
+            "description": "Boşsa Accept-Language, o da yoksa tr"
           },
           {
             "name": "refresh",
@@ -959,108 +3578,6 @@
         }
       }
     },
-    "/api/checkin": {
-      "post": {
-        "tags": [
-          "checkin"
-        ],
-        "summary": "Günlük öz bildirim (not acil belirti için taranır)",
-        "operationId": "post_checkin_api_checkin_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckinRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckinResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/chat": {
-      "post": {
-        "tags": [
-          "llm"
-        ],
-        "summary": "Streaming sohbet (SSE)",
-        "operationId": "post_chat_api_chat_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChatRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "text/event-stream. Her olay `event: <ad>` + `data: <json>` satırlarıdır. Olay adları ve payload şemaları: meta→SSEMeta, token→SSEToken, thinking→SSEThinking, tool_call→SSEToolCall, tool_result→SSEToolResult, emergency→EmergencyNotice, done→SSEDone, error→SSEError. Tarayıcıda EventSource POST desteklemez: @microsoft/fetch-event-source kullanın.",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/ingest": {
       "post": {
         "tags": [
@@ -1217,6 +3734,70 @@
   },
   "components": {
     "schemas": {
+      "AccountRange": {
+        "properties": {
+          "first_id": {
+            "type": "string",
+            "title": "First Id"
+          },
+          "last_id": {
+            "type": "string",
+            "title": "Last Id"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_id",
+          "last_id",
+          "count"
+        ],
+        "title": "AccountRange"
+      },
+      "ActionDoneRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Bugünün to-do öğesinin self-care kodu"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "ActionDoneRequest"
+      },
+      "ActionDoneResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "day": {
+            "$ref": "#/components/schemas/DayView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "done",
+          "day"
+        ],
+        "title": "ActionDoneResponse"
+      },
       "AlertExplanation": {
         "properties": {
           "summary": {
@@ -1307,6 +3888,52 @@
         ],
         "title": "AlertListResponse"
       },
+      "AreaScoreView": {
+        "properties": {
+          "area": {
+            "type": "string",
+            "title": "Area"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "0–100. Dünya'da davranışsal alan paylaşılmadıysa null"
+          },
+          "score_text": {
+            "type": "string",
+            "title": "Score Text"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden"
+          },
+          "main_concern": {
+            "type": "boolean",
+            "title": "Main Concern"
+          }
+        },
+        "type": "object",
+        "required": [
+          "area",
+          "label",
+          "score",
+          "score_text",
+          "hidden",
+          "main_concern"
+        ],
+        "title": "AreaScoreView"
+      },
       "AstronautInfo": {
         "properties": {
           "id": {
@@ -1394,6 +4021,54 @@
           "active_events"
         ],
         "title": "AstronautSummary"
+      },
+      "AuthHint": {
+        "properties": {
+          "station": {
+            "type": "string",
+            "enum": [
+              "ship",
+              "earth"
+            ],
+            "title": "Station"
+          },
+          "astronauts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccountRange"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bu istasyonda giriş yapabilen astronot hesapları (sadece gemi)"
+          },
+          "earth_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earth Id",
+            "description": "Dünya üssü hesabı (sadece Dünya istasyonu)"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Giriş kartında gösterilecek ipucu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "station",
+          "astronauts",
+          "earth_id",
+          "text"
+        ],
+        "title": "AuthHint"
       },
       "Baseline": {
         "properties": {
@@ -1532,6 +4207,120 @@
         ],
         "title": "BriefingResponse"
       },
+      "CatalogDomain": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CatalogDomain"
+      },
+      "CatalogIndicator": {
+        "properties": {
+          "col": {
+            "type": "string",
+            "title": "Col"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "domain_label": {
+            "type": "string",
+            "title": "Domain Label"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "dec": {
+            "type": "integer",
+            "title": "Dec"
+          },
+          "healthy": {
+            "$ref": "#/components/schemas/CatalogRange"
+          },
+          "warning": {
+            "$ref": "#/components/schemas/CatalogRange"
+          },
+          "healthy_text": {
+            "type": "string",
+            "title": "Healthy Text"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "trig": {
+            "type": "integer",
+            "title": "Trig"
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private"
+          },
+          "averaged": {
+            "type": "boolean",
+            "title": "Averaged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "col",
+          "domain",
+          "domain_label",
+          "label",
+          "unit",
+          "dec",
+          "healthy",
+          "warning",
+          "healthy_text",
+          "action",
+          "trig",
+          "private",
+          "averaged"
+        ],
+        "title": "CatalogIndicator"
+      },
+      "CatalogRange": {
+        "properties": {
+          "min": {
+            "type": "number",
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "min",
+          "max"
+        ],
+        "title": "CatalogRange"
+      },
       "CatalogResponse": {
         "properties": {
           "systems": {
@@ -1555,6 +4344,52 @@
           "metrics"
         ],
         "title": "CatalogResponse"
+      },
+      "CatalogSolution": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "when": {
+            "type": "string",
+            "title": "When"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "contact_ground_if": {
+            "type": "string",
+            "title": "Contact Ground If"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "domain",
+          "title",
+          "when",
+          "steps",
+          "contact_ground_if",
+          "basis"
+        ],
+        "title": "CatalogSolution"
       },
       "ChatMessage": {
         "properties": {
@@ -1583,8 +4418,16 @@
       "ChatRequest": {
         "properties": {
           "astronaut_id": {
-            "type": "string",
-            "title": "Astronaut Id"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Astronaut Id",
+            "description": "Eski mod (synthetic): zorunlu. Yeni mod: boş bırakın; astronot token'dan gelir (farklıysa 403)"
           },
           "messages": {
             "items": {
@@ -1626,7 +4469,6 @@
         },
         "type": "object",
         "required": [
-          "astronaut_id",
           "messages"
         ],
         "title": "ChatRequest"
@@ -1651,6 +4493,86 @@
           "checkins"
         ],
         "title": "CheckinListResponse"
+      },
+      "CheckinMessage": {
+        "properties": {
+          "who": {
+            "type": "string",
+            "enum": [
+              "bot",
+              "me"
+            ],
+            "title": "Who"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "who",
+          "text"
+        ],
+        "title": "CheckinMessage"
+      },
+      "CheckinNext": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "options"
+        ],
+        "title": "CheckinNext"
+      },
+      "CheckinNote": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic",
+            "description": "Konu adı (yazıldığı dilde)"
+          },
+          "topic_key": {
+            "type": "string",
+            "title": "Topic Key",
+            "description": "sleep | mood | stress | symptoms | other"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Astronotun cevabı (aynen)"
+          },
+          "flag": {
+            "type": "boolean",
+            "title": "Flag"
+          },
+          "urgent": {
+            "type": "boolean",
+            "title": "Urgent",
+            "description": "Acil belirti → gemideki CMO bilgilendirildi (Dünya'ya gitmez)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "topic_key",
+          "text",
+          "flag",
+          "urgent"
+        ],
+        "title": "CheckinNote"
       },
       "CheckinRecord": {
         "properties": {
@@ -1771,13 +4693,20 @@
             "description": "Boşsa sunucu zamanı (UTC)"
           },
           "lang": {
-            "type": "string",
-            "enum": [
-              "tr",
-              "en"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tr",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Lang",
-            "default": "tr"
+            "description": "Boşsa Accept-Language, o da yoksa tr"
           }
         },
         "type": "object",
@@ -1810,6 +4739,261 @@
           "checkin"
         ],
         "title": "CheckinResponse"
+      },
+      "CheckinShareRequest": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "private",
+              "scores",
+              "full"
+            ],
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level"
+        ],
+        "title": "CheckinShareRequest"
+      },
+      "CheckinState": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "day": {
+            "type": "integer",
+            "title": "Day"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "description": "true → bugün ve bitmemiş (cevap verilebilir)"
+          },
+          "started": {
+            "type": "boolean",
+            "title": "Started"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Options",
+            "description": "Hızlı cevaplar"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/CheckinMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/CheckinNote"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share",
+            "description": "Tamamlandıysa paylaşım seviyesi (varsayılan private)"
+          },
+          "can_reset": {
+            "type": "boolean",
+            "title": "Can Reset",
+            "description": "'Baştan başla': sadece paylaşım private iken"
+          },
+          "cmo_notified": {
+            "type": "boolean",
+            "title": "Cmo Notified"
+          },
+          "cmo_notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CmoNotice"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'Gemideki sağlık sorumlusu bilgilendirildi'"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "share_options": {
+            "items": {
+              "$ref": "#/components/schemas/ShareOption"
+            },
+            "type": "array",
+            "title": "Share Options",
+            "description": "Sadece tamamlanmış check-in'de",
+            "default": []
+          },
+          "share_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Note",
+            "description": "Seçili seviyenin açıklaması + 'paylaşım geri alınamaz'"
+          },
+          "share_cmo_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Cmo Note",
+            "description": "Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "day",
+          "mission_day",
+          "is_today",
+          "editable",
+          "started",
+          "step",
+          "options",
+          "messages",
+          "notes",
+          "done",
+          "share",
+          "can_reset",
+          "cmo_notified",
+          "cmo_notice"
+        ],
+        "title": "CheckinState"
+      },
+      "CheckinTurnRequest": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Answer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer"
+        ],
+        "title": "CheckinTurnRequest"
+      },
+      "CheckinTurnResponse": {
+        "properties": {
+          "reply": {
+            "type": "string",
+            "title": "Reply"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckinNote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckinNext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "checkin": {
+            "$ref": "#/components/schemas/CheckinState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reply",
+          "note",
+          "next",
+          "done",
+          "checkin"
+        ],
+        "title": "CheckinTurnResponse",
+        "description": "Prototipin assistantTurn çıktısı aynen + güncel durum (`checkin`, ek alan)."
+      },
+      "CmoNotice": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "CmoNotice"
       },
       "Contributor": {
         "properties": {
@@ -1876,6 +5060,70 @@
           "weight"
         ],
         "title": "Contributor"
+      },
+      "CrewInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "sex": {
+            "type": "string",
+            "title": "Sex"
+          },
+          "bmi": {
+            "type": "number",
+            "title": "Bmi"
+          },
+          "mission": {
+            "type": "string",
+            "title": "Mission"
+          },
+          "mission_label": {
+            "type": "string",
+            "title": "Mission Label"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Veri setindeki simülasyon deseni"
+          },
+          "profile_label": {
+            "type": "string",
+            "title": "Profile Label"
+          },
+          "first_mission_day": {
+            "type": "integer",
+            "title": "First Mission Day"
+          },
+          "last_mission_day": {
+            "type": "integer",
+            "title": "Last Mission Day"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "age",
+          "sex",
+          "bmi",
+          "mission",
+          "mission_label",
+          "profile",
+          "profile_label",
+          "first_mission_day",
+          "last_mission_day",
+          "n_days"
+        ],
+        "title": "CrewInfo"
       },
       "CrewMember": {
         "properties": {
@@ -2181,6 +5429,233 @@
         ],
         "title": "DateWindow"
       },
+      "DayView": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "viewer": {
+            "type": "string",
+            "enum": [
+              "astronaut",
+              "earth"
+            ],
+            "title": "Viewer"
+          },
+          "day": {
+            "type": "integer",
+            "title": "Day",
+            "description": "1'den başlar"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today",
+            "description": "Son kayıt (check-in sadece bugün yapılabilir)"
+          },
+          "day_label": {
+            "type": "string",
+            "title": "Day Label",
+            "description": "'30 günün 30. günü · görev günü 155'"
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "Gösterilen durum = max(health_status, ground ? 1 : 0)"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label",
+            "description": "Normal / Dikkat / Rahatsız"
+          },
+          "health_status": {
+            "type": "integer",
+            "title": "Health Status",
+            "description": "Veri setindeki durum (ground hariç)"
+          },
+          "ground": {
+            "type": "boolean",
+            "title": "Ground",
+            "description": "Yer desteği gerekli. Dünya'da sadece görünür ölçümlerden hesaplanır"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Kümülatif sağlık skoru (her zaman görünür)"
+          },
+          "score_text": {
+            "type": "string",
+            "title": "Score Text"
+          },
+          "daily_score": {
+            "type": "number",
+            "title": "Daily Score"
+          },
+          "main_concern": {
+            "type": "string",
+            "title": "Main Concern",
+            "description": "none | immune | bone_muscle | cardiovascular | behavioral"
+          },
+          "main_concern_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Concern Label"
+          },
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/AreaScoreView"
+            },
+            "type": "array",
+            "title": "Areas"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/ReadingView"
+            },
+            "type": "array",
+            "title": "Readings",
+            "description": "Katalog sırasında; grup sırası `domains`"
+          },
+          "todo_title": {
+            "type": "string",
+            "title": "Todo Title"
+          },
+          "todo": {
+            "items": {
+              "$ref": "#/components/schemas/TodoItemView"
+            },
+            "type": "array",
+            "title": "Todo",
+            "description": "Görünür to-do öğeleri, veri setindeki sırayla"
+          },
+          "todo_masked_count": {
+            "type": "integer",
+            "title": "Todo Masked Count",
+            "description": "Dünya: tetikleyicisi sadece gizli ölçümler olan öğe sayısı"
+          },
+          "todo_masked_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Todo Masked Text"
+          },
+          "calm_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calm Text",
+            "description": "Yapılacak bir şey yoksa"
+          },
+          "ground_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ground Title"
+          },
+          "ground_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ground Text"
+          },
+          "readings_note": {
+            "type": "string",
+            "title": "Readings Note"
+          },
+          "threshold_note": {
+            "type": "string",
+            "title": "Threshold Note",
+            "description": "Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share",
+            "description": "Bu günün check-in paylaşım seviyesi (tamamlandıysa)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "viewer",
+          "day",
+          "n_days",
+          "mission_day",
+          "is_today",
+          "day_label",
+          "status",
+          "status_label",
+          "health_status",
+          "ground",
+          "subtitle",
+          "score",
+          "score_text",
+          "daily_score",
+          "main_concern",
+          "main_concern_label",
+          "areas",
+          "readings",
+          "todo_title",
+          "todo",
+          "todo_masked_count",
+          "todo_masked_text",
+          "calm_text",
+          "ground_title",
+          "ground_text",
+          "readings_note",
+          "threshold_note"
+        ],
+        "title": "DayView"
+      },
       "DocRef": {
         "properties": {
           "file": {
@@ -2226,6 +5701,394 @@
         ],
         "title": "DocRef"
       },
+      "DownlinkSnapshot": {
+        "properties": {
+          "epoch": {
+            "type": "string",
+            "title": "Epoch"
+          },
+          "seq": {
+            "type": "integer",
+            "title": "Seq",
+            "description": "Bu snapshot'ın içerdiği son seq; stream since=seq ile devam eder"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "simulated_light_delay_minutes": {
+            "type": "number",
+            "title": "Simulated Light Delay Minutes"
+          },
+          "astronauts": {
+            "items": {
+              "$ref": "#/components/schemas/EarthAstronaut"
+            },
+            "type": "array",
+            "title": "Astronauts"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/EarthDay"
+            },
+            "type": "array",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "epoch",
+          "seq",
+          "generated_at",
+          "simulated_light_delay_minutes",
+          "astronauts",
+          "days"
+        ],
+        "title": "DownlinkSnapshot"
+      },
+      "EarthAstronaut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "age": {
+            "type": "integer",
+            "title": "Age"
+          },
+          "sex": {
+            "type": "string",
+            "title": "Sex"
+          },
+          "bmi": {
+            "type": "number",
+            "title": "Bmi"
+          },
+          "mission": {
+            "type": "string",
+            "title": "Mission"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile"
+          },
+          "first_mission_day": {
+            "type": "integer",
+            "title": "First Mission Day"
+          },
+          "last_mission_day": {
+            "type": "integer",
+            "title": "Last Mission Day"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "age",
+          "sex",
+          "bmi",
+          "mission",
+          "profile",
+          "first_mission_day",
+          "last_mission_day",
+          "n_days"
+        ],
+        "title": "EarthAstronaut"
+      },
+      "EarthCheckin": {
+        "properties": {
+          "share": {
+            "type": "string",
+            "enum": [
+              "private",
+              "scores",
+              "full"
+            ],
+            "title": "Share"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/EarthCheckinNote"
+            },
+            "type": "array",
+            "title": "Notes",
+            "description": "private → boş; scores → konu + flag; full → + metin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "share",
+          "notes"
+        ],
+        "title": "EarthCheckin"
+      },
+      "EarthCheckinNote": {
+        "properties": {
+          "topic_key": {
+            "type": "string",
+            "title": "Topic Key"
+          },
+          "flag": {
+            "type": "boolean",
+            "title": "Flag"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Sadece `full` paylaşımda"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic_key",
+          "flag"
+        ],
+        "title": "EarthCheckinNote"
+      },
+      "EarthCheckinNoteView": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "flag": {
+            "type": "boolean",
+            "title": "Flag"
+          },
+          "flag_text": {
+            "type": "string",
+            "title": "Flag Text",
+            "description": "scores: 'İşaretlendi' / 'İşaret yok'; full: ''"
+          }
+        },
+        "type": "object",
+        "required": [
+          "topic",
+          "text",
+          "flag",
+          "flag_text"
+        ],
+        "title": "EarthCheckinNoteView"
+      },
+      "EarthCheckinView": {
+        "properties": {
+          "share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "'Tamamlanmış check-in yok' / 'gizli tutuldu' / 'Astronotun paylaştığı: …'"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/EarthCheckinNoteView"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "share",
+          "text",
+          "notes"
+        ],
+        "title": "EarthCheckinView"
+      },
+      "EarthDay": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "day_index": {
+            "type": "integer",
+            "title": "Day Index"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          },
+          "health_status": {
+            "type": "integer",
+            "title": "Health Status"
+          },
+          "ground": {
+            "type": "boolean",
+            "title": "Ground",
+            "description": "Sadece görünür ölçümlerden"
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "max(health_status, ground ? 1 : 0)"
+          },
+          "cumulative_score": {
+            "type": "number",
+            "title": "Cumulative Score"
+          },
+          "daily_score": {
+            "type": "number",
+            "title": "Daily Score"
+          },
+          "main_concern": {
+            "type": "string",
+            "title": "Main Concern"
+          },
+          "behavioral_hidden": {
+            "type": "boolean",
+            "title": "Behavioral Hidden"
+          },
+          "area_scores": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Area Scores"
+          },
+          "readings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/EarthReading"
+            },
+            "type": "object",
+            "title": "Readings"
+          },
+          "todo": {
+            "items": {
+              "$ref": "#/components/schemas/EarthTodo"
+            },
+            "type": "array",
+            "title": "Todo"
+          },
+          "todo_masked_count": {
+            "type": "integer",
+            "title": "Todo Masked Count"
+          },
+          "checkin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EarthCheckin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "day_index",
+          "mission_day",
+          "n_days",
+          "health_status",
+          "ground",
+          "status",
+          "cumulative_score",
+          "daily_score",
+          "main_concern",
+          "behavioral_hidden",
+          "area_scores",
+          "readings",
+          "todo",
+          "todo_masked_count",
+          "checkin"
+        ],
+        "title": "EarthDay",
+        "description": "Bir günün Dünya'ya giden hali. Gizlilik filtresi GEMİDE uygulanır; bu kayıtta gizli ölçümler,\nmaskeli to-do kodları, paylaşılmamış davranışsal skor, check-in mesajları ve CMO bilgisi YOKTUR."
+      },
+      "EarthReading": {
+        "properties": {
+          "today": {
+            "type": "number",
+            "title": "Today"
+          },
+          "used": {
+            "type": "number",
+            "title": "Used",
+            "description": "Değerlendirilen değer (3 günlük ortalama veya o günün değeri)"
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "used",
+          "level"
+        ],
+        "title": "EarthReading"
+      },
+      "EarthTodo": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Triggers",
+            "description": "Görünür tetikleyici kolonlar; boş → veri setinin önerisi"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "triggers"
+        ],
+        "title": "EarthTodo"
+      },
       "EmergencyNotice": {
         "properties": {
           "triggered": {
@@ -2262,6 +6125,12 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "cmo_notified": {
+            "type": "boolean",
+            "title": "Cmo Notified",
+            "description": "Yeni mod: gemide CMO bildirimi kaydedildi (Dünya'ya gitmez)",
+            "default": false
           }
         },
         "type": "object",
@@ -2319,6 +6188,18 @@
           "detail": {
             "type": "string",
             "title": "Detail"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "Makine tarafından okunur hata kodu (yeni uçlar), örn. unknown_id"
           }
         },
         "type": "object",
@@ -2351,13 +6232,20 @@
       "ExplainRequest": {
         "properties": {
           "lang": {
-            "type": "string",
-            "enum": [
-              "tr",
-              "en"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tr",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
             ],
             "title": "Lang",
-            "default": "tr"
+            "description": "Boşsa Accept-Language, o da yoksa tr"
           },
           "as_of": {
             "anyOf": [
@@ -3130,6 +7018,255 @@
         ],
         "title": "LLMHealth"
       },
+      "LinkStatus": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured",
+            "description": "SHIP_URL ve EARTH_LINK_TOKEN ayarlı mı"
+          },
+          "connected": {
+            "type": "boolean",
+            "title": "Connected"
+          },
+          "ship_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ship Url"
+          },
+          "epoch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epoch"
+          },
+          "last_contact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Contact",
+            "description": "Gemiden son olay veya heartbeat"
+          },
+          "last_event_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Event At"
+          },
+          "last_seq": {
+            "type": "integer",
+            "title": "Last Seq",
+            "description": "Dünya'nın işlediği son seq"
+          },
+          "ship_last_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ship Last Seq",
+            "description": "Gemide yayınlanmış son seq (heartbeat)"
+          },
+          "pending_on_ship": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending On Ship",
+            "description": "Kuyruktaki olay: gemide gecikme nedeniyle bekleyen"
+          },
+          "behind": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Behind",
+            "description": "Yayınlanmış ama Dünya'ya henüz ulaşmamış olay sayısı"
+          },
+          "events_received": {
+            "type": "integer",
+            "title": "Events Received"
+          },
+          "snapshot_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot At"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "delay_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delay Seconds"
+          },
+          "simulated_light_delay_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulated Light Delay Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "connected",
+          "ship_url",
+          "epoch",
+          "last_contact",
+          "last_event_at",
+          "last_seq",
+          "ship_last_seq",
+          "pending_on_ship",
+          "behind",
+          "events_received",
+          "snapshot_at",
+          "last_error",
+          "delay_seconds",
+          "simulated_light_delay_minutes"
+        ],
+        "title": "LinkStatus"
+      },
+      "LoginRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Id",
+            "description": "Astronot kimliği (A000 …) veya EARTH; büyük/küçük harf duyarsız",
+            "default": ""
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "title": "Password",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "description": "Authorization: Bearer <token>"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "astronaut",
+              "earth"
+            ],
+            "title": "Kind"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject",
+            "description": "A003 | EARTH"
+          },
+          "astronaut_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Astronaut Id",
+            "description": "Astronot girişinde kendi kimliği; token sadece bu astronota erişir"
+          },
+          "station": {
+            "type": "string",
+            "enum": [
+              "ship",
+              "earth"
+            ],
+            "title": "Station"
+          },
+          "home_path": {
+            "type": "string",
+            "title": "Home Path"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "kind",
+          "subject",
+          "station",
+          "home_path",
+          "expires_at"
+        ],
+        "title": "LoginResponse"
+      },
       "MetricInfo": {
         "properties": {
           "name": {
@@ -3517,6 +7654,135 @@
         "type": "object",
         "title": "MissionInfo"
       },
+      "MonitorCrewMember": {
+        "properties": {
+          "astronaut": {
+            "$ref": "#/components/schemas/CrewInfo"
+          },
+          "today": {
+            "type": "integer",
+            "title": "Today"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "score_text": {
+            "type": "string",
+            "title": "Score Text"
+          },
+          "ground": {
+            "type": "boolean",
+            "title": "Ground"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share",
+            "description": "Bugünün check-in'i (tamamlandıysa)"
+          },
+          "checkin_text": {
+            "type": "string",
+            "title": "Checkin Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut",
+          "today",
+          "mission_day",
+          "status",
+          "status_label",
+          "subtitle",
+          "score",
+          "score_text",
+          "ground",
+          "share",
+          "checkin_text"
+        ],
+        "title": "MonitorCrewMember"
+      },
+      "MonitorCrewResponse": {
+        "properties": {
+          "link": {
+            "$ref": "#/components/schemas/LinkStatus"
+          },
+          "astronauts": {
+            "items": {
+              "$ref": "#/components/schemas/MonitorCrewMember"
+            },
+            "type": "array",
+            "title": "Astronauts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "link",
+          "astronauts"
+        ],
+        "title": "MonitorCrewResponse"
+      },
+      "MonitorDay": {
+        "properties": {
+          "view": {
+            "$ref": "#/components/schemas/DayView"
+          },
+          "checkin": {
+            "$ref": "#/components/schemas/EarthCheckinView"
+          },
+          "updated_seq": {
+            "type": "integer",
+            "title": "Updated Seq"
+          },
+          "received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Received At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "view",
+          "checkin",
+          "updated_seq",
+          "received_at"
+        ],
+        "title": "MonitorDay"
+      },
       "OverallStatus": {
         "properties": {
           "status": {
@@ -3565,6 +7831,154 @@
           "status"
         ],
         "title": "OverallStatus"
+      },
+      "PersonalCatalogResponse": {
+        "properties": {
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Statuses",
+            "description": "Durum etiketleri, indeks = seviye"
+          },
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogDomain"
+            },
+            "type": "array",
+            "title": "Domains"
+          },
+          "areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Areas"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogIndicator"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "solutions": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogSolution"
+            },
+            "type": "array",
+            "title": "Solutions"
+          },
+          "threshold_source": {
+            "type": "string",
+            "title": "Threshold Source"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "threshold_note": {
+            "type": "string",
+            "title": "Threshold Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "statuses",
+          "domains",
+          "areas",
+          "indicators",
+          "solutions",
+          "threshold_source",
+          "verified",
+          "threshold_note"
+        ],
+        "title": "PersonalCatalogResponse"
+      },
+      "PersonalOverview": {
+        "properties": {
+          "astronaut": {
+            "$ref": "#/components/schemas/CrewInfo"
+          },
+          "today": {
+            "type": "integer",
+            "title": "Today",
+            "description": "Bugünün gün numarası (= n_days; son kayıt)"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          },
+          "strip": {
+            "items": {
+              "$ref": "#/components/schemas/StripDay"
+            },
+            "type": "array",
+            "title": "Strip"
+          },
+          "threshold_note": {
+            "type": "string",
+            "title": "Threshold Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut",
+          "today",
+          "n_days",
+          "strip",
+          "threshold_note"
+        ],
+        "title": "PersonalOverview"
+      },
+      "PrincipalInfo": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "astronaut",
+              "earth"
+            ],
+            "title": "Kind"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "astronaut_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Astronaut Id"
+          },
+          "station": {
+            "type": "string",
+            "enum": [
+              "ship",
+              "earth"
+            ],
+            "title": "Station"
+          },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "subject",
+          "astronaut_id",
+          "station",
+          "read_only"
+        ],
+        "title": "PrincipalInfo"
       },
       "RAGHealth": {
         "properties": {
@@ -3640,6 +8054,114 @@
         ],
         "title": "RawPoint"
       },
+      "ReadingView": {
+        "properties": {
+          "col": {
+            "type": "string",
+            "title": "Col"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "dec": {
+            "type": "integer",
+            "title": "Dec"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Değerlendirilen değer (3 günlük ortalama; exposure → o günün değeri). Gizliyse null"
+          },
+          "today": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Today",
+            "description": "O günün ham değeri. Gizliyse null"
+          },
+          "value_text": {
+            "type": "string",
+            "title": "Value Text",
+            "description": "Biçimli değer veya 'Paylaşılmadı'"
+          },
+          "healthy_text": {
+            "type": "string",
+            "title": "Healthy Text",
+            "description": "Sağlıklı aralık metni, örn. '7–9' / '7 to 9'"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "0 sağlıklı · 1 uyarı aralığında · 2 uyarı aralığının dışında. Gizliyse null"
+          },
+          "flag_text": {
+            "type": "string",
+            "title": "Flag Text",
+            "description": "'' | 'Aralık dışında' | 'Çok dışında'"
+          },
+          "averaged": {
+            "type": "boolean",
+            "title": "Averaged",
+            "description": "true → son 3 günün ortalaması, false → o günün değeri"
+          },
+          "private": {
+            "type": "boolean",
+            "title": "Private",
+            "description": "Ruh hali / stres: Dünya sadece paylaşılırsa görür"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "description": "Bu izleyiciden gizli (Dünya, paylaşılmadı)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "col",
+          "domain",
+          "label",
+          "unit",
+          "dec",
+          "value",
+          "today",
+          "value_text",
+          "healthy_text",
+          "level",
+          "flag_text",
+          "averaged",
+          "private",
+          "hidden"
+        ],
+        "title": "ReadingView"
+      },
       "ScorePenalty": {
         "properties": {
           "event_id": {
@@ -3684,6 +8206,45 @@
         ],
         "title": "ScorePenalty"
       },
+      "ShareOption": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": [
+              "private",
+              "scores",
+              "full"
+            ],
+            "title": "Level"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "false → mevcut seviyeden düşük (paylaşım geri alınamaz)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "label",
+          "description",
+          "selected",
+          "enabled"
+        ],
+        "title": "ShareOption"
+      },
       "ShareRequest": {
         "properties": {
           "share_with_ground": {
@@ -3720,6 +8281,103 @@
           "updated_at"
         ],
         "title": "ShareResponse"
+      },
+      "StationInfo": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "ship",
+              "earth"
+            ],
+            "title": "Role",
+            "description": "ship: gemi bilgisayarı | earth: Dünya üssü (salt okunur)"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "home_path": {
+            "type": "string",
+            "title": "Home Path",
+            "description": "Bu istasyonun ana ekranı: ship → /me, earth → /monitor (eski sentetik mod: /legacy)"
+          },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only",
+            "description": "true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)"
+          },
+          "data_source": {
+            "type": "string",
+            "enum": [
+              "astronaut_health",
+              "synthetic"
+            ],
+            "title": "Data Source"
+          },
+          "legacy_enabled": {
+            "type": "boolean",
+            "title": "Legacy Enabled",
+            "description": "true → eski ekranlar (/legacy) ve eski API açık (gemi + synthetic)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "version",
+          "home_path",
+          "read_only",
+          "data_source",
+          "legacy_enabled"
+        ],
+        "title": "StationInfo"
+      },
+      "StripDay": {
+        "properties": {
+          "day": {
+            "type": "integer",
+            "title": "Day",
+            "description": "1'den başlar (30 günün kaçıncısı)"
+          },
+          "mission_day": {
+            "type": "integer",
+            "title": "Mission Day"
+          },
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "description": "Gösterilen durum 0/1/2 (bu izleyiciye göre)"
+          },
+          "status_label": {
+            "type": "string",
+            "title": "Status Label"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Kümülatif sağlık skoru"
+          },
+          "score_text": {
+            "type": "string",
+            "title": "Score Text"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "mission_day",
+          "status",
+          "status_label",
+          "score",
+          "score_text",
+          "label"
+        ],
+        "title": "StripDay"
       },
       "SystemInfo": {
         "properties": {
@@ -3865,6 +8523,78 @@
           "verified"
         ],
         "title": "Thresholds"
+      },
+      "TodoItemView": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why",
+            "description": "Tetikleyen ölçümler; tetikleyici yoksa 'Veri setinin önerisi'"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "readings",
+              "dataset"
+            ],
+            "title": "Source",
+            "description": "dataset → veri seti önerdi, eşleşen ölçüm yok"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Triggers",
+            "description": "Görünür tetikleyici ölçüm kolonları"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "when": {
+            "type": "string",
+            "title": "When"
+          },
+          "contact_ground_if": {
+            "type": "string",
+            "title": "Contact Ground If"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "description": "Astronot 'yaptım' olarak işaretledi",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "title",
+          "why",
+          "source",
+          "triggers",
+          "steps",
+          "when",
+          "contact_ground_if",
+          "basis"
+        ],
+        "title": "TodoItemView"
       },
       "ValidationError": {
         "properties": {
@@ -4151,6 +8881,305 @@
         "title": "SSEError",
         "type": "object"
       },
+      "DownlinkPayload": {
+        "description": "Olay yükü: her olay ilgili günün filtrelenmiş güncel halini (`day`) taşır.",
+        "properties": {
+          "day": {
+            "$ref": "#/components/schemas/EarthDay"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "enum": [
+                  "private",
+                  "scores",
+                  "full"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "checkin.*: paylaşım seviyesi",
+            "title": "Share"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "action.done: kod (Dünya'da maskeliyse null)",
+            "title": "Code"
+          },
+          "masked": {
+            "default": false,
+            "description": "action.done: öğe Dünya'da maskeli",
+            "title": "Masked",
+            "type": "boolean"
+          },
+          "done": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "action.done: işaretlendi / kaldırıldı",
+            "title": "Done"
+          }
+        },
+        "required": [
+          "day"
+        ],
+        "title": "DownlinkPayload",
+        "type": "object"
+      },
+      "DownlinkEvent": {
+        "properties": {
+          "seq": {
+            "description": "Gemideki sıra numarası (artan, boşluksuz yayın)",
+            "title": "Seq",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "checkin.completed",
+              "checkin.shared",
+              "action.done",
+              "day.snapshot",
+              "link.heartbeat"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "epoch": {
+            "description": "Gemi DB dönemi; değişirse Dünya baştan senkronize olur",
+            "title": "Epoch",
+            "type": "string"
+          },
+          "astronaut_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Astronaut Id"
+          },
+          "day_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Day Index"
+          },
+          "ship_time": {
+            "format": "date-time",
+            "title": "Ship Time",
+            "type": "string"
+          },
+          "publish_time": {
+            "description": "ship_time + DOWNLINK_DELAY_SECONDS",
+            "format": "date-time",
+            "title": "Publish Time",
+            "type": "string"
+          },
+          "earth_received_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Dünya'nın aldığı an (Dünya doldurur)",
+            "title": "Earth Received Time"
+          },
+          "simulated_light_delay_minutes": {
+            "description": "Gerçek ışık gecikmesi etiketi (simülasyon, bekletmez)",
+            "title": "Simulated Light Delay Minutes",
+            "type": "number"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DownlinkPayload"
+          }
+        },
+        "required": [
+          "seq",
+          "type",
+          "epoch",
+          "ship_time",
+          "publish_time",
+          "simulated_light_delay_minutes",
+          "payload"
+        ],
+        "title": "DownlinkEvent",
+        "type": "object"
+      },
+      "DownlinkHeartbeat": {
+        "properties": {
+          "epoch": {
+            "title": "Epoch",
+            "type": "string"
+          },
+          "ship_time": {
+            "format": "date-time",
+            "title": "Ship Time",
+            "type": "string"
+          },
+          "last_seq": {
+            "description": "Yayınlanmış son seq",
+            "title": "Last Seq",
+            "type": "integer"
+          },
+          "pending": {
+            "description": "Gecikme nedeniyle henüz yayınlanmamış olay sayısı",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "delay_seconds": {
+            "title": "Delay Seconds",
+            "type": "number"
+          },
+          "simulated_light_delay_minutes": {
+            "title": "Simulated Light Delay Minutes",
+            "type": "number"
+          }
+        },
+        "required": [
+          "epoch",
+          "ship_time",
+          "last_seq",
+          "pending",
+          "delay_seconds",
+          "simulated_light_delay_minutes"
+        ],
+        "title": "DownlinkHeartbeat",
+        "type": "object"
+      },
+      "MonitorStreamEvent": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "event",
+              "link"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Type"
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Seq"
+          },
+          "astronaut_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Astronaut Id"
+          },
+          "day_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Day Index"
+          },
+          "ship_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ship Time"
+          },
+          "earth_received_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Earth Received Time"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LinkStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "MonitorStreamEvent",
+        "type": "object"
+      },
       "ChatEventName": {
         "type": "string",
         "enum": [
@@ -4164,6 +9193,13 @@
           "error"
         ],
         "title": "ChatEventName"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "POST /api/auth/login ile alınan token",
+        "scheme": "bearer"
       }
     }
   }

@@ -7,6 +7,10 @@ import pytest
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["MOCK_STREAM_DELAY_MS"] = "0"
 os.environ["APP_ENV"] = "test"
+# Global ayarlar eski sentetik moddadır (eski testler buna bağlı). Yeni mimarinin testleri kendi
+# Settings(...) nesnelerini ve geçici DB'lerini kurar (tests/station/conftest.py).
+os.environ["DATA_SOURCE"] = "synthetic"
+os.environ["STATION_ROLE"] = "ship"
 
 
 @pytest.fixture(scope="session")
@@ -49,3 +53,19 @@ def client(seeded_db):
 
     with TestClient(create_app()) as c:
         yield c
+
+
+# ---------------------------------------------------------------- yeni mimari (astronaut_health)
+@pytest.fixture(scope="session")
+def dataset():
+    from app.config import get_settings
+    from app.personal.dataset import load_dataset_file
+
+    return load_dataset_file(get_settings().dataset_path)
+
+
+@pytest.fixture(scope="session")
+def catalog():
+    from app.personal.catalog import load_personal_catalog
+
+    return load_personal_catalog()

@@ -32,6 +32,14 @@ _RULES: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
     (("stres", "stress", "ruh hali", "mood", "check-in", "checkin"), "get_checkins", {"days": 7}),
     (("uyari", "alarm", "alert"), "get_alerts", {}),
     (("belge", "dokuman", "kaynak", "nasa", "protokol", "standart", "document", "guideline", "procedure"), "search_docs", {}),
+    # yeni veri modeli (astronaut_health) tool'ları
+    (("nasilim", "nasil gidiyor", "durumum", "genel durum", "ozet", "bugun", "how am i", "how are", "overall", "summary", "today"),
+     "get_today_summary", {}),
+    (("uyku", "uyu", "sleep"), "get_recent_readings", {"cols": ["beh_sleep_h"], "days": 7}),
+    (("nabiz", "kalp", "heart", "pulse"), "get_recent_readings", {"cols": ["cv_resting_hr_bpm"], "days": 7}),
+    (("radyasyon", "radiation"), "get_recent_readings", {"cols": ["exp_radiation_mSv_day"], "days": 7}),
+    (("yapilacak", "yapmaliyim", "ne yapayim", "todo", "to-do", "to do", "what should i do"), "get_todo", {}),
+    (("cozum", "oneri", "solution", "self-care", "self care"), "get_selfcare_solutions", {}),
 ]
 
 
@@ -72,6 +80,8 @@ class MockClient:
         if not calls and "get_health_summary" in tool_names:
             calls.append(ToolCall(new_call_id(), "get_health_summary",
                                   json.dumps({"astronaut_id": aid} if aid else {})))
+        if not calls and "get_today_summary" in tool_names:
+            calls.append(ToolCall(new_call_id(), "get_today_summary", "{}"))
         return calls
 
     def _decide(self, messages: list[Message], tools: list[dict] | None) -> LLMResponse:
@@ -106,6 +116,12 @@ class MockClient:
             return json.dumps(templates.alert_explanation(ctx, lang), ensure_ascii=False)
         if name == "DailyBriefing":
             return json.dumps(templates.daily_briefing(ctx, lang), ensure_ascii=False)
+        if name == "CheckinTurnDraft":  # mock: scripted check-in ile aynı karar
+            from app.personal.checkin_script import assistant_turn
+
+            out = assistant_turn(ctx, lang)
+            note = out["note"]
+            return json.dumps({"reply": out["reply"], "flag": bool(note and note["flag"]), "skip": note is None}, ensure_ascii=False)
         return "{}"
 
     # ------------------------------------------------------------------ arayüz

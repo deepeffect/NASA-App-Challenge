@@ -21,7 +21,7 @@ export function CheckinPage() {
         <select
           id="astro"
           value={id ?? ""}
-          onChange={(e) => navigate(`/checkin/${e.target.value}`)}
+          onChange={(e) => navigate(`/legacy/checkin/${e.target.value}`)}
           className="mb-6 min-h-11 w-full rounded-xl border border-slate-600 bg-slate-800 px-3"
         >
           <option value="" disabled>

@@ -175,9 +175,43 @@ def daily_briefing(ctx: dict[str, Any], lang: str = "tr") -> dict[str, Any]:
 # =============================================================================
 # Sohbet: tool sonuçlarından cevap (mock + çevrim dışı yedek)
 # =============================================================================
+def _personal_text(name: str, d: dict[str, Any], L: str) -> str:
+    """Yeni veri modelinin tool'ları (astronaut_health). Sayılar tool'un biçimli değerleridir."""
+    en = L == "en"
+    if name == "get_today_summary":
+        s = (f"Today (day {d['day']} of {d['n_days']}, mission day {d['mission_day']}) your status is {d['status']}: {d['summary']}."
+             if en else f"Bugün ({d['n_days']} günün {d['day']}. günü, görev günü {d['mission_day']}) durumun {d['status']}: {d['summary']}.")
+        out = d.get("out_of_range_readings") or []
+        if out:
+            items = "; ".join(f"{r['label']} {r['value_text']} {r['unit']}".strip() for r in out[:4])
+            s += (" Out of range: " if en else " Aralık dışında: ") + items + "."
+        if d.get("todo"):
+            s += (" On your to-do list: " if en else " Yapılacaklar listende: ") + ", ".join(d["todo"]) + "."
+        return s
+    if name == "get_recent_readings":
+        parts = []
+        for r in d.get("readings", []):
+            pts = ", ".join(f"{p['day']}: {p['value_text']}" for p in r["points"][-5:])
+            parts.append(f"{r['label']} ({'day' if en else 'gün'} {pts})")
+        return ("Recent readings: " if en else "Son ölçümler: ") + "; ".join(parts) + "." if parts else (
+            "Nothing is out of range today." if en else "Bugün aralık dışında bir ölçüm yok.")
+    if name == "get_todo":
+        if not d.get("todo"):
+            return d.get("nothing_to_do") or ("Nothing to do today." if en else "Bugün yapılacak bir şey yok.")
+        return ("To do: " if en else "Yapılacaklar: ") + "; ".join(f"{t['title']} ({t['why']})" for t in d["todo"]) + "."
+    if name == "get_selfcare_solutions":
+        return ("Self-care solutions: " if en else "Öz bakım çözümleri: ") + ", ".join(s["title"] for s in d.get("solutions", [])) + "."
+    return ""
+
+
+PERSONAL_TOOL_NAMES = {"get_today_summary", "get_recent_readings", "get_todo", "get_selfcare_solutions"}
+
+
 def _tool_text(name: str, d: dict[str, Any], L: str) -> str:
     if "error" in d and len(d) <= 2:
         return ("Veri alınamadı: " if L == "tr" else "Could not fetch data: ") + str(d["error"])
+    if name in PERSONAL_TOOL_NAMES:
+        return _personal_text(name, d, L)
     if name == "get_health_summary":
         ov = d["overall"]
         score = fmt(ov.get("score"), 0) if ov.get("score") is not None else "—"
@@ -248,5 +282,7 @@ def chat_answer(tool_results: list[tuple[str, dict[str, Any]]], lang: str = "tr"
         parts = ["Size yardımcı olabilmem için sağlık verilerinize bakmam gerekiyor." if L == "tr"
                  else "I need to look at your health data to help."]
     if any(n == "get_health_summary" and d.get("active_alerts") for n, d in tool_results):
+        parts.append(T[L]["cmo"])
+    if any(n == "get_today_summary" and d.get("needs_ground_support") for n, d in tool_results):
         parts.append(T[L]["cmo"])
     return " ".join(parts) + "\n\n" + T[L][mode]

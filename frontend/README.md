@@ -3,6 +3,24 @@
 Vite + React 19 + TypeScript 5 · Tailwind 4 · Recharts 3 · TanStack Query 5 · react-router 7 ·
 `@microsoft/fetch-event-source` (POST + SSE).
 
+## İki istasyon, tek derleme
+
+Aynı derleme iki istasyonda servis edilir; her istasyon kendi ekranını açar, diğerinde "bu ekran bu
+istasyonda değil" gösterilir (`GET /api/station`):
+
+| Rota | İstasyon | Klasör | Durum |
+|---|---|---|---|
+| `/me` | gemi (astronot terminali) | `src/apps/personal/` | yer tutucu — kişisel ekran ekibi |
+| `/monitor` | Dünya üssü | `src/apps/monitor/` | yer tutucu — Dünya ekranı ekibi |
+| `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
+
+- Kurallar ve görünüm için tek doğru kaynak: `reference/personal-artifact.html` (prototip).
+- İki ekranın ortak bileşenleri: `src/shared/health/` (aynı `DayView` / `StripDay` sözleşmesi; Dünya'da gizli alanlar `hidden: true`).
+- Yeni uçların istemcisi: `src/api/station.ts` (`stationApi.*`, `openMonitorStream`, `chat`). Dil her istekte
+  `lang` ile açıkça gider (`src/shared/i18n.tsx`, TR/EN), token sekme oturumunda saklanır.
+- Geliştirme: kökte `npm run dev:ship` (→ <http://localhost:5173/me>) ve `npm run dev:earth` (→ <http://localhost:5174/monitor>).
+- Üretim: kökte `npm run serve` arayüzü `VITE_API_BASE_URL` boş (aynı adres) derler; backend `dist/`'i kendisi servis eder.
+
 ## Kurulum
 
 ```powershell
@@ -12,7 +30,7 @@ Copy-Item .env.example .env     # bash: cp .env.example .env
 npm run dev                     # http://localhost:5173 (ağdan da erişilebilir: host=true)
 ```
 
-`.env`:
+`.env` (sadece geliştirme; `npm run serve` bunu boş derler, `dev:ship` / `dev:earth` kendileri ayarlar):
 
 ```ini
 VITE_API_BASE_URL=http://127.0.0.1:8000     # backend başka makinedeyse onun IP'si
@@ -53,9 +71,14 @@ SSE olay modelleri (`SSEToken`, `SSEToolCall`, `SSEDone`, …) de bu dosyaya ür
 ## Yapı
 
 ```
+reference/      personal-artifact.html — prototip (kurallar ve görünüm için tek doğru kaynak)
 src/
-  api/          client.ts (tipli fetch istemcisi) · sse.ts (sohbet akışı) · queries.ts (TanStack hook'ları) · types.ts (üretilen)
-  app/          App (router), Layout, AsOfContext (global as_of), TimeSlider, HealthIndicator
+  apps/
+    personal/   /me — astronot ekranı (gemi)
+    monitor/    /monitor — Dünya üssü ekranı
+  shared/       i18n (TR/EN), station (istasyon bilgisi, rol koruması), Placeholder, health/ (ortak bileşenler)
+  api/          station.ts (yeni uçlar) · client.ts (eski uçlar) · sse.ts (eski sohbet akışı) · queries.ts · types.ts (üretilen)
+  app/          App (kök router), LegacyApp (/legacy), Layout, AsOfContext (global as_of), TimeSlider, HealthIndicator
   components/
     ui/         Badges (durum/ciddiyet: renk + ikon + metin), primitives (Card, Button, QueryState), EmergencyBanner, icons, labels, format
     charts/     MetricChart (normal bandı, eşik, olay penceresi, changepoint, tahmin)
@@ -88,7 +111,7 @@ Kurallar:
 
 ## Görsel smoke testi (Playwright)
 
-Backend ve Vite açıkken (kökte `npm run dev`):
+Eski ekranları (`/legacy`) dener. Backend ve Vite açıkken (kökte `npm run dev`):
 
 ```powershell
 npx playwright install --only-shell chromium   # ilk sefer, sadece headless Chromium (~290 MB, kullanıcı dizinine)
@@ -101,7 +124,11 @@ grafiği · sohbet (mock cevap + acil durum bandı) · check-in formu · mürett
 yakalanmamış JS hataları ve 4xx/5xx istekler raporlanır; sorun varsa çıkış kodu 1.
 Örnek dedektörler ekranı için 8001 portunda geçici ikinci bir backend başlatılır (çalışan dev sunucusuna dokunmaz).
 
+Vite'a hazırlık kontrolü takılırsa ("Backend veya Vite açık değil" ama ikisi de açıksa) smoke'u backend'in
+servis ettiği derlemeye karşı çalıştırın: kökte `DATA_SOURCE=synthetic` ile `npm run serve -- ship`, sonra
+`SMOKE_WEB=http://127.0.0.1:8000 SMOKE_API=http://127.0.0.1:8000 DATA_SOURCE=synthetic npm run smoke`.
+
 ## URL'de zaman
 
-Seçili gün URL'de tutulur: `/astronauts/AST-02?as_of=2026-10-22`. Link paylaşılabilir; geri/ileri çalışır;
+Seçili gün URL'de tutulur: `/legacy/astronauts/AST-02?as_of=2026-10-22`. Link paylaşılabilir; geri/ileri çalışır;
 sayfalar arası gezinmede gün korunur. "Canlıya dön" parametreyi kaldırır.

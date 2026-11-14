@@ -18,6 +18,8 @@ frontend/.env.local
 # Veri (ham NASA verisi ve üretilen DB/indeks repoya girmez)
 data/raw/*
 !data/raw/.gitkeep
+# Simüle veri seti (gizli değil): gemi bilgisayarı git pull ile alır
+!data/raw/astronaut_health.json
 data/processed/*
 !data/processed/.gitkeep
 data/docs/*

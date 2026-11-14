@@ -5,8 +5,9 @@
 # LLM'e gitmeden ÖNCE `emergency` olayı üretilir; LLM kapalıyken de çalışır.
 #
 # Eşleştirme: büyük/küçük harf ve Türkçe karakter duyarsız alt-dize araması
-# ("gogus agrisi" = "Göğüs ağrısı"). Olumsuzlamaları ("ağrım yok") ayırt etmez:
-# güvenlik için bilinçli olarak fazla tetiklemeyi tercih eder.
+# ("gogus agrisi" = "Göğüs ağrısı"). Eski ekranlarda olumsuzlamaları ("ağrım yok") ayırt etmez
+# (bilinçli olarak fazla tetikler). Yeni "Asistana sor" sohbeti basit olumsuzlamayı ayırt eder
+# ("göğüs ağrım yok", "no chest pain" tetiklemez). Sonuç: gemide CMO kaydı; Dünya'ya gönderilmez.
 #
 # ⚠ PROTOKOL METNİ PLACEHOLDER'DIR.
 # TODO: Mürettebat tıbbi acil durum prosedürleri ve uçuş cerrahı ile doğrula.
@@ -22,16 +23,16 @@ protocol:
     tr:
       - "Mürettebat sağlık sorumlusunu (CMO) hemen çağırın; kişiyi yalnız bırakmayın."
       - "Gemideki tıbbi acil durum kontrol listesini açın ve adımları uygulayın."
-      - "Yer ekibine (uçuş cerrahı) acil durum bildirimi gönderin; iletişim gecikmesini hesaba katın."
+      - "Gerekirse Dünya ile iletişime geçme kararını CMO verir."
       - "Belirtileri ve zamanlarını kaydedin."
     en:
       - "Call the crew medical officer (CMO) immediately; do not leave the person alone."
       - "Open the onboard medical emergency checklist and follow its steps."
-      - "Send an emergency notice to the ground team (flight surgeon); account for the communication delay."
+      - "If needed, the CMO decides whether to contact Earth."
       - "Record the symptoms and their timing."
   contacts:
     - "Mürettebat sağlık sorumlusu (CMO)"
-    - "Yer ekibi: uçuş cerrahı"
+    - "Yer ekibi: uçuş cerrahı (CMO'nun kararıyla)"
 
 symptoms:
   chest_pain:
