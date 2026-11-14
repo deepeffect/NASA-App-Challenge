@@ -15,6 +15,7 @@ from fastapi.openapi.utils import get_openapi
 
 from app import __version__
 from app.api import router as legacy_router
+from app.api.assistant import router as assistant_router
 from app.api.auth import router as auth_router
 from app.api.checkin import router as checkin_router
 from app.api.downlink import router as downlink_router
@@ -118,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(personal_router, prefix="/api")
         app.include_router(checkin_router, prefix="/api")
         app.include_router(downlink_router, prefix="/api")
+        app.include_router(assistant_router, prefix="/api")
     if settings.station_role == "earth":
         app.include_router(monitor_router, prefix="/api")
     if settings.legacy_enabled:

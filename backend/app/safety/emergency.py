@@ -4,6 +4,7 @@ Sohbet mesajları ve check-in notları `detect_emergency()` ile taranır; eşle�
 LLM'e gitmeden önce bir EmergencyNotice üretilir.
 """
 
+import re
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
@@ -51,8 +52,43 @@ def get_protocol(lang: str = "tr", path: Path | None = None) -> EmergencyProtoco
     )
 
 
-def detect_emergency(text: str | None, lang: str = "tr", path: Path | None = None) -> EmergencyNotice | None:
-    """Metin acil belirti içeriyorsa EmergencyNotice, yoksa None."""
+# Basit olumsuzlama (sadece negation_aware=True): İngilizcede terimden ÖNCE, Türkçede SONRA gelir.
+# Pencere cümle/bağlaç sınırında biter: "no chest pain but I fainted" → bayılma yine tetikler.
+_CLAUSE_SPLIT = re.compile(r"[.,;:!?\n]+|\b(?:but|however|ama|fakat|ancak|lakin)\b")
+_NEG_BEFORE = {"no", "not", "dont", "don't", "didnt", "didn't", "doesnt", "doesn't", "never", "without", "nor", "isnt", "isn't"}
+_NEG_AFTER = {"yok", "degil", "olmadi", "olmuyor", "yasamadim", "yasamiyorum", "hissetmiyorum", "hissetmedim", "cekmiyorum"}
+
+
+def _occurrences(clause: str, term: str) -> list[int]:
+    out, start = [], 0
+    while (i := clause.find(term, start)) >= 0:
+        out.append(i)
+        start = i + 1
+    return out
+
+
+def _negated(clause: str, i: int, term: str) -> bool:
+    before = clause[:i].split()[-4:]
+    after = clause[i + len(term):].split()[:3]
+    return any(w in _NEG_BEFORE for w in before) or any(w in _NEG_AFTER for w in after)
+
+
+def _term_present(folded: str, term: str, negation_aware: bool) -> bool:
+    if not negation_aware:
+        return term in folded
+    for clause in _CLAUSE_SPLIT.split(folded):
+        if clause and any(not _negated(clause, i, term) for i in _occurrences(clause, term)):
+            return True
+    return False
+
+
+def detect_emergency(
+    text: str | None, lang: str = "tr", path: Path | None = None, negation_aware: bool = False
+) -> EmergencyNotice | None:
+    """Metin acil belirti içeriyorsa EmergencyNotice, yoksa None.
+
+    negation_aware=True → "göğüs ağrım yok" / "no chest pain" gibi basit olumsuzlamalar tetiklemez.
+    """
     if not text or not text.strip():
         return None
     folded = fold_text(text)
@@ -62,7 +98,7 @@ def detect_emergency(text: str | None, lang: str = "tr", path: Path | None = Non
     terms: list[str] = []
     for sid, spec in (cfg.get("symptoms") or {}).items():
         for term in spec.get("terms", []):
-            if fold_text(term) in folded:
+            if _term_present(folded, fold_text(term), negation_aware):
                 if sid not in symptoms:
                     symptoms.append(sid)
                     label = (spec.get("label") or {}).get(lang) or (spec.get("label") or {}).get("tr") or sid

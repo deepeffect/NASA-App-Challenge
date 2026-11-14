@@ -258,6 +258,8 @@ def post_checkin(db: DB, body: CheckinRequest) -> CheckinResponse:
     },
 )
 async def post_chat(db: DB, body: ChatRequest) -> EventSourceResponse:
+    if not body.astronaut_id:
+        raise HTTPException(status_code=422, detail="astronaut_id gerekli (eski mod)")
     _require_astronaut(db, body.astronaut_id)
 
     async def gen():

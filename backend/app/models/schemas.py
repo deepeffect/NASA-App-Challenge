@@ -330,6 +330,7 @@ class EmergencyNotice(BaseModel):
     matched_terms: list[str]
     protocol: EmergencyProtocol
     message: str
+    cmo_notified: bool = Field(False, description="Yeni mod: gemide CMO bildirimi kaydedildi (Dünya'ya gitmez)")
 
 
 class CheckinRequest(BaseModel):
@@ -472,7 +473,9 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    astronaut_id: str
+    astronaut_id: str | None = Field(
+        None, description="Eski mod (synthetic): zorunlu. Yeni mod: boş bırakın; astronot token'dan gelir (farklıysa 403)"
+    )
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
     as_of: dt.date | None = None
     lang: Lang | None = Field(None, description="Boşsa kullanıcının dilinden tahmin edilir")
