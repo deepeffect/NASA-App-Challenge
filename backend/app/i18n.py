@@ -6,6 +6,7 @@ Frontend dil seçimini her zaman `lang` ile açıkça gönderir; başlık sadece
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import Annotated, Literal
 
 from fastapi import Depends, Query, Request
@@ -47,6 +48,23 @@ def resolve_lang(explicit: str | None, accept_language: str | None) -> Lang:
         if e in SUPPORTED:
             return e  # type: ignore[return-value]
     return parse_accept_language(accept_language) or DEFAULT_LANG
+
+
+_current: ContextVar[str] = ContextVar("request_lang", default=DEFAULT_LANG)
+
+
+def current_lang() -> Lang:
+    """Bu isteğin dili (lang_middleware ayarlar; istek dışında tr)."""
+    return _current.get()  # type: ignore[return-value]
+
+
+async def lang_middleware(request: Request, call_next):  # noqa: ANN001, ANN201
+    """Her istekte dil: ?lang= > Accept-Language > tr. Eski kod t(..., current_lang()) ile kullanır."""
+    token = _current.set(resolve_lang(request.query_params.get("lang"), request.headers.get("accept-language")))
+    try:
+        return await call_next(request)
+    finally:
+        _current.reset(token)
 
 
 def get_lang(
@@ -114,6 +132,12 @@ MESSAGES: dict[str, dict[Lang, str]] = {
     },
     "forbidden_kind": {"tr": "Bu hesap bu işlemi yapamaz.", "en": "This account cannot do that."},
     "unknown_astronaut": {"tr": "Astronot bulunamadı: {id}", "en": "Astronaut not found: {id}"},
+    "unknown_metric": {"tr": "Bilinmeyen metrik: {metric}", "en": "Unknown metric: {metric}"},
+    "unknown_event": {"tr": "Olay bulunamadı: {event_id}", "en": "Event not found: {event_id}"},
+    "legacy_astronaut_required": {"tr": "astronaut_id gerekli (eski mod)", "en": "astronaut_id is required (legacy mode)"},
+    "validation_error": {"tr": "İstek geçersiz: {fields}", "en": "Invalid request: {fields}"},
+    "not_found": {"tr": "Bu istasyonda böyle bir adres yok.", "en": "There is no such address at this station."},
+    "method_not_allowed": {"tr": "Bu adres bu yöntemi desteklemiyor.", "en": "This address does not support this method."},
     "unknown_day": {"tr": "Geçersiz gün: {day} (1–{n})", "en": "Invalid day: {day} (1–{n})"},
     # ---- check-in
     "empty_answer": {"tr": "Bir cevap yazın.", "en": "Type an answer."},

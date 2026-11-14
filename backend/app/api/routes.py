@@ -11,6 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.analysis.catalog import load_catalog
 from app.db import get_engine, get_session
+from app.i18n import current_lang, t
 from app.ingest.pipeline import IngestError
 from app.models.schemas import (
     AlertListResponse,
@@ -61,18 +62,18 @@ class SSEResponseDoc(Response):
 
 def _require_astronaut(db: Session, aid: str) -> None:
     if not data_svc.known_astronaut(db, aid):
-        raise HTTPException(status_code=404, detail=f"Astronot bulunamadı: {aid}")
+        raise HTTPException(status_code=404, detail=t("unknown_astronaut", current_lang(), id=aid))
 
 
 def _require_metric(metric: str) -> None:
     if load_catalog().get(metric) is None:
-        raise HTTPException(status_code=404, detail=f"Bilinmeyen metrik: {metric}")
+        raise HTTPException(status_code=404, detail=t("unknown_metric", current_lang(), metric=metric))
 
 
 def _event_or_404(db: Session, event_id: str, as_of: date | None) -> HealthEvent:
     ev = data_svc.find_event(db, event_id, as_of)
     if ev is None:
-        raise HTTPException(status_code=404, detail=f"Olay bulunamadı: {event_id}")
+        raise HTTPException(status_code=404, detail=t("unknown_event", current_lang(), event_id=event_id))
     return ev
 
 
@@ -154,11 +155,11 @@ async def get_briefing(
     db: DB,
     astronaut_id: str,
     as_of: AsOf = None,
-    lang: Lang = "tr",
+    lang: Annotated[Lang | None, Query(description="Boşsa Accept-Language, o da yoksa tr")] = None,
     refresh: Annotated[bool, Query(description="true → cache'i atla")] = False,
 ) -> BriefingResponse:
     _require_astronaut(db, astronaut_id)
-    return await llm_svc.briefing(db, astronaut_id, as_of, lang, refresh)
+    return await llm_svc.briefing(db, astronaut_id, as_of, lang or current_lang(), refresh)
 
 
 # ============================================================================ olaylar
@@ -196,6 +197,8 @@ def get_alert(db: DB, event_id: str, as_of: AsOf = None) -> HealthEvent:
 )
 async def explain_alert(db: DB, event_id: str, body: ExplainRequest | None = None) -> ExplainResponse:
     req = body or ExplainRequest()
+    if req.lang is None:
+        req = req.model_copy(update={"lang": current_lang()})
     return await llm_svc.explain(db, _event_or_404(db, event_id, req.as_of), req)
 
 
@@ -234,6 +237,8 @@ def put_share(db: DB, event_id: str, body: ShareRequest, as_of: AsOf = None) -> 
 )
 def post_checkin(db: DB, body: CheckinRequest) -> CheckinResponse:
     _require_astronaut(db, body.astronaut_id)
+    if body.lang is None:
+        body = body.model_copy(update={"lang": current_lang()})
     return data_svc.create_checkin(db, body)
 
 
@@ -259,7 +264,7 @@ def post_checkin(db: DB, body: CheckinRequest) -> CheckinResponse:
 )
 async def post_chat(db: DB, body: ChatRequest) -> EventSourceResponse:
     if not body.astronaut_id:
-        raise HTTPException(status_code=422, detail="astronaut_id gerekli (eski mod)")
+        raise HTTPException(status_code=422, detail=t("legacy_astronaut_required", current_lang()))
     _require_astronaut(db, body.astronaut_id)
 
     async def gen():

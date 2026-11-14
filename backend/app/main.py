@@ -26,7 +26,8 @@ from app.api.station import router as station_router
 from app.config import Settings, get_settings
 from app.db import engine_for, init_db
 from app.models.schemas import SSE_MODELS
-from app.errors import ApiError, api_error_handler
+from app.errors import ApiError, api_error_handler, http_error_handler, validation_error_handler
+from app.i18n import lang_middleware
 from app.station import earth_read_only_middleware
 
 DESCRIPTION = """
@@ -104,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.station_role == "earth":
         # CORS'tan önce eklenir → CORS en dışta kalır, 403 cevabı da CORS başlığı taşır
         app.middleware("http")(earth_read_only_middleware)
+    app.middleware("http")(lang_middleware)  # istek dili (?lang= > Accept-Language > tr)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -112,6 +114,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+    if not settings.legacy_enabled:  # eski ekranlar FastAPI'nin varsayılan hata biçimini bekler
+        from fastapi.exceptions import RequestValidationError
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+        app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
     app.include_router(station_router, prefix="/api")
     app.include_router(auth_router, prefix="/api")
     app.include_router(catalog_router, prefix="/api")

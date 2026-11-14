@@ -341,7 +341,7 @@ class CheckinRequest(BaseModel):
     note: str | None = Field(None, max_length=2000)
     share_with_ground: bool = False
     timestamp: dt.datetime | None = Field(None, description="Boşsa sunucu zamanı (UTC)")
-    lang: Lang = "tr"
+    lang: Lang | None = Field(None, description="Boşsa Accept-Language, o da yoksa tr")
 
 
 class CheckinRecord(BaseModel):
@@ -376,7 +376,7 @@ class AlertListResponse(BaseModel):
 
 
 class ExplainRequest(BaseModel):
-    lang: Lang = "tr"
+    lang: Lang | None = Field(None, description="Boşsa Accept-Language, o da yoksa tr")
     as_of: dt.date | None = None
     refresh: bool = Field(False, description="true → cache'i atla, yeniden üret")
 
