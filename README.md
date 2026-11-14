@@ -3,6 +3,8 @@
 > **Hızlı başlangıç** (kök klasörde; gereken: Node 20.19+, [uv](https://docs.astral.sh/uv/)):
 > 1. `npm run setup` — Python ortamı, npm paketleri, `.env` dosyaları, API tipleri, demo verisi
 > 2. `npm run dev` — backend + frontend birlikte → arayüz <http://localhost:5173>, API <http://127.0.0.1:8000/docs>
+>
+> Arayüzün kullanımı ve demo akışı: [`kullanım.md`](kullanım.md)
 
 NASA Space Apps Challenge 2026 · *Create Health Monitoring Software for Astronauts on Space Mission*
 
