@@ -11,7 +11,7 @@ istasyonda değil" gösterilir (`GET /api/station`):
 | Rota | İstasyon | Klasör | Durum |
 |---|---|---|---|
 | `/me` | gemi (astronot terminali) | `src/apps/personal/` | yer tutucu — kişisel ekran ekibi |
-| `/monitor` | Dünya üssü | `src/apps/monitor/` | yer tutucu — Dünya ekranı ekibi |
+| `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı (`feat/earth`; astronot detayı ortak bileşenleri bekliyor) |
 | `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
 
 - Kurallar ve görünüm için tek doğru kaynak: `reference/personal-artifact.html` (prototip).
@@ -127,6 +127,21 @@ yakalanmamış JS hataları ve 4xx/5xx istekler raporlanır; sorun varsa çıkı
 Vite'a hazırlık kontrolü takılırsa ("Backend veya Vite açık değil" ama ikisi de açıksa) smoke'u backend'in
 servis ettiği derlemeye karşı çalıştırın: kökte `DATA_SOURCE=synthetic` ile `npm run serve -- ship`, sonra
 `SMOKE_WEB=http://127.0.0.1:8000 SMOKE_API=http://127.0.0.1:8000 DATA_SOURCE=synthetic npm run smoke`.
+
+### Dünya ekranı smoke testi
+
+Gemi (:8000) ve Dünya (:8001, web :5174) lokal açıkken (`npm run dev:ship` + `npm run dev:earth`):
+
+```powershell
+npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: screenshots/earth/
+```
+
+`scripts/smoke-earth.ts`: giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık) · gemide A000 check-in +
+"Sadece skorlar" → Dünya'da gecikme + 2 sn içinde, cevap metni yok · paylaşılmamış günde ruh hali / stres
+"Paylaşılmadı" · gemi kapatılır (uyarı, son durum korunur) ve açılır (akış kaldığı seq'ten, boşluksuz).
+Dünya ekranı gemiye hiç istek atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki
+yerine döner (bu sırada dev:earth backend'i de bir kez yeniden başlar). A000'ın paylaşımı geri alınamadığı için
+süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
 
 ## URL'de zaman
 
