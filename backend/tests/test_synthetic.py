@@ -87,6 +87,16 @@ def test_notes_do_not_trigger_emergency(data):
         assert detect_emergency(c["note"]) is None, c["note"]
 
 
+def test_scenario_notes_are_consistent(data):
+    from app.data.synthetic import NORMAL_NOTES, SCENARIO_NOTES
+
+    late = [c["note"] for c in data.checkins
+            if c["astronaut_id"] == "AST-02" and c["timestamp"] >= pd.Timestamp("2026-10-16") and c["note"]]
+    assert late and all(n in SCENARIO_NOTES for n in late)
+    others = {c["note"] for c in data.checkins if c["astronaut_id"] != "AST-02" and c["note"]}
+    assert others <= set(NORMAL_NOTES)
+
+
 def test_seed_database_roundtrip():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     stats = seed_database(SyntheticConfig(seed=1, days=30), engine=engine)

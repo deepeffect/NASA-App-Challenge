@@ -195,7 +195,8 @@ def generate(cfg: SyntheticConfig | None = None) -> SyntheticData:
             if in_scenario and rng.random() < 0.6:
                 note = str(rng.choice(SCENARIO_NOTES))
             elif rng.random() < 0.25:
-                note = str(rng.choice(NORMAL_NOTES))
+                picked = str(rng.choice(NORMAL_NOTES))  # çekim sayısı sabit kalsın (seed tekrarlanabilirliği)
+                note = None if in_scenario else picked
             checkins.append({
                 "astronaut_id": aid,
                 "timestamp": datetime.combine(dates[j], time(21, 0)),

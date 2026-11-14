@@ -23,6 +23,8 @@ _LANG = re.compile(r"Write all text fields in (\w+)")
 
 # (anahtar kelimeler (katlanmış), tool, ek argümanlar)
 _RULES: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
+    (("nasilim", "nasil gidiyor", "durumum", "genel durum", "ozet", "how am i", "how are", "overall", "summary", "today"),
+     "get_health_summary", {}),
     (("radyasyon", "radiation", "doz", "dose", "msv"), "get_radiation_dose", {}),
     (("uyku", "uyu", "sleep"), "get_metric", {"metric": "sleep_duration", "days": 14}),
     (("nabiz", "kalp", "heart", "pulse"), "get_metric", {"metric": "resting_hr", "days": 14}),

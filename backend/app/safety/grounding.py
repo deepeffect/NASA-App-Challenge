@@ -15,7 +15,11 @@ from typing import Any
 
 _DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b|\b\d{1,2}[./]\d{1,2}[./]\d{2,4}\b")
 _TIME = re.compile(r"\b\d{1,2}:\d{2}\b")
-_IDS = re.compile(r"\b(?:AST|evt|call)[-_][\w-]+\b", re.IGNORECASE)
+_IDS = re.compile(
+    r"\b(?:AST|evt|call)[-_][\w-]+\b"            # astronot / olay / tool çağrısı kimlikleri
+    r"|\b[A-Za-z]+(?:-[A-Za-z]+)*-\d+[A-Za-z]*\b",  # standart/belge kodları: NASA-STD-3001, ISO-8601
+    re.IGNORECASE,
+)
 _NUM = re.compile(r"(?<![\w.,])[-+−]?\d+(?:[.,]\d+)?(?![\w]|[.,]\d)")
 
 

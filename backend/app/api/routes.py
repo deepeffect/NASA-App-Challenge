@@ -10,7 +10,7 @@ from sqlmodel import Session
 from sse_starlette.sse import EventSourceResponse
 
 from app.analysis.catalog import load_catalog
-from app.db import get_session
+from app.db import get_engine, get_session
 from app.ingest.pipeline import IngestError
 from app.models.schemas import (
     AlertListResponse,
@@ -41,7 +41,7 @@ from app.models.schemas import (
 )
 from app.services import data as data_svc
 from app.services import health as health_svc
-from app.services import stub as llm_svc  # (e)/(f) adımında gerçek LLM servisiyle değişecek
+from app.services import llm_service as llm_svc
 
 router = APIRouter()
 
@@ -158,7 +158,7 @@ async def get_briefing(
     refresh: Annotated[bool, Query(description="true → cache'i atla")] = False,
 ) -> BriefingResponse:
     _require_astronaut(db, astronaut_id)
-    return llm_svc.briefing(astronaut_id, as_of, lang)
+    return await llm_svc.briefing(db, astronaut_id, as_of, lang, refresh)
 
 
 # ============================================================================ olaylar
@@ -196,7 +196,7 @@ def get_alert(db: DB, event_id: str, as_of: AsOf = None) -> HealthEvent:
 )
 async def explain_alert(db: DB, event_id: str, body: ExplainRequest | None = None) -> ExplainResponse:
     req = body or ExplainRequest()
-    return llm_svc.explain(_event_or_404(db, event_id, req.as_of), req)
+    return await llm_svc.explain(db, _event_or_404(db, event_id, req.as_of), req)
 
 
 @router.post(
@@ -261,8 +261,10 @@ async def post_chat(db: DB, body: ChatRequest) -> EventSourceResponse:
     _require_astronaut(db, body.astronaut_id)
 
     async def gen():
-        async for name, payload in llm_svc.chat_stream(body):
-            yield {"event": name, "data": json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)}
+        # Akış, istek dependency'si kapandıktan sonra da sürebilir → kendi oturumunu aç
+        with Session(get_engine()) as s:
+            async for name, payload in llm_svc.chat_stream(s, body):
+                yield {"event": name, "data": json.dumps(payload.model_dump(mode="json"), ensure_ascii=False)}
 
     return EventSourceResponse(gen(), ping=15)
 

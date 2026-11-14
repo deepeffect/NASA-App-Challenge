@@ -101,6 +101,10 @@ def test_extract_numbers_turkish_and_ignores():
     assert nums == [5.1, 7.25]
 
 
+def test_standard_codes_are_not_numbers():
+    assert extract_numbers("Eşikler NASA-STD-3001 ve ISO-8601 ile doğrulanmalı; SpO2 ve qwen3:14b") == []
+
+
 def test_ungrounded_numbers():
     data = [{"value": 5.12, "baseline": 7.248, "z7": -2.61}, json.dumps({"dose": 1.84})]
     text = "Son değer 5,1 sa, normal 7,2 sa; z = -2,6. Doz 1,84 mSv. Ama 9,9 saat uyuman lazım. 3 gün izle."
