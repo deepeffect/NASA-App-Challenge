@@ -1,0 +1,234 @@
+/**
+ * Ortak sağlık görünümünün stili (astronot /me + Dünya /monitor).
+ *
+ * Kaynak: frontend/reference/personal-artifact.html içindeki <style> bloğu. Değerler birebir taşındı;
+ * farklar sadece şunlar:
+ *   - Her şey `.ahc` kapsamında (HealthRoot). Eski ekranlara (/legacy) ve Tailwind'e sızmaz.
+ *   - Prototipteki id seçiciler sınıf oldu: #infobtn → .infobtn, #whoami → .whoami, #stip → .stip,
+ *     #chart → .chart, #tip → .tip.
+ *   - Tailwind preflight'ın sıfırladığı tarayıcı varsayılanları (başlık kalınlığı, <ol> numaraları,
+ *     <dialog> ortalaması) açıkça geri yazıldı.
+ *   - "Steps / Hide" yazısı CSS `content` yerine gerçek metin (.tgl): TR/EN çevrilebilsin diye.
+ *   - Prototipte olmayan tek ek: to-do öğesindeki "Yaptım" düğmesi (.itemact / .donebtn).
+ *
+ * Katman: kurallar `components` katmanında. Tailwind preflight'ını (base) ezer, Tailwind yardımcı
+ * sınıfları (utilities) ise bunları ezebilir. Katman sırası Tailwind'in ürettiği sırayla aynı ilan edilir
+ * (properties, theme, base, components, utilities). Bu satır ŞART: uygulamada bu dosya index.css'ten ÖNCE
+ * yüklenir (main.tsx önce App'i içe aktarır); sıra ilan edilmezse `components` ilk katman olur ve preflight
+ * buradaki her kuralı ezer.
+ *
+ * Renk kuralı (prototip): sorun yokken sakin; renk sadece sorun varken ve asla tek başına değil
+ * (her durum rengi yanında ikon + metin taşır).
+ */
+@layer properties, theme, base, components, utilities;
+
+/* ----------------------------------------------------------------------------
+   Katman dışı: index.css'teki katmansız genel kuralları (html color-scheme, :focus-visible)
+   sadece bu görünüm için ezmek gerekir; katmanlı bir kural katmansız kuralı ezemez.
+   ---------------------------------------------------------------------------- */
+html:has(.ahc) { color-scheme: light dark; }
+html:has(.ahc[data-theme="light"]) { color-scheme: light; }
+html:has(.ahc[data-theme="dark"]) { color-scheme: dark; }
+/* Sayfa zemini (prototipte body'nin kendisi --bg idi): yana taşma veya esnek kaydırmada koyu bant görünmesin.
+   Değişkenler .ahc üzerinde tanımlı olduğu için renkler burada açık yazılır; --bg ile AYNI kalmalıdır. */
+body:has(.ahc) { background: #f1f4f7; }
+@media (prefers-color-scheme: dark) {
+  body:has(.ahc:not([data-theme="light"])) { background: #0d1115; }
+}
+body:has(.ahc[data-theme="dark"]) { background: #0d1115; }
+.ahc :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ahc .strip button:focus-visible { outline-offset: 1px; }
+
+@layer components {
+  /* ---------- tema: açık varsayılan, koyu = işletim sistemi tercihi veya data-theme="dark" ---------- */
+  .ahc {
+    --bg: #f1f4f7; --surface: #ffffff; --ink: #10161d; --ink-2: #47525f; --muted: #7b8794;
+    --line: #dce2e9; --quiet: #cfd6de; --accent: #1c5cab;
+    --series-cum: #2a78d6; --series-day: #eb6834;
+    --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
+    --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--font-body);
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+  }
+  @media (prefers-color-scheme: dark) {
+    .ahc:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1115; --surface: #171c22; --ink: #eef1f4; --ink-2: #b7c0ca; --muted: #85909c;
+      --line: #2a323b; --quiet: #3a444f; --accent: #86b6ef; --series-cum: #3987e5; --series-day: #d95926;
+    }
+  }
+  .ahc[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1115; --surface: #171c22; --ink: #eef1f4; --ink-2: #b7c0ca; --muted: #85909c;
+    --line: #2a323b; --quiet: #3a444f; --accent: #86b6ef; --series-cum: #3987e5; --series-day: #d95926;
+  }
+
+  /* ---------- temel ---------- */
+  .ahc *, .ahc *::before, .ahc *::after { box-sizing: border-box; }
+  /* Tek dar kolon */
+  .ahc > main { max-width: 680px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 14px; }
+  .ahc h1, .ahc h2, .ahc h3 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; }
+  .ahc h1 { font-size: 22px; }
+  .ahc h2 { font-size: 15px; }
+  .ahc p { margin: 0; }
+  .ahc .num { font-variant-numeric: tabular-nums; }
+  .ahc .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .ahc .muted { color: var(--muted); font-size: 13px; }
+  /* Görünmez ama ekran okuyucuya açık */
+  .ahc .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  .ahc select, .ahc button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .ahc select { flex: 1 1 auto; min-width: 0; }
+  .ahc button { cursor: pointer; }
+  .ahc button:hover { border-color: var(--accent); }
+  .ahc summary { cursor: pointer; }
+
+  /* ---------- üst bar ---------- */
+  .ahc .top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "title pick info"; gap: 10px; align-items: center; }
+  .ahc .top h1 { grid-area: title; }
+  .ahc .pick { grid-area: pick; display: flex; min-width: 0; justify-content: flex-end; align-items: center; gap: 10px; }
+  .ahc .infobtn { grid-area: info; width: 34px; height: 34px; padding: 0; border-radius: 50%; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 700; font-size: 17px; color: var(--accent); }
+  @media (max-width: 560px) {
+    .ahc .top { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title info" "pick pick"; }
+  }
+  .ahc .whoami { color: var(--ink-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .ahc .appstack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* ---------- pencere (self-care çözümleri) ---------- */
+  .ahc dialog { margin: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px; width: 100%; max-width: min(560px, calc(100% - 32px)); max-height: 82vh; overflow: auto; }
+  .ahc dialog::backdrop { background: rgba(8, 12, 16, 0.45); }
+  .ahc .dlg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .ahc .dlg-head button { width: 32px; height: 32px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; }
+  .ahc details.sol { border-top: 1px solid var(--line); padding: 8px 0; }
+  .ahc details.sol summary { font-weight: 600; }
+  .ahc details.sol ol { margin: 6px 0; padding-left: 20px; list-style: decimal; }
+
+  /* ---------- giriş ---------- */
+  .ahc .login { display: flex; flex-direction: column; gap: 12px; max-width: 420px; width: 100%; margin: 24px auto 0; }
+  .ahc .login form { display: flex; flex-direction: column; gap: 10px; }
+  .ahc .field { display: flex; flex-direction: column; gap: 4px; }
+  .ahc .field label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .ahc .field input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  .ahc button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); font-weight: 600; padding: 9px 12px; }
+  .ahc .err { border-left: 3px solid var(--crit); padding-left: 10px; }
+
+  /* ---------- durum ---------- */
+  .ahc .status { display: flex; flex-direction: column; gap: 14px; }
+  .ahc .headline { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .ahc .state { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.15; display: flex; align-items: center; gap: 10px; }
+  .ahc .state-sub { color: var(--ink-2); margin-top: 2px; }
+  .ahc .score { text-align: right; flex: none; }
+  .ahc .score b { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.15; display: block; }
+  /* Durum işareti: sarı üçgen = dikkat, kırmızı baklava = rahatsız. Yanında her zaman metin vardır. */
+  .ahc .glyph { width: 13px; height: 13px; flex: none; display: inline-block; }
+  .ahc .glyph.sm { width: 10px; height: 10px; }
+  .ahc .g1 { background: var(--warn); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .ahc .g2 { background: var(--crit); transform: rotate(45deg) scale(0.85); }
+
+  /* ---------- 30 günlük şerit ---------- */
+  .ahc .stripwrap { position: relative; }
+  .ahc .strip { display: grid; grid-template-columns: repeat(var(--days, 30), 1fr); gap: 2px; height: 84px; border-bottom: 1px solid var(--quiet); }
+  .ahc .strip button { padding: 0; height: 100%; border: 0; border-radius: 0; background: none; min-width: 0; display: flex; align-items: flex-end; }
+  .ahc .strip button span { display: block; width: 100%; height: 0; border-radius: 4px 4px 0 0; background: var(--quiet); transition: height 0.35s ease, background-color 0.2s; }
+  .ahc .strip button.s1 span { background: var(--warn); }
+  .ahc .strip button.s2 span { background: var(--crit); }
+  .ahc .strip button:hover span { filter: brightness(0.88); }
+  .ahc .strip button[aria-current="true"] span { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+  .ahc .ticks { display: grid; grid-template-columns: repeat(var(--days, 30), 1fr); gap: 2px; margin-top: 6px; font-size: 11px; color: var(--muted); height: 16px; }
+  .ahc .ticks span { text-align: center; white-space: nowrap; overflow: visible; }
+  .ahc .ticks span.sel { color: var(--ink); font-weight: 600; }
+  .ahc .stip { position: absolute; top: -6px; pointer-events: none; background: var(--ink); color: var(--surface); font-size: 12.5px; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: none; transform: translateY(-100%); }
+  @media (prefers-reduced-motion: reduce) {
+    .ahc .strip button span { transition: none; }
+  }
+  .ahc .dayrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ahc .dayrow button { padding: 4px 10px; }
+  .ahc .key { display: flex; gap: 14px; flex-wrap: wrap; }
+  .ahc .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .ahc .key i.k0 { background: var(--quiet); }
+  .ahc .key i.k1 { background: var(--warn); }
+  .ahc .key i.k2 { background: var(--crit); }
+
+  /* ---------- to-do ---------- */
+  .ahc .todo { display: flex; flex-direction: column; }
+  .ahc .todo h2 { margin-bottom: 4px; }
+  .ahc .ground { border-left: 3px solid var(--crit); padding: 2px 0 2px 12px; margin: 6px 0 4px; }
+  .ahc .items { list-style: none; margin: 0; padding: 0; }
+  .ahc .item { border-top: 1px solid var(--line); padding: 10px 0; }
+  .ahc .item:first-child { border-top: 0; }
+  .ahc .item summary { display: flex; flex-direction: column; gap: 1px; list-style: none; position: relative; padding-right: 64px; }
+  .ahc .item summary::-webkit-details-marker { display: none; }
+  .ahc .item .tgl { position: absolute; right: 0; top: 2px; font-size: 13px; color: var(--accent); font-weight: 500; }
+  .ahc .item details:not([open]) .tgl-hide, .ahc .item details[open] .tgl-show { display: none; }
+  .ahc .item b { font-weight: 600; }
+  .ahc .item ol { margin: 8px 0 6px; padding-left: 20px; list-style: decimal; }
+  .ahc .item ol li { margin: 2px 0; }
+  .ahc .calm { color: var(--ink-2); }
+  /* Ek (prototipte yok): "Yaptım". Basılı hali renk + ✓ işareti + aria-pressed ile anlatılır. */
+  .ahc .itemact { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .ahc .donebtn { border-radius: 999px; padding: 4px 14px; font-size: 13.5px; font-weight: 500; }
+  .ahc .donebtn[aria-pressed="true"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+  /* Kaydedilirken `disabled` DEĞİL aria-disabled: odak düğmede kalır, ekran okuyucu yeni durumu duyar. */
+  .ahc .donebtn[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
+  .ahc .donemark { color: var(--ink-2); font-size: 13px; }
+
+  /* ---------- günlük check-in ---------- */
+  .ahc .ci-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .ahc .linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-size: 13px; font-weight: 500; }
+  .ahc .cilog { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 12px; }
+  .ahc .msg { max-width: 86%; padding: 7px 12px; border-radius: 14px; overflow-wrap: anywhere; }
+  .ahc .msg.bot { align-self: flex-start; background: var(--bg); border-bottom-left-radius: 4px; }
+  .ahc .msg.me { align-self: flex-end; background: var(--accent); color: var(--surface); border-bottom-right-radius: 4px; }
+  .ahc .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ahc .chips button { border-radius: 999px; padding: 5px 14px; }
+  .ahc .cirow { display: flex; gap: 6px; margin-top: 8px; }
+  .ahc .cirow input { flex: 1 1 auto; min-width: 0; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .ahc .cirow button { font-weight: 500; }
+  .ahc .cinotes { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 3px; }
+  .ahc .cinotes div { display: flex; gap: 8px; align-items: baseline; font-size: 14px; }
+  .ahc .cinotes .t { color: var(--muted); min-width: 84px; }
+  .ahc .cinotes .glyph { width: 10px; height: 10px; align-self: center; }
+
+  /* ---------- Dünya ile paylaşım / Dünya üssü çubuğu ---------- */
+  .ahc .earthbar { display: flex; flex-direction: column; gap: 10px; }
+  .ahc .pick2 { display: flex; gap: 6px; }
+  .ahc .pick2 select { flex: 1 1 auto; min-width: 0; }
+  .ahc .share { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .ahc .chips button[aria-pressed="true"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+  .ahc .chips button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ---------- açılır bölümler: bu günün ayrıntıları ---------- */
+  .ahc details.more > summary { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+  .ahc details.more[open] > summary { margin-bottom: 14px; }
+  .ahc .stack { display: flex; flex-direction: column; gap: 18px; }
+  .ahc .who { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--ink-2); font-size: 14px; }
+  .ahc .who b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- skor grafiği ---------- */
+  .ahc .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); margin: 4px 0 6px; }
+  .ahc .legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+  .ahc .legend i.cum { border-color: var(--series-cum); }
+  .ahc .legend i.day { border-color: var(--series-day); }
+  .ahc .chart { position: relative; width: 100%; }
+  .ahc .chart svg { display: block; width: 100%; touch-action: pan-y; cursor: crosshair; }
+  .ahc .tip { position: absolute; top: 4px; pointer-events: none; background: var(--ink); color: var(--surface); font-size: 12.5px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; white-space: nowrap; display: none; }
+
+  /* ---------- ölçümler tablosu ---------- */
+  /* position: relative → görünmez başlık metni (.vh) bu kutuyla birlikte kayar/kırpılır, sayfayı yana taşırmaz. */
+  .ahc .scroll { overflow-x: auto; position: relative; }
+  .ahc table.readings { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .ahc table.readings th, .ahc table.readings td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .ahc table.readings th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .ahc table.readings td.r, .ahc table.readings th.r { text-align: right; }
+  .ahc table.readings tr.grp td { font-family: var(--font-display); font-weight: 600; padding-top: 12px; border-bottom: 1px solid var(--ink-2); }
+  .ahc table.readings td.name { white-space: normal; min-width: 140px; }
+  .ahc table.readings td .unit { color: var(--muted); }
+  .ahc table.readings td.flag { font-weight: 600; }
+}

@@ -16,6 +16,9 @@ istasyonda değil" gösterilir (`GET /api/station`):
 
 - Kurallar ve görünüm için tek doğru kaynak: `reference/personal-artifact.html` (prototip).
 - İki ekranın ortak bileşenleri: `src/shared/health/` (aynı `DayView` / `StripDay` sözleşmesi; Dünya'da gizli alanlar `hidden: true`).
+  `StatusCard`, `TodoCard`, `ReadingsTable`, `ScoreChart`, `WhoRow`, `SelfCareDialog`; hepsi `audience: "astronaut" | "earth"` alır
+  ve bir `HealthRoot` içinde kullanılır (prototipin teması, açık/koyu, tek dar kolon, offline yazı tipleri). Kullanım örneği ve
+  ekranların kendi kartları için hazır sınıflar: `src/shared/health/index.ts`.
 - Yeni uçların istemcisi: `src/api/station.ts` (`stationApi.*`, `openMonitorStream`, `chat`). Dil her istekte
   `lang` ile açıkça gider (`src/shared/i18n.tsx`, TR/EN), token sekme oturumunda saklanır.
 - Geliştirme: kökte `npm run dev:ship` (→ <http://localhost:5173/me>) ve `npm run dev:earth` (→ <http://localhost:5174/monitor>).
