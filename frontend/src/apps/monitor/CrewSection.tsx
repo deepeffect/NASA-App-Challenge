@@ -53,6 +53,7 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
   const day = useMonitorDay(a.id, member.today);
   const catalog = useCatalog();
   const hid = `card-${a.id}`;
+  const priv = day.data?.view.readings.filter((r) => r.private) ?? [];
 
   return (
     <article className={`card ccard is-s${member.status}${flashClass(flashFor(a.id))}`} aria-labelledby={hid} data-astronaut={a.id}>
@@ -97,6 +98,13 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
           <span>{t("sharing")}</span>
           <span data-share={member.share ?? "none"}>{t(shareKey(member.share))}</span>
         </div>
+        {priv.length > 0 && (
+          // Ruh hali / stres: Dünya sadece astronot o günün check-in'ini paylaştıysa görür
+          <div className="row" data-private={priv.every((r) => r.hidden) ? "hidden" : "shared"}>
+            <span>{priv.map((r) => r.label).join(" · ")}</span>
+            <span className="num">{priv.every((r) => r.hidden) ? priv[0].value_text : priv.map((r) => r.value_text).join(" · ")}</span>
+          </div>
+        )}
       </div>
     </article>
   );
