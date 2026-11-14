@@ -30,7 +30,7 @@ Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
 | Komut | Ne yapar |
 |---|---|
 | `npm run setup` | uv kontrolü → `backend/.venv` + `uv pip install -e ".[dev]"` → `.env.example`→`.env` (yoksa) → npm paketleri → `gen:api` → DB boşsa `seed --seed 42`. Tekrar çalıştırmak güvenli. |
-| `npm run dev` | backend (`127.0.0.1:8000`, `--reload`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır |
+| `npm run dev` | backend (`127.0.0.1:8000`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır. Backend `app/` altındaki `.py` değişince kendiliğinden yeniden başlar (`scripts/backend-dev.mjs`; uvicorn `--reload` Windows'ta tüm konsola Ctrl+C gönderip `npm run dev`'i düşürdüğü için kullanılmıyor) |
 | `npm run dev:backend` / `npm run dev:frontend` | tek tek |
 | `npm run dev:backend:lan` | backend'i ağa aç (`0.0.0.0:8000`) — takım arkadaşları bağlanacaksa |
 | `npm run seed` | demo verisini yeniden yükle (DB'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
