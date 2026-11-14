@@ -338,3 +338,48 @@ def test_monitor_api_reads_earth_db(ship, receiver, earth_engine, tmp_path_facto
         # astronot uçları Dünya'da yok; yazma 403
         assert e.get("/api/me", headers=auth).status_code == 404
         assert e.post("/api/checkin/share", json={"level": "full"}, headers=auth).status_code == 403
+
+
+def test_monitor_events_list(ship, receiver, earth_engine) -> None:
+    """Canlı akışın geçmişi: earth.db'deki olaylar yeniden eskiye; gün içeriği ve check-in metni taşımaz."""
+    app, c = ship
+    secret = "slept badly EVENTS-SECRET-17"
+    auth = complete_checkin(c, "A060", answers=(secret, "Low", "A lot", "None", "No"))
+    c.post("/api/checkin/share", json={"level": "scores"}, headers=auth)
+    complete_checkin(c, "A061")  # private kalır
+
+    async def go():
+        async with receiver.client(httpx.ASGITransport(app=app)) as client:
+            await receiver.consume(client, follow=False)
+
+    run(go())
+    earth = create_app(Settings(station_role="earth", data_source="astronaut_health", database_url=str(earth_engine.url)))
+    with TestClient(earth) as e:
+        assert e.get("/api/monitor/events").status_code == 401
+        auth = login(e, "EARTH")
+        r = e.get("/api/monitor/events?limit=3", headers=auth)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert secret not in r.text and "notes" not in r.text and "readings" not in r.text
+        evs = body["events"]
+        assert [(x["type"], x["astronaut_id"]) for x in evs] == [
+            ("checkin.completed", "A061"),
+            ("checkin.shared", "A060"),
+            ("checkin.completed", "A060"),
+        ]
+        assert body["last_seq"] == receiver.state()["last_seq"] == evs[0]["seq"]
+        assert body["total"] >= 3 and evs[0]["seq"] > evs[1]["seq"] > evs[2]["seq"]
+        shared = evs[1]
+        assert shared["share"] == "scores" and shared["day"] == 30 and shared["mission_day"]
+        assert shared["simulated_light_delay_minutes"] == 20.0
+        assert shared["ship_time"] <= shared["publish_time"] <= shared["earth_received_time"]
+        assert shared["ship_time"].endswith(("Z", "+00:00"))
+        # filtreler ve sayfalama
+        only = e.get("/api/monitor/events?astronaut_id=a060&type=checkin.completed", headers=auth).json()
+        assert [x["type"] for x in only["events"]] == ["checkin.completed"] and only["total"] == 1
+        both = e.get("/api/monitor/events?astronaut_id=A060&type=checkin.completed&type=checkin.shared", headers=auth).json()
+        assert both["total"] == 2
+        older = e.get(f"/api/monitor/events?limit=1&before_seq={evs[1]['seq']}", headers=auth).json()
+        assert older["events"][0]["seq"] == evs[2]["seq"]
+        assert e.get("/api/monitor/events?type=link.heartbeat", headers=auth).status_code == 422
+        assert e.get("/api/monitor/events?limit=0", headers=auth).status_code == 422
