@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { auth, type StationInfo, stationApi } from "../../api/station";
+import { AllAstronauts } from "./AllAstronauts";
 import { isUnauthorized } from "./api";
 import { CrewSection } from "./CrewSection";
 import { LinkBar } from "./LinkBar";
@@ -80,6 +81,7 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
       <div className="mon-body">
         <main className="mon-main">
           <CrewSection />
+          <AllAstronauts />
         </main>
         <aside className="mon-side" />
       </div>
