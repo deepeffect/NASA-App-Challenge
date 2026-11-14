@@ -20,6 +20,7 @@ import { AllAstronauts } from "./AllAstronauts";
 import { isUnauthorized } from "./api";
 import { CrewSection } from "./CrewSection";
 import { LinkBar } from "./LinkBar";
+import { LiveFeed } from "./LiveFeed";
 import { LiveProvider } from "./live";
 import { Login } from "./Login";
 import { Footer, Header } from "./Shell";
@@ -83,7 +84,9 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
           <CrewSection />
           <AllAstronauts />
         </main>
-        <aside className="mon-side" />
+        <aside className="mon-side">
+          <LiveFeed />
+        </aside>
       </div>
       <Footer station={station} />
     </>
