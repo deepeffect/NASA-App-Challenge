@@ -1,0 +1,449 @@
+veri artırma: train 169 olay / 88 kopya, val 46 olay / 24 kopya
+satır sayısı  train 165377  val 41157 (gerçek 10094)  test 1598  kontrol 1598
+train'de 'yeşilken gelecek hafta sarı/kırmızı' örneği: 1049
+seçilen parametreler: {'max_iter': 400, 'learning_rate': 0.03, 'max_leaf_nodes': 31, 'l2_regularization': 1.0, 'min_samples_leaf': 40} val MAE 0.312
+{
+ "val": {
+  "model": {
+   "n": 41157,
+   "mae_z": 0.312,
+   "mae_z_when_target_yellow_or_red": 1.043,
+   "onset": {
+    "true_new_problems": 256,
+    "flagged": 14,
+    "hit": 11,
+    "false_alarm": 3,
+    "missed": 245,
+    "precision": 0.786,
+    "recall": 0.043
+   },
+   "onset_possible_p90": {
+    "flagged": 308,
+    "hit": 104,
+    "false_alarm": 204,
+    "missed": 152,
+    "precision": 0.338,
+    "recall": 0.406
+   },
+   "interval_80_coverage": 0.788
+  },
+  "zero (personal normal)": {
+   "n": 41157,
+   "mae_z": 0.387,
+   "mae_z_when_target_yellow_or_red": 3.006,
+   "onset": {
+    "true_new_problems": 256,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 256,
+    "precision": null,
+    "recall": 0.0
+   }
+  },
+  "persistence (last 7-day mean)": {
+   "n": 41157,
+   "mae_z": 0.378,
+   "mae_z_when_target_yellow_or_red": 0.933,
+   "onset": {
+    "true_new_problems": 256,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 256,
+    "precision": null,
+    "recall": 0.0
+   }
+  },
+  "linear trend": {
+   "n": 41157,
+   "mae_z": 1.195,
+   "mae_z_when_target_yellow_or_red": 1.383,
+   "onset": {
+    "true_new_problems": 256,
+    "flagged": 3541,
+    "hit": 158,
+    "false_alarm": 3383,
+    "missed": 98,
+    "precision": 0.045,
+    "recall": 0.617
+   }
+  }
+ },
+ "val_real_only": {
+  "model": {
+   "n": 10094,
+   "mae_z": 0.277,
+   "mae_z_when_target_yellow_or_red": 1.521,
+   "onset": {
+    "true_new_problems": 1,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 1,
+    "precision": null,
+    "recall": 0.0
+   },
+   "onset_possible_p90": {
+    "flagged": 8,
+    "hit": 0,
+    "false_alarm": 8,
+    "missed": 1,
+    "precision": 0.0,
+    "recall": 0.0
+   },
+   "interval_80_coverage": 0.801
+  },
+  "zero (personal normal)": {
+   "n": 10094,
+   "mae_z": 0.304,
+   "mae_z_when_target_yellow_or_red": 2.0,
+   "onset": {
+    "true_new_problems": 1,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 1,
+    "precision": null,
+    "recall": 0.0
+   }
+  },
+  "persistence (last 7-day mean)": {
+   "n": 10094,
+   "mae_z": 0.349,
+   "mae_z_when_target_yellow_or_red": 1.1,
+   "onset": {
+    "true_new_problems": 1,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 1,
+    "precision": null,
+    "recall": 0.0
+   }
+  },
+  "linear trend": {
+   "n": 10094,
+   "mae_z": 1.176,
+   "mae_z_when_target_yellow_or_red": 3.897,
+   "onset": {
+    "true_new_problems": 1,
+    "flagged": 784,
+    "hit": 0,
+    "false_alarm": 784,
+    "missed": 1,
+    "precision": 0.0,
+    "recall": 0.0
+   }
+  }
+ },
+ "test": {
+  "model": {
+   "n": 1598,
+   "mae_z": 0.322,
+   "mae_z_when_target_yellow_or_red": 1.276,
+   "onset": {
+    "true_new_problems": 21,
+    "flagged": 2,
+    "hit": 2,
+    "false_alarm": 0,
+    "missed": 19,
+    "precision": 1.0,
+    "recall": 0.095
+   },
+   "onset_possible_p90": {
+    "flagged": 17,
+    "hit": 10,
+    "false_alarm": 7,
+    "missed": 11,
+    "precision": 0.588,
+    "recall": 0.476
+   },
+   "interval_80_coverage": 0.784
+  },
+  "zero (personal normal)": {
+   "n": 1598,
+   "mae_z": 0.417,
+   "mae_z_when_target_yellow_or_red": 3.238,
+   "onset": {
+    "true_new_problems": 21,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 21,
+    "precision": null,
+    "recall": 0.0
+   }
+  },
+  "persistence (last 7-day mean)": {
+   "n": 1598,
+   "mae_z": 0.37,
+   "mae_z_when_target_yellow_or_red": 1.0,
+   "onset": {
+    "true_new_problems": 21,
+    "flagged": 3,
+    "hit": 2,
+    "false_alarm": 1,
+    "missed": 19,
+    "precision": 0.667,
+    "recall": 0.095
+   }
+  },
+  "linear trend": {
+   "n": 1598,
+   "mae_z": 1.117,
+   "mae_z_when_target_yellow_or_red": 2.026,
+   "onset": {
+    "true_new_problems": 21,
+    "flagged": 96,
+    "hit": 10,
+    "false_alarm": 86,
+    "missed": 11,
+    "precision": 0.104,
+    "recall": 0.476
+   }
+  }
+ },
+ "control": {
+  "model": {
+   "n": 1598,
+   "mae_z": 0.265,
+   "mae_z_when_target_yellow_or_red": null,
+   "onset": {
+    "true_new_problems": 0,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 0,
+    "precision": null,
+    "recall": null
+   },
+   "onset_possible_p90": {
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 0,
+    "precision": null,
+    "recall": null
+   },
+   "interval_80_coverage": 0.806
+  },
+  "zero (personal normal)": {
+   "n": 1598,
+   "mae_z": 0.28,
+   "mae_z_when_target_yellow_or_red": null,
+   "onset": {
+    "true_new_problems": 0,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 0,
+    "precision": null,
+    "recall": null
+   }
+  },
+  "persistence (last 7-day mean)": {
+   "n": 1598,
+   "mae_z": 0.337,
+   "mae_z_when_target_yellow_or_red": null,
+   "onset": {
+    "true_new_problems": 0,
+    "flagged": 0,
+    "hit": 0,
+    "false_alarm": 0,
+    "missed": 0,
+    "precision": null,
+    "recall": null
+   }
+  },
+  "linear trend": {
+   "n": 1598,
+   "mae_z": 1.12,
+   "mae_z_when_target_yellow_or_red": null,
+   "onset": {
+    "true_new_problems": 0,
+    "flagged": 94,
+    "hit": 0,
+    "false_alarm": 94,
+    "missed": 0,
+    "precision": 0.0,
+    "recall": null
+   }
+  }
+ },
+ "test_lead_times": [
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "engine_first_yellow_day": 164,
+   "model_first_correct_warning_day": null,
+   "lead_days": null,
+   "earlier_wrong_flags": 0
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_duration",
+   "engine_first_yellow_day": 158,
+   "model_first_correct_warning_day": 157,
+   "lead_days": 1,
+   "earlier_wrong_flags": 0
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "stress",
+   "engine_first_yellow_day": 158,
+   "model_first_correct_warning_day": 157,
+   "lead_days": 1,
+   "earlier_wrong_flags": 0
+  }
+ ],
+ "test_lead_times_possible_p90": [
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "engine_first_yellow_day": 164,
+   "model_first_correct_warning_day": 157,
+   "lead_days": 7,
+   "earlier_wrong_flags": 1
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_duration",
+   "engine_first_yellow_day": 158,
+   "model_first_correct_warning_day": 155,
+   "lead_days": 3,
+   "earlier_wrong_flags": 0
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "stress",
+   "engine_first_yellow_day": 158,
+   "model_first_correct_warning_day": 156,
+   "lead_days": 2,
+   "earlier_wrong_flags": 0
+  }
+ ],
+ "test_flags_possible_p90": [
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_duration",
+   "day": 155,
+   "target_day": 162,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 156,
+   "target_day": 163,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_duration",
+   "day": 156,
+   "target_day": 163,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "stress",
+   "day": 156,
+   "target_day": 163,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 157,
+   "target_day": 164,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_duration",
+   "day": 157,
+   "target_day": 164,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "stress",
+   "day": 157,
+   "target_day": 164,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 158,
+   "target_day": 165,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 158,
+   "target_day": 165,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 161,
+   "target_day": 168,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 162,
+   "target_day": 169,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "resting_hr",
+   "day": 163,
+   "target_day": 170,
+   "correct": true
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 168,
+   "target_day": 175,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 170,
+   "target_day": 177,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 171,
+   "target_day": 178,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 172,
+   "target_day": 179,
+   "correct": false
+  },
+  {
+   "astronaut": "AST-02",
+   "indicator": "sleep_quality",
+   "day": 173,
+   "target_day": 180,
+   "correct": false
+  }
+ ],
+ "control_false_alarms_by_indicator": [],
+ "control_false_alarms_possible_p90": []
+}

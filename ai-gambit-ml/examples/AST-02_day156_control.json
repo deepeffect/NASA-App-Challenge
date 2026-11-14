@@ -1,0 +1,272 @@
+{
+  "type": "health_forecast",
+  "astronaut_id": "AST-02",
+  "as_of_mission_day": 156,
+  "horizon_days": 7,
+  "input_window_days": 7,
+  "method": "gradient-boosted forecast of next week's 7-day mean, on the rule engine's personal z-score scale",
+  "model_version": "forecast_v2",
+  "disclaimer": "Projection from a model trained on synthetic mission data. Decision support, not a diagnosis.",
+  "validation_mae_z": 0.312,
+  "risk_levels": {
+    "likely": "central forecast reaches the yellow/red rule threshold next week",
+    "possible": "only the worst-case end of the 80% forecast band reaches the yellow/red threshold",
+    "low": "forecast stays inside the personal normal"
+  },
+  "forecasts": [
+    {
+      "indicator": "resting heart rate",
+      "indicator_tr": "Dinlenik nabız",
+      "unit": "bpm",
+      "personal_baseline": 45.05,
+      "last_7_day_mean": 47.0,
+      "forecast_next_7_day_mean": 45.55,
+      "forecast_range_80pct": [
+        44.31,
+        46.69
+      ],
+      "worse_when": "higher",
+      "worst_case_value": 46.69,
+      "z_now": 1.4,
+      "z_forecast": 0.52,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "blood pressure (systolic)",
+      "indicator_tr": "Kan basıncı",
+      "unit": "mmHg",
+      "personal_baseline": 121.15,
+      "last_7_day_mean": 122.71,
+      "forecast_next_7_day_mean": 123.24,
+      "forecast_range_80pct": [
+        121.02,
+        127.29
+      ],
+      "worse_when": "higher",
+      "worst_case_value": 127.29,
+      "z_now": -0.6,
+      "z_forecast": -0.47,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "heart rate variability (HRV)",
+      "indicator_tr": "Kalp hızı değişkenliği (HRV)",
+      "unit": "ms",
+      "personal_baseline": 25.57,
+      "last_7_day_mean": 25.76,
+      "forecast_next_7_day_mean": 25.95,
+      "forecast_range_80pct": [
+        24.0,
+        28.1
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 24.0,
+      "z_now": 0.2,
+      "z_forecast": 0.25,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "sleep quality (self-report)",
+      "indicator_tr": "Uyku kalitesi",
+      "unit": "score_1_5",
+      "personal_baseline": 3.38,
+      "last_7_day_mean": 3.86,
+      "forecast_next_7_day_mean": 3.43,
+      "forecast_range_80pct": [
+        3.15,
+        3.72
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 3.15,
+      "z_now": 0.9,
+      "z_forecast": 0.12,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": true
+    },
+    {
+      "indicator": "stress (self-report)",
+      "indicator_tr": "Stres",
+      "unit": "score_1_5",
+      "personal_baseline": 1.26,
+      "last_7_day_mean": 1.14,
+      "forecast_next_7_day_mean": 1.23,
+      "forecast_range_80pct": [
+        1.02,
+        1.46
+      ],
+      "worse_when": "higher",
+      "worst_case_value": 1.46,
+      "z_now": -0.3,
+      "z_forecast": -0.1,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": true
+    },
+    {
+      "indicator": "exercise time",
+      "indicator_tr": "Egzersiz süresi",
+      "unit": "min",
+      "personal_baseline": 101.05,
+      "last_7_day_mean": 105.0,
+      "forecast_next_7_day_mean": 104.87,
+      "forecast_range_80pct": [
+        98.28,
+        111.1
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 98.28,
+      "z_now": 0.1,
+      "z_forecast": 0.09,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "mood (self-report)",
+      "indicator_tr": "Ruh hali",
+      "unit": "score_1_5",
+      "personal_baseline": 3.15,
+      "last_7_day_mean": 3.29,
+      "forecast_next_7_day_mean": 3.22,
+      "forecast_range_80pct": [
+        3.07,
+        3.42
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 3.07,
+      "z_now": 0.1,
+      "z_forecast": -0.06,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": true
+    },
+    {
+      "indicator": "reaction time",
+      "indicator_tr": "Tepki süresi",
+      "unit": "ms",
+      "personal_baseline": 313.2,
+      "last_7_day_mean": 317.57,
+      "forecast_next_7_day_mean": 313.45,
+      "forecast_range_80pct": [
+        304.7,
+        321.84
+      ],
+      "worse_when": "higher",
+      "worst_case_value": 321.84,
+      "z_now": 0.3,
+      "z_forecast": 0.04,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "sleep duration",
+      "indicator_tr": "Uyku süresi",
+      "unit": "h",
+      "personal_baseline": 6.42,
+      "last_7_day_mean": 6.5,
+      "forecast_next_7_day_mean": 6.42,
+      "forecast_range_80pct": [
+        6.08,
+        6.75
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 6.08,
+      "z_now": 0.1,
+      "z_forecast": -0.03,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "body temperature",
+      "indicator_tr": "Vücut sıcaklığı",
+      "unit": "degC",
+      "personal_baseline": 36.79,
+      "last_7_day_mean": 36.71,
+      "forecast_next_7_day_mean": 36.74,
+      "forecast_range_80pct": [
+        36.71,
+        36.77
+      ],
+      "worse_when": "higher",
+      "worst_case_value": 36.77,
+      "z_now": -0.2,
+      "z_forecast": -0.02,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "blood oxygen (SpO2)",
+      "indicator_tr": "Kan oksijen satürasyonu (SpO2)",
+      "unit": "%",
+      "personal_baseline": 97.03,
+      "last_7_day_mean": 97.16,
+      "forecast_next_7_day_mean": 97.15,
+      "forecast_range_80pct": [
+        97.13,
+        97.16
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 97.13,
+      "z_now": 0.1,
+      "z_forecast": -0.0,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    },
+    {
+      "indicator": "body mass",
+      "indicator_tr": "Vücut kütlesi",
+      "unit": "kg",
+      "personal_baseline": 75.87,
+      "last_7_day_mean": 75.2,
+      "forecast_next_7_day_mean": 75.26,
+      "forecast_range_80pct": [
+        75.14,
+        75.43
+      ],
+      "worse_when": "lower",
+      "worst_case_value": 75.14,
+      "z_now": -0.1,
+      "z_forecast": -0.0,
+      "status_now": "GREEN",
+      "status_forecast": "GREEN",
+      "worst_case_status": "GREEN",
+      "risk_next_week": "low",
+      "self_report": false
+    }
+  ],
+  "watch_list": [],
+  "status": "ok"
+}

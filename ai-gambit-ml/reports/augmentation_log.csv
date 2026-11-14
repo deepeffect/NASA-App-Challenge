@@ -1,0 +1,216 @@
+indicator,onset_day,magnitude_sd,ramp,plateau,secondary,series
+blood_pressure,47,1.95,3,35,[],mars_aug00/AST-01
+stress,387,-2.15,8,34,"['mood', 'hrv', 'resting_hr']",mars_aug00/AST-01
+exercise,441,4.36,2,30,"['body_mass', 'mood']",mars_aug00/AST-01
+exercise,91,3.18,1,24,"['body_mass', 'mood']",mars_aug01/AST-01
+sleep_duration,334,2.86,10,19,[],mars_aug01/AST-01
+sleep_duration,533,4.19,6,10,"['sleep_quality', 'mood', 'hrv', 'reaction_time']",mars_aug01/AST-01
+body_temp,421,2.17,2,29,"['resting_hr', 'hrv', 'sleep_quality', 'exercise']",mars_aug02/AST-01
+hrv,162,-1.53,6,29,[],mars_aug02/AST-01
+body_temp,214,0.94,13,31,"['resting_hr', 'hrv', 'exercise']",mars_aug02/AST-01
+resting_hr,84,-1.26,3,24,[],mars_aug03/AST-01
+sleep_quality,503,3.0,13,30,[],mars_aug03/AST-01
+stress,528,-2.58,5,12,"['hrv', 'resting_hr']",mars_aug03/AST-01
+exercise,521,4.48,14,18,[],mars_aug04/AST-01
+reaction_time,383,2.23,12,31,[],mars_aug04/AST-01
+hrv,222,2.61,11,6,['resting_hr'],mars_aug04/AST-01
+exercise,559,-1.32,5,9,[],mars_aug05/AST-01
+stress,533,-0.73,1,14,"['sleep_duration', 'mood', 'resting_hr']",mars_aug05/AST-01
+body_temp,225,1.07,14,11,"['resting_hr', 'sleep_quality', 'exercise']",mars_aug05/AST-01
+sleep_duration,341,1.74,10,12,[],mars_aug06/AST-01
+body_temp,230,1.53,13,6,"['resting_hr', 'hrv']",mars_aug06/AST-01
+sleep_duration,373,2.16,14,6,[],mars_aug06/AST-01
+reaction_time,331,-2.47,10,39,[],mars_aug07/AST-01
+body_mass,322,1.33,2,28,[],mars_aug07/AST-01
+body_temp,128,2.11,2,28,[],mars_aug07/AST-01
+hrv,160,2.81,11,17,[],mars_aug08/AST-01
+resting_hr,546,2.8,4,14,['hrv'],mars_aug08/AST-01
+resting_hr,257,-1.19,13,15,['hrv'],mars_aug08/AST-01
+exercise,385,-1.87,6,31,[],mars_aug09/AST-01
+resting_hr,195,-1.82,2,21,[],mars_aug09/AST-01
+blood_pressure,231,3.49,14,15,[],mars_aug09/AST-01
+exercise,195,2.2,6,8,"['body_mass', 'mood']",mars_aug10/AST-01
+sleep_quality,534,-1.33,1,29,[],mars_aug10/AST-01
+hrv,332,1.93,3,21,[],mars_aug10/AST-01
+stress,180,3.52,10,12,['resting_hr'],mars_aug00/AST-02
+stress,313,-0.66,5,21,['sleep_duration'],mars_aug00/AST-02
+sleep_duration,335,-1.8,9,34,[],mars_aug00/AST-02
+blood_pressure,288,2.38,3,18,[],mars_aug01/AST-02
+sleep_quality,400,1.89,7,37,[],mars_aug01/AST-02
+exercise,366,3.76,4,39,[],mars_aug01/AST-02
+blood_pressure,227,1.56,11,16,[],mars_aug02/AST-02
+reaction_time,73,4.18,9,24,[],mars_aug02/AST-02
+sleep_quality,178,1.42,14,21,[],mars_aug02/AST-02
+reaction_time,144,4.49,10,30,[],mars_aug03/AST-02
+sleep_duration,362,2.96,14,20,"['sleep_quality', 'stress', 'resting_hr', 'reaction_time']",mars_aug03/AST-02
+reaction_time,576,0.84,5,22,[],mars_aug03/AST-02
+blood_pressure,500,4.27,14,15,[],mars_aug04/AST-02
+stress,384,1.39,6,30,"['sleep_duration', 'hrv', 'resting_hr']",mars_aug04/AST-02
+body_temp,190,-1.72,10,21,"['resting_hr', 'hrv', 'sleep_quality']",mars_aug04/AST-02
+sleep_quality,409,2.57,6,30,[],mars_aug05/AST-02
+stress,473,3.38,3,24,"['sleep_duration', 'resting_hr']",mars_aug05/AST-02
+stress,89,2.28,6,22,"['sleep_duration', 'resting_hr']",mars_aug05/AST-02
+sleep_duration,30,2.6,1,30,"['sleep_quality', 'stress', 'hrv', 'resting_hr']",mars_aug06/AST-02
+sleep_quality,192,3.99,10,28,[],mars_aug06/AST-02
+resting_hr,517,3.68,14,33,[],mars_aug06/AST-02
+exercise,139,3.6,12,17,[],mars_aug07/AST-02
+stress,490,2.34,13,9,"['sleep_duration', 'hrv', 'resting_hr']",mars_aug07/AST-02
+stress,400,0.92,1,9,[],mars_aug07/AST-02
+exercise,59,2.65,13,35,['body_mass'],mars_aug08/AST-02
+hrv,270,3.97,3,23,[],mars_aug08/AST-02
+hrv,500,4.31,6,12,['resting_hr'],mars_aug08/AST-02
+body_temp,418,3.64,10,17,[],mars_aug09/AST-02
+stress,438,1.07,14,19,['hrv'],mars_aug09/AST-02
+hrv,315,3.72,8,35,[],mars_aug09/AST-02
+stress,96,3.17,14,10,"['hrv', 'resting_hr']",mars_aug10/AST-02
+resting_hr,344,2.93,12,15,['hrv'],mars_aug10/AST-02
+reaction_time,411,-1.36,9,35,[],mars_aug10/AST-02
+blood_pressure,323,3.23,8,39,[],mars_aug11/AST-02
+sleep_duration,335,3.99,10,7,[],mars_aug11/AST-02
+exercise,478,3.53,12,19,[],mars_aug11/AST-02
+body_temp,496,2.37,11,27,[],mars_aug00/AST-03
+stress,251,2.61,7,7,['resting_hr'],mars_aug00/AST-03
+blood_pressure,399,2.35,12,17,[],mars_aug00/AST-03
+exercise,537,4.33,4,39,"['body_mass', 'mood']",mars_aug01/AST-03
+sleep_duration,569,4.1,4,11,"['resting_hr', 'reaction_time']",mars_aug01/AST-03
+body_temp,142,0.92,3,5,"['resting_hr', 'exercise']",mars_aug01/AST-03
+sleep_duration,395,1.83,12,30,"['sleep_quality', 'stress', 'mood', 'resting_hr']",mars_aug02/AST-03
+spo2,422,4.28,11,31,[],mars_aug02/AST-03
+stress,141,2.38,8,24,[],mars_aug02/AST-03
+hrv,35,-1.31,8,14,[],mars_aug03/AST-03
+exercise,268,3.93,7,17,['body_mass'],mars_aug03/AST-03
+body_mass,511,2.32,8,10,[],mars_aug03/AST-03
+sleep_duration,198,-2.11,13,5,"['sleep_quality', 'stress', 'hrv', 'reaction_time']",mars_aug04/AST-03
+hrv,498,1.09,9,22,['resting_hr'],mars_aug04/AST-03
+hrv,178,1.75,12,26,['resting_hr'],mars_aug04/AST-03
+exercise,549,1.75,5,11,['mood'],mars_aug05/AST-03
+body_mass,56,-1.41,1,5,[],mars_aug05/AST-03
+resting_hr,246,0.92,12,32,[],mars_aug05/AST-03
+hrv,406,2.51,12,35,[],mars_aug07/AST-03
+stress,70,2.88,9,25,"['mood', 'hrv', 'resting_hr']",mars_aug07/AST-03
+sleep_duration,102,-2.44,10,36,[],mars_aug07/AST-03
+body_temp,253,3.04,5,17,"['resting_hr', 'hrv', 'sleep_quality', 'exercise']",mars_aug08/AST-03
+stress,69,4.22,4,30,[],mars_aug08/AST-03
+reaction_time,42,-1.51,5,19,[],mars_aug08/AST-03
+body_temp,428,4.09,11,35,['hrv'],mars_aug09/AST-03
+stress,178,4.25,11,6,['hrv'],mars_aug09/AST-03
+stress,421,2.34,2,7,"['sleep_duration', 'hrv', 'resting_hr']",mars_aug09/AST-03
+resting_hr,293,-1.24,10,30,[],mars_aug10/AST-03
+body_temp,449,1.52,6,11,"['resting_hr', 'sleep_quality', 'exercise']",mars_aug10/AST-03
+sleep_duration,373,3.0,14,21,"['stress', 'mood', 'resting_hr']",mars_aug10/AST-03
+sleep_duration,376,2.31,12,12,[],mars_aug11/AST-03
+hrv,440,3.67,12,35,[],mars_aug11/AST-03
+body_temp,400,2.31,9,30,"['resting_hr', 'sleep_quality', 'exercise']",mars_aug11/AST-03
+sleep_duration,43,2.63,9,5,"['sleep_quality', 'stress', 'mood', 'resting_hr', 'reaction_time']",mars_aug00/AST-04
+body_temp,268,3.15,14,7,[],mars_aug00/AST-04
+spo2,407,-0.89,8,31,[],mars_aug00/AST-04
+mood,363,-1.9,1,9,[],mars_aug01/AST-04
+exercise,343,3.97,1,29,"['body_mass', 'mood']",mars_aug01/AST-04
+spo2,487,1.19,8,9,['resting_hr'],mars_aug01/AST-04
+sleep_duration,202,3.19,2,9,"['stress', 'mood', 'hrv', 'resting_hr']",mars_aug02/AST-04
+sleep_quality,561,4.2,6,29,['mood'],mars_aug02/AST-04
+sleep_duration,244,2.89,7,27,[],mars_aug02/AST-04
+exercise,521,2.8,11,26,['mood'],mars_aug03/AST-04
+exercise,131,2.62,7,25,"['body_mass', 'mood']",mars_aug03/AST-04
+spo2,282,1.59,7,9,[],mars_aug03/AST-04
+body_temp,185,1.22,4,9,['exercise'],mars_aug04/AST-04
+resting_hr,42,2.84,8,17,[],mars_aug04/AST-04
+blood_pressure,92,1.51,6,35,[],mars_aug04/AST-04
+spo2,66,2.32,3,34,[],mars_aug05/AST-04
+sleep_duration,105,4.14,12,26,"['sleep_quality', 'mood', 'resting_hr', 'reaction_time']",mars_aug05/AST-04
+stress,553,3.55,10,21,[],mars_aug05/AST-04
+mood,565,2.39,2,36,"['stress', 'sleep_quality']",mars_aug07/AST-04
+body_temp,261,2.03,7,26,"['hrv', 'exercise']",mars_aug07/AST-04
+stress,424,0.96,14,12,[],mars_aug07/AST-04
+exercise,520,-1.82,12,29,['mood'],mars_aug08/AST-04
+hrv,278,3.07,1,31,[],mars_aug08/AST-04
+exercise,543,-0.91,1,23,[],mars_aug08/AST-04
+sleep_quality,306,3.82,12,22,['mood'],mars_aug09/AST-04
+sleep_quality,411,-0.91,10,20,[],mars_aug09/AST-04
+body_temp,391,4.38,2,21,[],mars_aug09/AST-04
+sleep_duration,166,1.81,6,18,"['sleep_quality', 'mood', 'hrv']",mars_aug11/AST-04
+sleep_duration,268,-0.52,3,38,"['sleep_quality', 'mood', 'hrv', 'resting_hr', 'reaction_time']",mars_aug11/AST-04
+body_mass,570,3.68,8,25,[],mars_aug11/AST-04
+sleep_duration,43,1.58,6,22,"['hrv', 'resting_hr']",env84_aug00/AST-01
+sleep_duration,60,3.74,7,17,"['hrv', 'resting_hr', 'reaction_time']",env84_aug01/AST-01
+sleep_duration,58,3.23,2,29,[],env84_aug02/AST-01
+exercise,39,1.89,11,8,[],env84_aug03/AST-01
+sleep_duration,37,2.5,14,23,[],env84_aug04/AST-01
+reaction_time,28,2.86,14,25,[],env84_aug05/AST-01
+hrv,54,3.02,7,23,[],env84_aug00/AST-02
+sleep_duration,58,4.27,10,27,[],env84_aug01/AST-02
+sleep_duration,34,2.34,8,31,[],env84_aug02/AST-02
+body_temp,48,-2.41,5,18,['exercise'],env84_aug03/AST-02
+exercise,57,-1.03,1,29,[],env84_aug04/AST-02
+body_temp,60,2.14,2,28,"['resting_hr', 'exercise']",env84_aug00/AST-03
+exercise,46,1.96,6,7,[],env84_aug02/AST-03
+hrv,43,2.94,10,18,[],env84_aug03/AST-03
+sleep_duration,55,3.7,6,11,"['hrv', 'resting_hr', 'reaction_time']",env84_aug04/AST-03
+exercise,50,-1.38,9,7,[],env84_aug05/AST-03
+resting_hr,52,-1.81,2,38,[],env84_aug00/AST-04
+body_temp,39,3.95,3,11,[],env84_aug01/AST-04
+sleep_duration,58,-1.01,13,26,"['hrv', 'resting_hr', 'reaction_time']",env84_aug02/AST-04
+blood_pressure,48,1.79,7,34,[],env84_aug03/AST-04
+reaction_time,34,1.44,13,27,[],env84_aug04/AST-04
+sleep_duration,54,2.89,9,20,"['hrv', 'resting_hr', 'reaction_time']",env84_aug05/AST-04
+reaction_time,100,-2.09,5,27,[],iss_aug00/AST-01
+sleep_duration,60,1.92,12,29,[],iss_aug01/AST-01
+body_mass,69,-1.4,5,27,[],iss_aug02/AST-01
+sleep_duration,59,3.74,12,34,[],iss_aug00/AST-02
+sleep_duration,54,2.93,11,34,[],iss_aug01/AST-02
+hrv,28,2.5,2,39,[],iss_aug02/AST-02
+body_temp,101,2.12,11,14,[],iss_aug03/AST-02
+stress,65,-2.17,5,18,[],iss_aug00/AST-03
+mood,43,3.14,4,14,[],iss_aug01/AST-03
+resting_hr,66,3.3,1,11,[],iss_aug02/AST-03
+blood_pressure,71,4.48,6,23,[],iss_aug03/AST-03
+hrv,34,-2.42,9,38,[],iss_aug00/AST-04
+sleep_duration,101,2.99,6,19,[],iss_aug01/AST-04
+sleep_duration,73,1.09,10,39,[],iss_aug02/AST-04
+mood,69,3.69,13,20,[],iss_aug03/AST-04
+hrv,707,-1.81,12,33,['resting_hr'],mars_aug00/AST-01
+reaction_time,676,2.4,10,28,[],mars_aug00/AST-01
+mood,709,4.1,10,13,['stress'],mars_aug01/AST-01
+sleep_quality,699,1.76,14,25,[],mars_aug01/AST-01
+blood_pressure,741,-1.79,13,18,[],mars_aug03/AST-01
+blood_pressure,661,1.84,10,10,[],mars_aug03/AST-01
+sleep_duration,797,1.89,8,27,[],mars_aug04/AST-01
+hrv,653,-2.43,1,36,[],mars_aug04/AST-01
+sleep_duration,697,2.12,4,39,[],mars_aug05/AST-01
+mood,715,4.05,3,20,"['stress', 'sleep_quality']",mars_aug05/AST-01
+sleep_duration,615,3.89,14,25,"['sleep_quality', 'resting_hr', 'reaction_time']",mars_aug00/AST-02
+sleep_duration,741,4.02,12,27,[],mars_aug00/AST-02
+hrv,829,1.23,7,27,[],mars_aug01/AST-02
+sleep_duration,832,3.01,10,20,"['sleep_quality', 'resting_hr']",mars_aug01/AST-02
+sleep_quality,837,-1.09,14,37,[],mars_aug02/AST-02
+body_temp,637,3.02,3,39,['hrv'],mars_aug02/AST-02
+reaction_time,817,3.66,9,18,[],mars_aug03/AST-02
+hrv,798,3.15,4,20,['resting_hr'],mars_aug03/AST-02
+resting_hr,789,-1.68,11,32,[],mars_aug04/AST-02
+sleep_duration,667,2.14,10,32,"['sleep_quality', 'stress']",mars_aug04/AST-02
+exercise,770,3.93,2,10,[],mars_aug05/AST-02
+sleep_quality,751,3.54,4,19,[],mars_aug05/AST-02
+resting_hr,639,0.87,1,27,['hrv'],mars_aug00/AST-03
+body_mass,763,2.1,14,6,[],mars_aug00/AST-03
+resting_hr,771,1.46,6,32,['hrv'],mars_aug01/AST-03
+stress,635,1.13,11,31,[],mars_aug01/AST-03
+mood,666,3.3,12,18,"['stress', 'sleep_quality']",mars_aug02/AST-03
+sleep_duration,664,1.96,8,28,[],mars_aug02/AST-03
+stress,630,4.45,7,23,"['hrv', 'resting_hr']",mars_aug03/AST-03
+reaction_time,716,4.15,14,6,[],mars_aug03/AST-03
+exercise,750,-1.51,12,28,[],mars_aug04/AST-03
+sleep_duration,796,1.84,6,17,[],mars_aug04/AST-03
+body_mass,744,2.15,12,29,[],mars_aug05/AST-03
+stress,768,2.38,13,39,[],mars_aug05/AST-03
+sleep_quality,723,3.38,6,32,[],mars_aug00/AST-04
+resting_hr,829,2.33,4,23,['hrv'],mars_aug00/AST-04
+stress,724,-2.48,6,25,"['sleep_duration', 'mood', 'hrv']",mars_aug01/AST-04
+sleep_duration,739,-1.87,8,21,"['sleep_quality', 'stress', 'mood', 'resting_hr', 'reaction_time']",mars_aug01/AST-04
+body_temp,770,2.62,3,7,"['resting_hr', 'hrv', 'sleep_quality']",mars_aug02/AST-04
+sleep_duration,687,2.82,1,6,[],mars_aug02/AST-04
+reaction_time,667,1.57,9,19,[],mars_aug03/AST-04
+sleep_quality,722,1.69,1,16,[],mars_aug03/AST-04
+blood_pressure,624,2.32,4,9,[],mars_aug04/AST-04
+body_mass,764,1.53,11,33,[],mars_aug04/AST-04
+reaction_time,824,-2.14,14,12,[],mars_aug05/AST-04
+stress,644,4.1,8,6,"['sleep_duration', 'hrv', 'resting_hr']",mars_aug05/AST-04

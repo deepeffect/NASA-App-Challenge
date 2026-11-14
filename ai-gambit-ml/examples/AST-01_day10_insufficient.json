@@ -1,0 +1,18 @@
+{
+  "type": "health_forecast",
+  "astronaut_id": "AST-01",
+  "as_of_mission_day": 10,
+  "horizon_days": 7,
+  "input_window_days": 7,
+  "method": "gradient-boosted forecast of next week's 7-day mean, on the rule engine's personal z-score scale",
+  "model_version": "forecast_v2",
+  "disclaimer": "Projection from a model trained on synthetic mission data. Decision support, not a diagnosis.",
+  "validation_mae_z": 0.312,
+  "risk_levels": {
+    "likely": "central forecast reaches the yellow/red rule threshold next week",
+    "possible": "only the worst-case end of the 80% forecast band reaches the yellow/red threshold",
+    "low": "forecast stays inside the personal normal"
+  },
+  "forecasts": [],
+  "status": "insufficient_data"
+}

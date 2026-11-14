@@ -1,0 +1,520 @@
+{
+  "generated_at": "2026-11-14 21:31",
+  "params": {
+    "max_iter": 600,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 63,
+    "l2_regularization": 1.0,
+    "min_samples_leaf": 100
+  },
+  "rows": {
+    "train": 681360,
+    "val": 290717,
+    "train_onset_examples": 3841
+  },
+  "val": {
+    "mae_z": 0.312,
+    "interval_80_coverage": 0.801,
+    "onset": {
+      "likely": {
+        "true_new_problems": 1518,
+        "hit": 232,
+        "false_alarm": 103,
+        "missed": 1286,
+        "precision": 0.693,
+        "recall": 0.153
+      },
+      "possible": {
+        "true_new_problems": 1518,
+        "hit": 722,
+        "false_alarm": 1237,
+        "missed": 796,
+        "precision": 0.369,
+        "recall": 0.476
+      }
+    }
+  },
+  "split": "hastalikli_v1 splits.json (seed level); train rows thinned by day stride {\"iss180/event\": 4, \"iss180/control\": 8, \"mars860/event\": 6, \"mars860/control\": 12}",
+  "test_event": {
+    "n": 426323,
+    "mae_z": {
+      "v2": 0.329,
+      "v1": 0.356,
+      "zero (personal normal)": 0.433,
+      "persistence (last 7-day mean)": 0.408
+    },
+    "interval_80_coverage_v2": 0.794,
+    "onset": {
+      "v2 likely": {
+        "true_new_problems": 3561,
+        "hit": 624,
+        "false_alarm": 214,
+        "missed": 2937,
+        "precision": 0.745,
+        "recall": 0.175
+      },
+      "v2 possible": {
+        "true_new_problems": 3561,
+        "hit": 1734,
+        "false_alarm": 2763,
+        "missed": 1827,
+        "precision": 0.386,
+        "recall": 0.487
+      },
+      "v1 likely": {
+        "true_new_problems": 3561,
+        "hit": 162,
+        "false_alarm": 78,
+        "missed": 3399,
+        "precision": 0.675,
+        "recall": 0.045
+      },
+      "v1 possible": {
+        "true_new_problems": 3561,
+        "hit": 1375,
+        "false_alarm": 3795,
+        "missed": 2186,
+        "precision": 0.266,
+        "recall": 0.386
+      },
+      "persistence": {
+        "true_new_problems": 3561,
+        "hit": 117,
+        "false_alarm": 303,
+        "missed": 3444,
+        "precision": 0.279,
+        "recall": 0.033
+      }
+    }
+  },
+  "test_control": {
+    "n": 426323,
+    "mae_z": {
+      "v2": 0.293,
+      "v1": 0.3,
+      "zero (personal normal)": 0.317,
+      "persistence (last 7-day mean)": 0.367
+    },
+    "interval_80_coverage_v2": 0.807,
+    "onset": {
+      "v2 likely": {
+        "true_new_problems": 131,
+        "hit": 0,
+        "false_alarm": 3,
+        "missed": 131,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "v2 possible": {
+        "true_new_problems": 131,
+        "hit": 0,
+        "false_alarm": 268,
+        "missed": 131,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "v1 likely": {
+        "true_new_problems": 131,
+        "hit": 0,
+        "false_alarm": 6,
+        "missed": 131,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "v1 possible": {
+        "true_new_problems": 131,
+        "hit": 11,
+        "false_alarm": 829,
+        "missed": 120,
+        "precision": 0.013,
+        "recall": 0.084
+      },
+      "persistence": {
+        "true_new_problems": 131,
+        "hit": 0,
+        "false_alarm": 24,
+        "missed": 131,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    }
+  },
+  "test_event_early_warning": {
+    "v2 possible": {
+      "uri_fever": {
+        "events": 50,
+        "warned_before_onset": 2,
+        "same_window_in_control_twin": 1,
+        "rate": 0.04,
+        "control_rate": 0.02
+      },
+      "stress_sleep": {
+        "events": 154,
+        "warned_before_onset": 67,
+        "same_window_in_control_twin": 4,
+        "rate": 0.435,
+        "control_rate": 0.026
+      },
+      "exercise_lapse": {
+        "events": 72,
+        "warned_before_onset": 7,
+        "same_window_in_control_twin": 3,
+        "rate": 0.097,
+        "control_rate": 0.042
+      },
+      "all": {
+        "events": 276,
+        "warned_before_onset": 76,
+        "same_window_in_control_twin": 8,
+        "rate": 0.275,
+        "control_rate": 0.029
+      },
+      "control_alarm_days_per_100": 0.7,
+      "control_astronauts_with_any_alarm": "73/192"
+    },
+    "v2 likely": {
+      "uri_fever": {
+        "events": 50,
+        "warned_before_onset": 0,
+        "same_window_in_control_twin": 0,
+        "rate": 0.0,
+        "control_rate": 0.0
+      },
+      "stress_sleep": {
+        "events": 154,
+        "warned_before_onset": 25,
+        "same_window_in_control_twin": 0,
+        "rate": 0.162,
+        "control_rate": 0.0
+      },
+      "exercise_lapse": {
+        "events": 72,
+        "warned_before_onset": 0,
+        "same_window_in_control_twin": 0,
+        "rate": 0.0,
+        "control_rate": 0.0
+      },
+      "all": {
+        "events": 276,
+        "warned_before_onset": 25,
+        "same_window_in_control_twin": 0,
+        "rate": 0.091,
+        "control_rate": 0.0
+      },
+      "control_alarm_days_per_100": 0.01,
+      "control_astronauts_with_any_alarm": "3/192"
+    },
+    "v1 possible": {
+      "uri_fever": {
+        "events": 50,
+        "warned_before_onset": 6,
+        "same_window_in_control_twin": 5,
+        "rate": 0.12,
+        "control_rate": 0.1
+      },
+      "stress_sleep": {
+        "events": 154,
+        "warned_before_onset": 74,
+        "same_window_in_control_twin": 13,
+        "rate": 0.481,
+        "control_rate": 0.084
+      },
+      "exercise_lapse": {
+        "events": 72,
+        "warned_before_onset": 10,
+        "same_window_in_control_twin": 11,
+        "rate": 0.139,
+        "control_rate": 0.153
+      },
+      "all": {
+        "events": 276,
+        "warned_before_onset": 90,
+        "same_window_in_control_twin": 29,
+        "rate": 0.326,
+        "control_rate": 0.105
+      },
+      "control_alarm_days_per_100": 2.24,
+      "control_astronauts_with_any_alarm": "135/192"
+    },
+    "v1 likely": {
+      "uri_fever": {
+        "events": 50,
+        "warned_before_onset": 0,
+        "same_window_in_control_twin": 0,
+        "rate": 0.0,
+        "control_rate": 0.0
+      },
+      "stress_sleep": {
+        "events": 154,
+        "warned_before_onset": 5,
+        "same_window_in_control_twin": 0,
+        "rate": 0.032,
+        "control_rate": 0.0
+      },
+      "exercise_lapse": {
+        "events": 72,
+        "warned_before_onset": 0,
+        "same_window_in_control_twin": 0,
+        "rate": 0.0,
+        "control_rate": 0.0
+      },
+      "all": {
+        "events": 276,
+        "warned_before_onset": 5,
+        "same_window_in_control_twin": 0,
+        "rate": 0.018,
+        "control_rate": 0.0
+      },
+      "control_alarm_days_per_100": 0.02,
+      "control_astronauts_with_any_alarm": "5/192"
+    },
+    "engine (any indicator yellow/red)": {
+      "uri_fever": {
+        "events": 50,
+        "warned_before_onset": 2,
+        "same_window_in_control_twin": 0,
+        "rate": 0.04,
+        "control_rate": 0.0
+      },
+      "stress_sleep": {
+        "events": 154,
+        "warned_before_onset": 11,
+        "same_window_in_control_twin": 3,
+        "rate": 0.071,
+        "control_rate": 0.019
+      },
+      "exercise_lapse": {
+        "events": 72,
+        "warned_before_onset": 6,
+        "same_window_in_control_twin": 2,
+        "rate": 0.083,
+        "control_rate": 0.028
+      },
+      "all": {
+        "events": 276,
+        "warned_before_onset": 19,
+        "same_window_in_control_twin": 5,
+        "rate": 0.069,
+        "control_rate": 0.018
+      },
+      "control_alarm_days_per_100": 0.34,
+      "control_astronauts_with_any_alarm": "34/192"
+    }
+  },
+  "test_events_by_type": {
+    "stress_sleep": 154,
+    "exercise_lapse": 72,
+    "uri_fever": 50
+  },
+  "test_event_onset_by_indicator_v2_possible": {
+    "blood_pressure": {
+      "true_new_problems": 45,
+      "hit": 0,
+      "false_alarm": 9,
+      "missed": 45,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    "body_mass": {
+      "true_new_problems": 0,
+      "hit": 0,
+      "false_alarm": 0,
+      "missed": 0,
+      "precision": null,
+      "recall": null
+    },
+    "body_temp": {
+      "true_new_problems": 51,
+      "hit": 8,
+      "false_alarm": 59,
+      "missed": 43,
+      "precision": 0.119,
+      "recall": 0.157
+    },
+    "exercise": {
+      "true_new_problems": 571,
+      "hit": 155,
+      "false_alarm": 197,
+      "missed": 416,
+      "precision": 0.44,
+      "recall": 0.271
+    },
+    "hrv": {
+      "true_new_problems": 142,
+      "hit": 67,
+      "false_alarm": 272,
+      "missed": 75,
+      "precision": 0.198,
+      "recall": 0.472
+    },
+    "mood": {
+      "true_new_problems": 0,
+      "hit": 0,
+      "false_alarm": 1,
+      "missed": 0,
+      "precision": 0.0,
+      "recall": null
+    },
+    "reaction_time": {
+      "true_new_problems": 6,
+      "hit": 0,
+      "false_alarm": 23,
+      "missed": 6,
+      "precision": 0.0,
+      "recall": 0.0
+    },
+    "resting_hr": {
+      "true_new_problems": 742,
+      "hit": 520,
+      "false_alarm": 633,
+      "missed": 222,
+      "precision": 0.451,
+      "recall": 0.701
+    },
+    "sleep_duration": {
+      "true_new_problems": 684,
+      "hit": 289,
+      "false_alarm": 548,
+      "missed": 395,
+      "precision": 0.345,
+      "recall": 0.423
+    },
+    "sleep_quality": {
+      "true_new_problems": 497,
+      "hit": 230,
+      "false_alarm": 569,
+      "missed": 267,
+      "precision": 0.288,
+      "recall": 0.463
+    },
+    "spo2": {
+      "true_new_problems": 0,
+      "hit": 0,
+      "false_alarm": 0,
+      "missed": 0,
+      "precision": null,
+      "recall": null
+    },
+    "stress": {
+      "true_new_problems": 823,
+      "hit": 465,
+      "false_alarm": 452,
+      "missed": 358,
+      "precision": 0.507,
+      "recall": 0.565
+    }
+  },
+  "demo_v31": {
+    "v1": {
+      "test": {
+        "n": 1598,
+        "mae_z": 0.322,
+        "mae_z_when_target_yellow_or_red": 1.276,
+        "onset": {
+          "true_new_problems": 21,
+          "flagged": 2,
+          "hit": 2,
+          "false_alarm": 0,
+          "missed": 19,
+          "precision": 1.0,
+          "recall": 0.095
+        },
+        "onset_possible_p90": {
+          "flagged": 17,
+          "hit": 10,
+          "false_alarm": 7,
+          "missed": 11,
+          "precision": 0.588,
+          "recall": 0.476
+        }
+      },
+      "lead_times_possible": [
+        {
+          "astronaut": "AST-02",
+          "indicator": "resting_hr",
+          "engine_first_yellow_day": 164,
+          "model_first_correct_warning_day": 157,
+          "lead_days": 7,
+          "earlier_wrong_flags": 1
+        },
+        {
+          "astronaut": "AST-02",
+          "indicator": "sleep_duration",
+          "engine_first_yellow_day": 158,
+          "model_first_correct_warning_day": 155,
+          "lead_days": 3,
+          "earlier_wrong_flags": 0
+        },
+        {
+          "astronaut": "AST-02",
+          "indicator": "stress",
+          "engine_first_yellow_day": 158,
+          "model_first_correct_warning_day": 156,
+          "lead_days": 2,
+          "earlier_wrong_flags": 0
+        }
+      ],
+      "control_flags_likely": 0,
+      "control_flags_possible": 0,
+      "control_flags_possible_AST02": 0
+    },
+    "v2": {
+      "test": {
+        "n": 1598,
+        "mae_z": 0.301,
+        "mae_z_when_target_yellow_or_red": 1.038,
+        "onset": {
+          "true_new_problems": 21,
+          "flagged": 9,
+          "hit": 9,
+          "false_alarm": 0,
+          "missed": 12,
+          "precision": 1.0,
+          "recall": 0.429
+        },
+        "onset_possible_p90": {
+          "flagged": 19,
+          "hit": 13,
+          "false_alarm": 6,
+          "missed": 8,
+          "precision": 0.684,
+          "recall": 0.619
+        }
+      },
+      "lead_times_possible": [
+        {
+          "astronaut": "AST-02",
+          "indicator": "resting_hr",
+          "engine_first_yellow_day": 164,
+          "model_first_correct_warning_day": 157,
+          "lead_days": 7,
+          "earlier_wrong_flags": 3
+        },
+        {
+          "astronaut": "AST-02",
+          "indicator": "sleep_duration",
+          "engine_first_yellow_day": 158,
+          "model_first_correct_warning_day": 155,
+          "lead_days": 3,
+          "earlier_wrong_flags": 0
+        },
+        {
+          "astronaut": "AST-02",
+          "indicator": "stress",
+          "engine_first_yellow_day": 158,
+          "model_first_correct_warning_day": 155,
+          "lead_days": 3,
+          "earlier_wrong_flags": 0
+        }
+      ],
+      "control_flags_likely": 0,
+      "control_flags_possible": 0,
+      "control_flags_possible_AST02": 0
+    }
+  },
+  "ship_rule": {
+    "rule": "v2 default only if on the v3.1 AST-02 demo (days 140-173) it catches >= v1's onsets at 'possible' and has 0 'likely' flags on the control twin and 0 'possible' flags on control AST-02",
+    "v2_becomes_default": true
+  },
+  "minutes": 9.0
+}
