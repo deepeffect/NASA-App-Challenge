@@ -277,7 +277,7 @@ Cevap:
 ```
 
 - `generated_by`: `llm` | `mock` | `template_fallback` — UI şablon cevabını belirtmeli.
-- `ungrounded_numbers`: çıktıda olup bağlam verisinde bulunmayan sayılar ("sayıları LLM üretmez" denetimi).
+- `ungrounded_numbers`: çıktıda olup bağlam verisinde bulunmayan sayılar ("sayıları LLM üretmez" denetimi). Tolerans: max(metindeki hassasiyetin yarısı, değerin %2'si) — "5,1 sa" ↔ 5 eşleşir. Yok sayılanlar: tarih/saat/kimlik/standart kodu, paydalar (`35/100`), birimsiz 0–10 tam sayılar (`3 gün`). Birimli her sayı (`5 saat`, `9 bpm`, `%5`, `2 mSv`) değeri ne olursa olsun aranır.
 - `escalate_to_ground`: critical olaylarda kural gereği her zaman `true`.
 
 ### `POST /api/alerts/{event_id}/feedback` — "Yanlış alarm" butonu

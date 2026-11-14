@@ -21,7 +21,7 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
 
 1. **Sayıları LLM üretmez.** Tüm sayısal analiz (`analysis/`) Python'dadır. LLM sayıları sadece
    tool sonuçlarından / verilen bağlamdan alır. `safety/grounding.py` çıktıdaki kaynağı olmayan
-   sayıları `ungrounded_numbers` alanında işaretler. LLM'e skor, eşik veya istatistik hesaplatma.
+   sayıları `ungrounded_numbers` alanında işaretler (birimli sayılar her zaman, birimsiz 0–10 tam sayılar hariç; ±%2 / yarım basamak tolerans). LLM'e skor, eşik veya istatistik hesaplatma.
 2. **Uyarılar LLM'den bağımsızdır.** Eşik/sapma/trend uyarıları ve acil belirti tespiti
    (`safety/emergency.py`) kural tabanlıdır; LLM kapalıyken de çalışır. LLM katmanında bir hata
    asla uyarı üretimini engellememeli. Explain/briefing LLM'siz şablon cevaba düşer.

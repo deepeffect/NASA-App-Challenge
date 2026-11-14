@@ -97,8 +97,42 @@ def test_think_filter_across_boundaries():
 
 # --------------------------------------------------------------------------- grounding
 def test_extract_numbers_turkish_and_ignores():
-    nums = [v for _, v, _ in extract_numbers("Uyku 5,1 sa (baseline 7.25), 2026-11-14 tarihinde AST-02 için 14:30'da.")]
-    assert nums == [5.1, 7.25]
+    nums = extract_numbers("Uyku 5,1 sa (baseline 7.25), 2026-11-14 tarihinde AST-02 için 14:30'da.")
+    assert [n.value for n in nums] == [5.1, 7.25]
+    assert [n.has_unit for n in nums] == [True, False]
+
+
+@pytest.mark.parametrize("text,unit", [
+    ("5 saat uyudun", True), ("5 saatten az", True), ("5 sa", True), ("8 h", True), ("9 bpm", True),
+    ("40 ms", True), ("%5 düşüş", True), ("5% drop", True), ("2 mSv", True), ("9 mmHg", True),
+    ("1 °C", True), ("2 kg", True), ("5 dk", True), ("5 dakika", True), ("5 min", True),
+    ("3 gün", False), ("2 uyarı", False), ("7 günlük", False), ("Saat 5 gibi", False),
+])
+def test_unit_detection(text, unit):
+    (n,) = extract_numbers(text)
+    assert n.has_unit is unit, text
+
+
+def test_small_int_with_unit_is_checked():
+    # Yanında birim olan küçük sayı her zaman aranır
+    assert find_ungrounded_numbers("Dün gece 5 saat uyudun.", [{"value": 7.2}]) == ["5"]
+    assert find_ungrounded_numbers("Dün gece 5 saat uyudun.", [{"value": 4.97}]) == []
+    assert find_ungrounded_numbers("Nabzın 9 bpm arttı.", [{"latest": 70, "baseline": 61}]) == ["9"]
+    assert find_ungrounded_numbers("Stres %5 arttı.", [{"value": 30}]) == ["5"]  # Türkçe önek yüzde
+    # birimsiz küçük sayılar (sayım/süre) yok sayılır
+    assert find_ungrounded_numbers("3 gün daha izle; 2 uyarı var.", [{"value": 99}]) == []
+
+
+def test_rounding_tolerance_both_ways():
+    assert find_ungrounded_numbers("Uyku 5,1 sa.", [{"value": 5}]) == []      # 5,1 ↔ 5
+    assert find_ungrounded_numbers("Uyku 5 sa.", [{"value": 5.1}]) == []      # 5 ↔ 5,1
+    assert find_ungrounded_numbers("Uyku 7,2 sa.", [{"value": 7.18}]) == []
+    assert find_ungrounded_numbers("Uyku 6,5 sa.", [{"value": 5.1}]) == ["6,5"]
+    assert find_ungrounded_numbers("Nabız 72 bpm.", [{"value": 70}]) == ["72"], "%2'yi aşan fark eşleşmez"
+
+
+def test_denominators_are_scale_bounds():
+    assert find_ungrounded_numbers("Genel skor 35/100; ruh hali 2/5.", [{"score": 35}]) == []
 
 
 def test_standard_codes_are_not_numbers():
