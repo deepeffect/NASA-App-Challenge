@@ -4,7 +4,9 @@ Kurallar (prototip + kullanıcı kararları):
   - Gizli ölçümler (ruh hali, stres): sadece o günün check-in'i en az `scores` paylaşıldıysa.
   - Diğer bütün ölçümler her zaman.
   - To-do: tetikleyicisi sadece gizli ölçümler olan öğeler maskelenir; kodları gönderilmez, sayıları gider.
-  - Ground sadece görünür ölçümlerden hesaplanır; gösterilen durum ve kümülatif skor her zaman gider.
+  - Ground sadece görünür ölçümlerden hesaplanır; gösterilen durum ve genel sağlık skoru (kümülatif ve
+    tek günlük) her zaman gider. Genel skor gizli değildir; gizli olan ruh hali / stres ölçümleri ve
+    davranışsal ALAN skorudur.
   - "Uyku, ruh hali ve stres" alan skoru: check-in en az `scores` paylaşılmadıysa gönderilmez.
   - Check-in: yok / private (tamamlandı, gizli) / scores (konu + flag) / full (+ cevap metni).
     Mesajlar, `urgent` ve CMO bildirimi asla gönderilmez.

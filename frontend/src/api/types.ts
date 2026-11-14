@@ -2636,6 +2636,11 @@ export interface components {
             /** Score Text */
             score_text: string;
             /**
+             * Daily Score
+             * @description O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da)
+             */
+            daily_score: number;
+            /**
              * Label
              * @description Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'
              */

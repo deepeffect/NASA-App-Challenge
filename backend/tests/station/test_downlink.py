@@ -149,6 +149,26 @@ def test_mood_and_stress_never_leave_ship_unshared(ship) -> None:
             assert not any(col in block for col in PRIVATE)
 
 
+def test_overall_scores_are_in_every_downlink_day(ship) -> None:
+    """Genel sağlık skoru (kümülatif + tek günlük) her günün Dünya kaydında vardır: snapshot'ta ve olaylarda,
+    check-in gizli tutulmuş veya hiç yapılmamış olsa da. (Davranışsal alan skoru ise paylaşılmadıkça yoktur.)"""
+    app, c = ship
+    complete_checkin(c, "A035")  # private kalır
+    with Session(app.state.engine) as db:
+        series = personal_data(app.state.engine).all(db)
+    snap = c.get("/api/downlink/snapshot", headers=LINK).json()
+    assert len(snap["days"]) == sum(len(s.days) for s in series.values())
+    for d in snap["days"]:
+        src = series[d["astronaut_id"]].days[d["day_index"]]
+        assert (d["cumulative_score"], d["daily_score"]) == (src.cumulative_score, src.daily_score), d["astronaut_id"]
+    private = next(d for d in snap["days"] if d["astronaut_id"] == "A035" and d["day_index"] == 29)
+    assert private["checkin"]["share"] == "private" and "behavioral" not in private["area_scores"]
+    for ev in ship_events(app):
+        day = ev.payload["day"]
+        src = series[day["astronaut_id"]].days[day["day_index"]]
+        assert (day["cumulative_score"], day["daily_score"]) == (src.cumulative_score, src.daily_score), ev.seq
+
+
 def test_d4_private_suggestion_never_enters_downlink(ship) -> None:
     """A139 23–24. gün: ruh haline bağlı veri seti önerisi (MOOD_CONNECT) snapshot'ta ve olaylarda kodsuz."""
     app, c = ship
@@ -326,6 +346,12 @@ def test_monitor_api_reads_earth_db(ship, receiver, earth_engine, tmp_path_facto
         assert other["checkin"]["text"] == "Check-in completed. The astronaut kept it private."
         assert next(r for r in other["view"]["readings"] if r["col"] == "beh_mood_score")["value_text"] == "Not shared"
         assert e.get("/api/monitor/astronauts/A031", headers=auth).json()["today"] == 30
+        # Şerit: genel skor (kümülatif + tek günlük) Dünya'da da görünür; A031 check-in'ini gizli tutmuş olsa da
+        earth_strip = e.get("/api/monitor/astronauts/A031", headers=auth).json()["strip"]
+        ship_strip = c.get("/api/me", headers={**login(c, "A031"), "Accept-Language": "en"}).json()["strip"]
+        assert len(earth_strip) == 30 and all(isinstance(d["daily_score"], float) for d in earth_strip)
+        assert [(d["day"], d["score"], d["daily_score"]) for d in earth_strip] == [
+            (d["day"], d["score"], d["daily_score"]) for d in ship_strip]
         assert e.get("/api/monitor/astronauts/A999", headers=auth).status_code == 404
         hint = e.post("/api/auth/login", json={"id": "A031", "password": "A031"}).json()
         assert hint["code"] == "wrong_station"

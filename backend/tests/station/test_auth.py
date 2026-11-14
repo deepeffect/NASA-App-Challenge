@@ -84,6 +84,9 @@ def test_me_overview_and_days(ship_client) -> None:
     assert ov["astronaut"]["mission_label"] == "Mars surface" and ov["astronaut"]["first_mission_day"] == 126
     today = ship_client.get("/api/me/days/30", headers={**auth, **EN}).json()
     assert today["is_today"] and today["day_label"] == "Day 30 of 30 · mission day 155"
+    # şerit grafiğin iki çizgisini taşır: kümülatif (score) ve tek günlük (daily_score)
+    assert (ov["strip"][29]["score"], ov["strip"][29]["daily_score"]) == (today["score"], today["daily_score"])
+    assert all(isinstance(d["daily_score"], float) for d in ov["strip"])
     tr = ship_client.get("/api/me/days/30?lang=tr", headers=auth).json()
     assert tr["day_label"] == "30 günün 30. günü · görev günü 155"
     assert ship_client.get("/api/me/days/31", headers=auth).status_code == 404

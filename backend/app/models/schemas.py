@@ -664,6 +664,10 @@ class StripDay(BaseModel):
     status_label: str
     score: float = Field(description="Kümülatif sağlık skoru")
     score_text: str
+    daily_score: float = Field(
+        description="O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: "
+        "genel skor her zaman görünür (Dünya'da da)"
+    )
     label: str = Field(description="Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'")
 
 

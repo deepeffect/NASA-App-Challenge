@@ -78,7 +78,7 @@ def earth_strip(cat: PersonalCatalog, recs: list[EarthDay], lang: Lang) -> list[
         out.append(
             StripDay(
                 day=rec.day_index + 1, mission_day=rec.mission_day, status=rec.status, status_label=label,
-                score=rec.cumulative_score, score_text=score,
+                score=rec.cumulative_score, score_text=score, daily_score=rec.daily_score,
                 label=tx("strip_label", lang, day=rec.day_index + 1, status=label, score=score),
             )
         )
