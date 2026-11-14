@@ -69,8 +69,15 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   // SSE: EventSource kendisi yeniden bağlanır (Dünya sunucusu yeniden başlarsa da)
   useEffect(() => {
     const es = new EventSource(monitorStreamUrl());
-    es.onopen = () => setStreamUp(true);
+    let failed = false;
+    es.onopen = () => {
+      setStreamUp(true);
+      // Dünya sunucusu geri geldi (ör. yeniden başladı): kaçan her şeyi baştan oku
+      if (failed) void qc.invalidateQueries({ queryKey: qk.all });
+      failed = false;
+    };
     es.onerror = () => {
+      failed = true;
       setStreamUp(false);
       void qc.invalidateQueries({ queryKey: qk.link() }); // ulaşılamıyorsa bağlantı sorgusu hata verir
     };
@@ -124,6 +131,11 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   }, [flashes, seqFlashes]);
 
   const earthReachable = !linkQ.isError && (streamUp || linkQ.isSuccess);
+  const reachableRef = useRef(earthReachable);
+  useEffect(() => {
+    if (earthReachable && !reachableRef.current) void qc.invalidateQueries({ queryKey: qk.all });
+    reachableRef.current = earthReachable;
+  }, [earthReachable, qc]);
   const value = useMemo<LiveCtx>(
     () => ({
       link,

@@ -78,7 +78,14 @@ export const qk = {
   checkins: () => ["monitor", "events", "checkins"] as const,
 };
 
-const keep = { placeholderData: keepPreviousData, retry: 1 } as const;
+export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
+
+/** Kısa kesintilerde (Dünya sunucusu yeniden başlıyor) birkaç kez dene: 1, 2, 4 sn. Yetkisizse deneme. */
+const retry = (n: number, e: unknown) => !isUnauthorized(e) && n < 3;
+/** Yenilemede eski veri kalır; hiç veri gelmediyse sık yokla (kiosk kendini toparlasın). */
+const keep = { placeholderData: keepPreviousData, retry } as const;
+const pollUntilData = (normalMs: number | false) => (q: { state: { data: unknown; status: string } }) =>
+  q.state.data === undefined && q.state.status === "error" ? 5_000 : normalMs;
 
 export function useLinkStatus() {
   return useQuery({ queryKey: qk.link(), queryFn: stationApi.link, refetchInterval: LINK_POLL_MS, retry: 0, staleTime: 2_000 });
@@ -86,17 +93,17 @@ export function useLinkStatus() {
 
 export function useCrew() {
   const { lang } = useLang();
-  return useQuery({ queryKey: qk.crew(lang), queryFn: stationApi.crew, refetchInterval: CREW_POLL_MS, ...keep });
+  return useQuery({ queryKey: qk.crew(lang), queryFn: stationApi.crew, refetchInterval: pollUntilData(CREW_POLL_MS), ...keep });
 }
 
 export function useCatalog() {
   const { lang } = useLang();
-  return useQuery({ queryKey: qk.catalog(lang), queryFn: stationApi.catalog, staleTime: Infinity, ...keep });
+  return useQuery({ queryKey: qk.catalog(lang), queryFn: stationApi.catalog, staleTime: Infinity, refetchInterval: pollUntilData(false), ...keep });
 }
 
 export function useOverview(id: string) {
   const { lang } = useLang();
-  return useQuery({ queryKey: qk.overview(id, lang), queryFn: () => stationApi.astronaut(id), ...keep });
+  return useQuery({ queryKey: qk.overview(id, lang), queryFn: () => stationApi.astronaut(id), refetchInterval: pollUntilData(false), ...keep });
 }
 
 export function useMonitorDay(id: string, day: number | undefined) {
@@ -105,12 +112,13 @@ export function useMonitorDay(id: string, day: number | undefined) {
     queryKey: qk.day(id, day ?? 0, lang),
     queryFn: () => stationApi.monitorDay(id, day ?? 1),
     enabled: day !== undefined,
+    refetchInterval: pollUntilData(false),
     ...keep,
   });
 }
 
 export function useFeedEvents(limit: number) {
-  return useQuery({ queryKey: qk.events(limit), queryFn: () => fetchEvents({ limit }), ...keep });
+  return useQuery({ queryKey: qk.events(limit), queryFn: () => fetchEvents({ limit }), refetchInterval: pollUntilData(false), ...keep });
 }
 
 /** Her astronotun bugünkü son check-in'i (gemi saati). Snapshot'la gelenlerin olayı yoktur → saat bilinmiyor. */
@@ -123,8 +131,7 @@ export function useCheckinTimes() {
       for (const e of r.events) if (e.astronaut_id && !out.has(e.astronaut_id)) out.set(e.astronaut_id, e); // yeniden eskiye
       return out;
     },
+    refetchInterval: pollUntilData(false),
     ...keep,
   });
 }
-
-export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
