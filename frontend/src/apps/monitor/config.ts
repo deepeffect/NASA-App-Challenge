@@ -18,8 +18,12 @@ export const PRODUCT_NAME: Record<Lang, string> = envName
 export const TEAM_NAME = "AI Gambit";
 export const EVENT_NAME = "NASA Space Apps Challenge 2026";
 
-/** Geminin görevi (görev çubuğu). Mürettebat bu görevin astronotlarıdır. */
-export const MISSION = { id: "Mars_Transit", name: { tr: "Mars transferi", en: "Mars transfer" } as Record<Lang, string> };
+/**
+ * Geminin görevi (görev çubuğu). Mürettebat bu görevin astronotlarıdır. Burada sadece kimlik var: görevin ADI
+ * backend kataloğundan (config/catalog.yaml → missions) seçili dilde gelir (`CrewInfo.mission_label`, api.ts →
+ * useMissionLabel); böylece görev çubuğu, tablo, astronot detayı ve /me hep aynı adı gösterir.
+ */
+export const MISSION = { id: "Mars_Transit" } as const;
 
 /**
  * A168 sağlıklı (smoke astronotu) · A076 hafif sorun · A115 iyileşiyor · A117 akut atak (gün 1 → 23 → 27 Normal → Dikkat

@@ -98,6 +98,15 @@ export function useCrew() {
   return useQuery({ queryKey: qk.crew(lang), queryFn: stationApi.crew, refetchInterval: pollUntilData(CREW_POLL_MS), ...keep });
 }
 
+/**
+ * Görevin adı backend kataloğundan, seçili dilde (`CrewInfo.mission_label`; config/catalog.yaml → missions).
+ * Görev çubuğu, tablo ve astronot detayı aynı kaynaktan okur. Veri gelene kadar undefined.
+ */
+export function useMissionLabel(missionId: string): string | undefined {
+  const crew = useCrew();
+  return crew.data?.astronauts.find((m) => m.astronaut.mission === missionId)?.astronaut.mission_label;
+}
+
 export function useCatalog() {
   const { lang } = useLang();
   return useQuery({ queryKey: qk.catalog(lang), queryFn: stationApi.catalog, staleTime: Infinity, refetchInterval: pollUntilData(false), ...keep });

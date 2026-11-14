@@ -256,6 +256,16 @@ async function loginEarth(page: Page, web: string): Promise<void> {
   await page.locator("[data-area]").first().waitFor({ timeout: 15_000 });
 }
 
+/** Görevin adı backend kataloğundan (CrewInfo.mission_label), verilen dilde: ekranlar bu adı göstermeli. */
+async function missionLabel(token: string, lang: "tr" | "en"): Promise<string> {
+  const res = await fetch(`${EARTH}/api/monitor/crew?lang=${lang}`, { headers: { Authorization: `Bearer ${token}`, "Accept-Language": lang } });
+  if (!res.ok) throw new Error(`GET /api/monitor/crew?lang=${lang} → ${res.status}`);
+  const crew = (await res.json()) as { astronauts: { astronaut: { mission: string; mission_label: string } }[] };
+  const m = crew.astronauts.find((x) => x.astronaut.mission === MISSION.id);
+  if (!m) throw new Error(`${MISSION.id} görevinde astronot yok`);
+  return m.astronaut.mission_label;
+}
+
 /** Detay adresi mi: /monitor/astronaut/<id> ve (verildiyse) ?day=<gün>; gün verilmezse ?day olmamalı. */
 const atDetail = (id: string, day?: number) => (u: URL) =>
   u.pathname.endsWith(`/monitor/astronaut/${id}`) && (day === undefined ? !u.searchParams.has("day") : u.searchParams.get("day") === String(day));
@@ -390,9 +400,16 @@ export async function runEarthSmoke(): Promise<number> {
       await check(current.issues, "son temas", () => page.getByText(/son temas/).first().waitFor({ timeout: 5000 }));
       await check(current.issues, "kuyruk", () => page.getByText(/kuyrukta \d+ olay/).first().waitFor({ timeout: 5000 }));
       await check(current.issues, "ışık gecikmesi etiketi", () => page.getByText(/Işık gecikmesi \(simüle\)/).first().waitFor({ timeout: 5000 }));
-      await check(current.issues, `görev çubuğu: ${MISSION.name.tr}`, async () => {
-        const txt = await page.locator(`[data-mission="${MISSION.id}"]`).innerText();
-        if (!txt.includes(MISSION.name.tr) || !txt.includes(`${DEMO_CREW_SIZE} kişilik mürettebat`)) throw new Error(`görev çubuğu: ${txt}`);
+      const missionTr = await missionLabel(earthToken, "tr");
+      await check(current.issues, `görev çubuğu: backend kataloğundaki ad (${missionTr})`, async () => {
+        const bar = page.locator(`[data-mission="${MISSION.id}"]`);
+        await bar.locator("b").getByText(missionTr, { exact: true }).waitFor({ timeout: 5000 });
+        const txt = await bar.innerText();
+        if (!txt.includes(`${DEMO_CREW_SIZE} kişilik mürettebat`)) throw new Error(`görev çubuğu: ${txt}`);
+      });
+      await check(current.issues, "tablodaki görev adı görev çubuğuyla aynı", async () => {
+        const cell = (await page.locator(`tr[data-astronaut="${DEMO_CREW[0]}"] td`).nth(1).innerText()).trim();
+        if (cell !== missionTr) throw new Error(`tablo "${cell}", görev çubuğu "${missionTr}"`);
       });
       await check(current.issues, `mürettebatın hepsi ${MISSION.id}`, async () => {
         const crew = await api<{ astronauts: { astronaut: { id: string; mission: string } }[] }>(EARTH, "GET", "/api/monitor/crew", earthToken);
@@ -411,6 +428,10 @@ export async function runEarthSmoke(): Promise<number> {
       await page.getByRole("button", { name: "EN", exact: true }).click();
       await page.getByRole("button", { name: "Açık tema" }).or(page.getByRole("button", { name: "Light theme" })).click();
       await check(current.issues, "EN metinleri", () => page.getByText("All astronauts").waitFor({ timeout: 10_000 }));
+      const missionEn = await missionLabel(earthToken, "en");
+      await check(current.issues, `görev çubuğu EN: ${missionEn}`, () =>
+        page.locator(`[data-mission="${MISSION.id}"] b`).getByText(missionEn, { exact: true }).waitFor({ timeout: 10_000 }),
+      );
       await page.waitForTimeout(600);
       await shot("01d-overview-1920-en-light.png");
       await page.getByRole("button", { name: "Dark theme" }).click();
@@ -592,6 +613,11 @@ export async function runEarthSmoke(): Promise<number> {
         }
         const aud = await page.locator(".ahc [data-audience]").evaluateAll((els) => [...new Set(els.map((e) => e.getAttribute("data-audience")))]);
         if (aud.length !== 1 || aud[0] !== "earth") throw new Error(`audience: ${aud.join(",")}`);
+      });
+      await check(current.issues, "detaydaki görev adı görev çubuğuyla aynı", async () => {
+        const bar = (await page.locator(`[data-mission="${MISSION.id}"] b`).innerText()).trim();
+        const who = await page.locator(".ahc .who").innerText();
+        if (!bar || bar === "…" || !who.includes(bar)) throw new Error(`görev çubuğu "${bar}", kimlik satırı "${who}"`);
       });
       await check(current.issues, "check-in paneli 'Sadece skorlar': konular + işaret, astronotun sözleri yok", async () => {
         const panel = page.locator('.ahc section[data-share="scores"]');
