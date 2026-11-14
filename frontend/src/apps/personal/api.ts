@@ -1,8 +1,9 @@
 /**
  * Astronot ekranının veri katmanı: sorgu anahtarları, sorgular ve "Asistana sor" akışı.
  *
- * - Bütün anahtarlar `["personal", …]` altındadır; çıkışta ve oturum bitince topluca silinir (başka bir
- *   astronot aynı sekmede giriş yaparsa öncekinin verisini görmesin).
+ * - Bütün anahtarlar `["personal", …]` altındadır. Giriş gerektiren sorgular ve yazma istekleri oturuma özel
+ *   sorgu istemcisinde çalışır (PersonalApp → `newSessionClient`); çıkışta ve oturum bitince istemciyle birlikte
+ *   atılır (başka bir astronot aynı sekmede giriş yaparsa öncekinin verisini görmesin).
  * - Backend metinleri isteğin dilinde döner, bu yüzden dil anahtarın parçasıdır: TR/EN değişince yeniden istenir.
  * - Hiçbir kural burada hesaplanmaz; gelen `DayView` / `CheckinState` aynen gösterilir.
  */
@@ -14,7 +15,6 @@ import { auth, StationApiError, stationApi } from "../../api/station";
 import { currentLang, type Lang } from "../../shared/i18n";
 
 export const qk = {
-  all: ["personal"] as const,
   hint: (lang: Lang) => ["personal", "hint", lang] as const,
   me: (lang: Lang) => ["personal", "me", lang] as const,
   catalog: (lang: Lang) => ["personal", "catalog", lang] as const,
@@ -24,18 +24,10 @@ export const qk = {
   checkinAny: (day: number) => ["personal", "checkin", day] as const,
 };
 
-/** Giriş gerektirmeyen sorgular: oturum bitince silinmez. */
-const PUBLIC_KEYS = new Set(["hint", "catalog"]);
-
 export const isUnauthorized = (e: unknown): boolean => e instanceof StationApiError && e.status === 401;
 
 /** 4xx hataları tekrar denenmez (yanlış istek, oturum yok); ağ ve 5xx hataları iki kez denenir. */
 const retry = (count: number, e: unknown) => !(e instanceof StationApiError && e.status < 500) && count < 2;
-
-/** Oturum bitti / çıkış: bu astronota ait bütün önbellek silinir. */
-export function clearPersonalData(qc: QueryClient): void {
-  qc.removeQueries({ queryKey: qk.all, predicate: (q) => !PUBLIC_KEYS.has(String(q.queryKey[1])) });
-}
 
 /**
  * Bir değişiklikten (cevap, paylaşım, "Yaptım") sonra: cevap seçili dilde gelir ve o dilin önbelleğine yazılır;
@@ -45,16 +37,22 @@ export function dropOtherLanguages(qc: QueryClient, prefix: readonly unknown[], 
   qc.removeQueries({ queryKey: prefix, predicate: (q) => q.queryKey[q.queryKey.length - 1] !== lang });
 }
 
+/** Herkese açık (giriş gerektirmez): uygulamanın istemcisinde tutulur, oturum bitince silinmez. */
 export function useHint(lang: Lang) {
   return useQuery({ queryKey: qk.hint(lang), queryFn: stationApi.hint, retry: 1, staleTime: Infinity });
 }
 
+/** Herkese açık (giriş gerektirmez): uygulamanın istemcisinde tutulur, oturum bitince silinmez. */
 export function useCatalog(lang: Lang) {
   return useQuery({ queryKey: qk.catalog(lang), queryFn: stationApi.catalog, retry, staleTime: Infinity, placeholderData: keepPreviousData });
 }
 
-export function useOverview(lang: Lang, enabled = true) {
-  return useQuery({ queryKey: qk.me(lang), queryFn: stationApi.me, retry, enabled, placeholderData: keepPreviousData });
+/**
+ * Giriş yapan astronotun özeti. Dil değişince yeni dilin cevabı gelene kadar eldeki görünüm kalır.
+ * Sadece oturumun istemcisi altında çağrılır (PersonalApp → Session): "önceki veri" oturumlar arasında taşınmaz.
+ */
+export function useOverview(lang: Lang) {
+  return useQuery({ queryKey: qk.me(lang), queryFn: stationApi.me, retry, placeholderData: keepPreviousData });
 }
 
 /** Bir günün görünümü. Yüklenirken önceki günün verisi döner; `data.day` ile seçili günü karşılaştırın. */
