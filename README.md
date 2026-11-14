@@ -37,6 +37,7 @@ Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
 | `npm run dev:earth` | Dünya rolü: backend `127.0.0.1:8001` (`earth.db`, `SHIP_URL=http://127.0.0.1:8000`) + arayüz `:5174` (`/monitor`) |
 | `npm run reset` | seçili rolün DB'sini sıfırlar: `npm run reset -- ship` / `-- earth` (rol verilmezse `backend/.env`'deki `STATION_ROLE`) |
 | `npm run serve` | arayüzü derler, backend'i `0.0.0.0:8000`'de başlatır ve derlenmiş arayüzü kendisi servis eder (gemi `/me`, Dünya `/monitor`). Rol `backend/.env`'den; `npm run serve -- earth --port 8001 --no-build` |
+| `npm run stop` | çalışan / artakalan geliştirme sunucularını kapatır: rolün portlarını (API + web) tutan süreç ağaçları ve eski oturumlardan kalan zincirler. `npm run stop -- ship` / `-- earth`; rol verilmezse ikisi. `-- --port 8055` tek bir portu kapatır. Portu bu depoya ait olmayan bir program tutuyorsa dokunmaz (`--force` ile kapatır). Windows'ta `taskkill /PID <pid> /T /F`. Ayrıntı: [bug_read.md](bug_read.md) |
 | `npm run setup` | uv kontrolü → `backend/.venv` + `uv pip install -e ".[dev]"` → `.env.example`→`.env` (yoksa) → npm paketleri → `gen:api` → DB boşsa `seed --seed 42`. Tekrar çalıştırmak güvenli. |
 | `npm run dev` | **eski ekranlar** (`DATA_SOURCE=synthetic`, `health.db`, `/legacy`): backend (`127.0.0.1:8000`) + frontend (Vite `:5173`) birlikte, `api`/`web` renkli önekleriyle; biri kapanırsa diğeri de kapanır. Backend `app/` altındaki `.py` değişince kendiliğinden yeniden başlar (`scripts/backend-dev.mjs`; uvicorn `--reload` Windows'ta tüm konsola Ctrl+C gönderip `npm run dev`'i düşürdüğü için kullanılmıyor) |
 | `npm run dev:backend` / `npm run dev:frontend` | tek tek |
@@ -44,6 +45,9 @@ Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
 | `npm run seed` | eski ekranların sentetik demo verisini yeniden yükle (`health.db`'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
 | `npm run test` | backend `pytest` + frontend tip kontrolü |
 | `npm run smoke` | Playwright ile 7 ekranın tam sayfa görüntüsü (`frontend/screenshots/`) + konsol hatası / başarısız istek raporu. `npm run dev` açıkken çalıştırın; ilk sefer: `npx --prefix frontend playwright install --only-shell chromium` |
+
+`dev`, `dev:ship`, `dev:earth` ve `serve` başlamadan önce portlarına bakar. Port doluysa ya da eski bir geliştirme
+oturumu hâlâ açıksa başlamaz; hangi sürecin tuttuğunu yazar ve `npm run stop` önerir.
 
 Aşağıdaki bölümler aynı adımların elle yapılışını anlatır.
 
