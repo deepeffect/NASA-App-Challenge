@@ -1,0 +1,299 @@
+# =============================================================================
+# METRİK KATALOĞU (tek doğru kaynak)
+# =============================================================================
+# Her metrik için birim, sağlık sistemi, ölçüm sıklığı, kötüleşme yönü,
+# günlük agregasyon, normal aralık ve eşikler burada tanımlanır.
+#
+# ⚠ TÜM NORMAL ARALIKLAR VE EŞİKLER PLACEHOLDER'DIR.
+#   Genel (yeryüzü) klinik referans değerlerinden alınmıştır; uzay uçuşu için
+#   DOĞRULANMAMIŞTIR. Her değer NASA-STD-3001 (Vol 1 & 2) ve uçuş cerrahı
+#   görüşüyle doğrulanmalıdır. Doğrulanan metrikte `thresholds.verified: true`
+#   ve `thresholds.source` alanını güncelleyin. API `threshold_verified` döner.
+#
+# Alanlar:
+#   frequency      hourly | daily | weekly | event
+#   bad_direction  up | down | both   → hangi yöne değişim "kötüleşme" sayılır
+#   aggregation    mean | sum | last | max | min → günlük değere indirgeme
+#   rules          çalışacak kural dedektörleri: threshold, baseline_deviation, trend
+#   min_std        baseline std alt sınırı (istatistiksel parametre, klinik eşik DEĞİL)
+#   decimals       gösterim hassasiyeti
+#   aliases        adaptörlerin tanıyacağı alternatif kolon/metrik adları
+#
+# Eşik kuralı: `value < low` veya `value > high` (sınır değer dahil değil).
+# Ortalama ile agregelenen metriklerde eşik, günün en kötü değeriyle (min/max)
+# karşılaştırılır; sum/last metriklerinde günlük değerle.
+# =============================================================================
+
+systems:
+  cardiovascular: {tr: Kardiyovasküler, en: Cardiovascular}
+  musculoskeletal: {tr: Kas-iskelet, en: Musculoskeletal}
+  immune: {tr: Bağışıklık, en: Immune}
+  behavioral: {tr: Davranışsal sağlık, en: Behavioral health}
+  sleep: {tr: Uyku, en: Sleep}
+  radiation: {tr: Radyasyon, en: Radiation}
+
+metrics:
+  # ---------------------------------------------------------------- kardiyovasküler
+  resting_hr:
+    display_name: {tr: İstirahat nabzı, en: Resting heart rate}
+    unit: bpm
+    system: cardiovascular
+    frequency: daily
+    bad_direction: up
+    aggregation: mean
+    min_std: 1.0
+    decimals: 0
+    aliases: [rhr, resting_heart_rate, hr_rest]
+    normal_range: {low: 50, high: 90}            # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 40, high: 100}              # TODO: NASA-STD-3001 ile doğrula
+      critical: {low: 35, high: 120}             # TODO: NASA-STD-3001 ile doğrula
+
+  heart_rate:
+    display_name: {tr: Nabız (saatlik), en: Heart rate (hourly)}
+    unit: bpm
+    system: cardiovascular
+    frequency: hourly
+    bad_direction: up
+    aggregation: mean
+    min_std: 1.0
+    decimals: 0
+    aliases: [hr, heartrate, pulse]
+    # Egzersizde doğal olarak yükselir; sadece grafik/tool için. Uyarı üretmez.
+    rules: []
+
+  hrv_rmssd:
+    display_name: {tr: Kalp hızı değişkenliği (RMSSD), en: Heart rate variability (RMSSD)}
+    unit: ms
+    system: cardiovascular
+    frequency: daily
+    bad_direction: down
+    aggregation: mean
+    min_std: 2.0
+    decimals: 0
+    aliases: [hrv, rmssd]
+    normal_range: {low: 20, high: 100}           # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 15}                         # TODO: NASA-STD-3001 ile doğrula
+
+  bp_systolic:
+    display_name: {tr: Sistolik kan basıncı, en: Systolic blood pressure}
+    unit: mmHg
+    system: cardiovascular
+    frequency: daily
+    bad_direction: up
+    aggregation: mean
+    min_std: 2.0
+    decimals: 0
+    aliases: [sbp, systolic]
+    normal_range: {low: 90, high: 130}           # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 90, high: 140}              # TODO: NASA-STD-3001 ile doğrula
+      critical: {high: 180}                      # TODO: NASA-STD-3001 ile doğrula
+
+  bp_diastolic:
+    display_name: {tr: Diyastolik kan basıncı, en: Diastolic blood pressure}
+    unit: mmHg
+    system: cardiovascular
+    frequency: daily
+    bad_direction: up
+    aggregation: mean
+    min_std: 2.0
+    decimals: 0
+    aliases: [dbp, diastolic]
+    normal_range: {low: 60, high: 85}            # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 60, high: 90}               # TODO: NASA-STD-3001 ile doğrula
+      critical: {high: 120}                      # TODO: NASA-STD-3001 ile doğrula
+
+  spo2:
+    display_name: {tr: Oksijen satürasyonu (SpO2), en: Oxygen saturation (SpO2)}
+    unit: "%"
+    system: cardiovascular
+    frequency: hourly
+    bad_direction: down
+    aggregation: mean
+    min_std: 0.3
+    decimals: 1
+    aliases: [oxygen_saturation, sao2]
+    normal_range: {low: 95, high: 100}           # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 94}                         # TODO: NASA-STD-3001 ile doğrula
+      critical: {low: 90}                        # TODO: NASA-STD-3001 ile doğrula
+
+  # ---------------------------------------------------------------- bağışıklık
+  body_temp:
+    display_name: {tr: Vücut ısısı, en: Body temperature}
+    unit: degC
+    system: immune
+    frequency: daily
+    bad_direction: both
+    aggregation: mean
+    min_std: 0.1
+    decimals: 1
+    aliases: [temperature, temp, core_temp]
+    normal_range: {low: 36.1, high: 37.5}        # TODO: NASA-STD-3001 ile doğrula (uçuşta çekirdek ısı yükselebilir)
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 35.5, high: 38.0}           # TODO: NASA-STD-3001 ile doğrula
+      critical: {low: 35.0, high: 39.0}          # TODO: NASA-STD-3001 ile doğrula
+
+  # ---------------------------------------------------------------- kas-iskelet
+  body_mass:
+    display_name: {tr: Vücut kütlesi, en: Body mass}
+    unit: kg
+    system: musculoskeletal
+    frequency: daily
+    bad_direction: down
+    aggregation: mean
+    min_std: 0.3
+    decimals: 1
+    aliases: [weight, mass, body_weight]
+    # Mutlak eşik anlamsız (kişiye özel); sadece baseline sapması ve trend.
+    rules: [baseline_deviation, trend]
+
+  exercise_minutes:
+    display_name: {tr: Egzersiz süresi, en: Exercise duration}
+    unit: min
+    system: musculoskeletal
+    frequency: daily
+    bad_direction: down
+    aggregation: sum
+    min_std: 5.0
+    decimals: 0
+    aliases: [exercise, exercise_min, workout_minutes]
+    normal_range: {low: 90}                      # TODO: NASA-STD-3001 / egzersiz protokolü ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 45}                         # TODO: NASA-STD-3001 / egzersiz protokolü ile doğrula
+
+  # ---------------------------------------------------------------- uyku
+  sleep_duration:
+    display_name: {tr: Uyku süresi, en: Sleep duration}
+    unit: h
+    system: sleep
+    frequency: daily
+    bad_direction: down
+    aggregation: sum
+    min_std: 0.25
+    decimals: 1
+    aliases: [sleep, sleep_hours, total_sleep]
+    normal_range: {low: 7, high: 9}              # TODO: NASA-STD-3001 ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 6.0}                        # TODO: NASA-STD-3001 ile doğrula
+      critical: {low: 4.0}                       # TODO: NASA-STD-3001 ile doğrula
+
+  sleep_quality:
+    display_name: {tr: Uyku kalitesi (öz bildirim), en: Sleep quality (self-report)}
+    unit: score_1_5
+    system: sleep
+    frequency: daily
+    bad_direction: down
+    aggregation: mean
+    min_std: 0.5
+    decimals: 1
+    aliases: [sleep_score]
+    normal_range: {low: 3}                       # TODO: doğrula (1-5 öz bildirim ölçeği)
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 2}                          # TODO: doğrula
+
+  # ---------------------------------------------------------------- davranışsal
+  mood:
+    display_name: {tr: Ruh hali (öz bildirim), en: Mood (self-report)}
+    unit: score_1_5
+    system: behavioral
+    frequency: daily
+    bad_direction: down
+    aggregation: mean
+    min_std: 0.5
+    decimals: 1
+    aliases: [mood_score]
+    normal_range: {low: 3}                       # TODO: doğrula (1-5 öz bildirim ölçeği)
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {low: 2}                          # TODO: doğrula
+
+  stress:
+    display_name: {tr: Stres (öz bildirim), en: Stress (self-report)}
+    unit: score_1_5
+    system: behavioral
+    frequency: daily
+    bad_direction: up
+    aggregation: mean
+    min_std: 0.5
+    decimals: 1
+    aliases: [stress_score, stress_level]
+    normal_range: {high: 3}                      # TODO: doğrula (1-5 öz bildirim ölçeği)
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {high: 4}                         # TODO: doğrula
+
+  reaction_time:
+    display_name: {tr: Reaksiyon süresi (PVT), en: Reaction time (PVT)}
+    unit: ms
+    system: behavioral
+    frequency: daily
+    bad_direction: up
+    aggregation: mean
+    min_std: 5.0
+    decimals: 0
+    aliases: [pvt, pvt_rt, reaction_ms]
+    normal_range: {low: 200, high: 400}          # TODO: NASA-STD-3001 / PVT protokolü ile doğrula
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {high: 500}                       # TODO: NASA-STD-3001 / PVT protokolü ile doğrula
+
+  # ---------------------------------------------------------------- radyasyon
+  radiation_daily_dose:
+    display_name: {tr: Günlük radyasyon dozu, en: Daily radiation dose}
+    unit: mSv
+    system: radiation
+    frequency: daily
+    bad_direction: up
+    aggregation: sum
+    min_std: 0.05
+    decimals: 2
+    aliases: [daily_dose, dose_daily]
+    rules: [threshold, baseline_deviation]
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {high: 10}                        # TODO: NASA-STD-3001 ile doğrula
+      critical: {high: 50}                       # TODO: NASA-STD-3001 ile doğrula
+
+  radiation_cumulative:
+    display_name: {tr: Kümülatif radyasyon dozu (kariyer), en: Cumulative radiation dose (career)}
+    unit: mSv
+    system: radiation
+    frequency: daily
+    bad_direction: up
+    aggregation: last
+    min_std: 0.05
+    decimals: 1
+    aliases: [cumulative_dose, dose_cumulative]
+    # Sürekli artan bir seri: baseline/trend anlamsız, sadece eşik.
+    rules: [threshold]
+    thresholds:
+      verified: false
+      source: placeholder
+      warning: {high: 400}                       # TODO: NASA-STD-3001 ile doğrula
+      critical: {high: 600}                      # TODO: NASA-STD-3001 ile doğrula (kariyer limiti)

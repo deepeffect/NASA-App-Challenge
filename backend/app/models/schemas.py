@@ -1,0 +1,588 @@
+"""API SÖZLEŞMESİ — tüm request/response modelleri (Pydantic v2).
+
+Bu dosya arayüz ekibiyle olan sözleşmedir. Bir alanı değiştirdiğinde:
+  1) `python -m app.cli export-openapi`   → docs/openapi.json
+  2) docs/API.md'yi güncelle
+  3) frontend: `npm run gen:api`          → src/api/types.ts
+Analiz motoru olayları (HealthEvent) doğrudan bu modellerle üretir.
+"""
+
+import datetime as dt
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, model_validator
+
+# =============================================================================
+# Ortak tipler
+# =============================================================================
+HealthSystem = Literal["cardiovascular", "musculoskeletal", "immune", "behavioral", "sleep", "radiation"]
+HEALTH_SYSTEMS: tuple[str, ...] = (
+    "cardiovascular",
+    "musculoskeletal",
+    "immune",
+    "behavioral",
+    "sleep",
+    "radiation",
+)
+Severity = Literal["info", "warning", "critical"]
+SEVERITY_RANK: dict[str, int] = {"info": 1, "warning": 2, "critical": 3}
+EventSource = Literal["rule", "anomaly", "changepoint", "forecast"]
+StatusColor = Literal["green", "yellow", "red", "unknown"]
+EventStatus = Literal["active", "resolved"]
+Verdict = Literal["false_alarm", "useful"]
+Lang = Literal["tr", "en"]
+GeneratedBy = Literal["llm", "mock", "template_fallback"]
+Direction = Literal["up", "down", "both"]
+Frequency = Literal["hourly", "daily", "weekly", "event"]
+MetricState = Literal["normal", "watch", "alert", "no_data"]
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+
+
+class DateWindow(BaseModel):
+    start: dt.date
+    end: dt.date
+
+
+class ValueRange(BaseModel):
+    low: float | None = None
+    high: float | None = None
+
+
+class Thresholds(BaseModel):
+    verified: bool = Field(description="false → placeholder, NASA-STD-3001 ile doğrulanmadı")
+    source: str = Field("placeholder", description="Eşiğin kaynağı")
+    warning: ValueRange | None = None
+    critical: ValueRange | None = None
+
+
+# =============================================================================
+# /api/health
+# =============================================================================
+class DBHealth(BaseModel):
+    ok: bool
+    astronauts: int = 0
+    measurements: int = 0
+    latest_date: dt.date | None = None
+    error: str | None = None
+
+
+class LLMHealth(BaseModel):
+    provider: Literal["mock", "openai"]
+    base_url: str | None = None
+    model: str
+    reachable: bool = Field(description="LLM sunucusuna erişilebildi mi (GET {base_url}/models)")
+    model_available: bool = Field(description="LLM_MODEL sunucuda yüklü mü")
+    available_models: list[str] = []
+    tool_mode: str
+    thinking: bool
+    latency_ms: float | None = None
+    error: str | None = None
+    checked_at: dt.datetime
+
+
+class RAGHealth(BaseModel):
+    backend: Literal["keyword", "embedding", "disabled"]
+    ok: bool
+    documents: int = 0
+    chunks: int = 0
+    error: str | None = None
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok", "degraded", "error"] = Field(
+        description="ok: her şey çalışıyor | degraded: LLM/RAG erişilemiyor (kural tabanlı uyarılar çalışır) | error: DB yok"
+    )
+    version: str
+    time: dt.datetime
+    db: DBHealth
+    llm: LLMHealth
+    rag: RAGHealth
+
+
+# =============================================================================
+# /api/metrics/catalog
+# =============================================================================
+class MetricInfo(BaseModel):
+    name: str = Field(examples=["sleep_duration"])
+    display_name: str
+    display_name_en: str
+    unit: str
+    system: HealthSystem
+    frequency: Frequency
+    bad_direction: Direction = Field(description="Hangi yöne değişim kötüleşme sayılır")
+    aggregation: str
+    normal_range: ValueRange | None = None
+    thresholds: Thresholds | None = None
+    threshold_verified: bool
+    rules: list[str]
+    decimals: int
+
+
+class SystemInfo(BaseModel):
+    id: HealthSystem
+    display_name: str
+    display_name_en: str
+    metrics: list[str]
+
+
+class CatalogResponse(BaseModel):
+    systems: list[SystemInfo]
+    metrics: list[MetricInfo]
+
+
+# =============================================================================
+# Astronot / görev
+# =============================================================================
+class AstronautInfo(BaseModel):
+    id: str = Field(examples=["AST-02"])
+    name: str
+    role: str | None = None
+
+
+class MissionInfo(BaseModel):
+    start_date: dt.date | None = Field(None, description="Görevin (verinin) ilk günü")
+    latest_date: dt.date | None = Field(None, description="Verideki son gün")
+    as_of: dt.date | None = Field(None, description="Bu cevabın hesaplandığı gün (zaman kaydırıcısı)")
+    mission_day: int | None = Field(None, description="as_of gününün görev günü (1'den başlar)")
+    total_days: int | None = None
+
+
+# =============================================================================
+# Olaylar (kural tabanlı + ML aynı şemayı kullanır)
+# =============================================================================
+class Contributor(BaseModel):
+    metric: str
+    value: float | None = None
+    baseline: float | None = None
+    z: float | None = None
+    weight: float = Field(ge=0, le=1, description="Olaya katkı payı; bir olayın katkıları toplamı 1")
+    threshold_verified: bool | None = Field(None, description="Metriğin eşiği doğrulandı mı (eşiği yoksa null)")
+
+
+class ForecastPoint(BaseModel):
+    date: dt.date
+    value: float
+    lower: float | None = None
+    upper: float | None = None
+
+
+class Forecast(BaseModel):
+    metric: str
+    method: str = Field(examples=["linear", "prophet"])
+    horizon_days: int
+    points: list[ForecastPoint]
+
+
+class HealthEvent(BaseModel):
+    event_id: str = Field(examples=["evt_3f9a1c2b7d10"], description="Deterministik: astronot+kaynak+dedektör+metrik+başlangıç hash'i")
+    astronaut_id: str
+    detected_at: dt.datetime
+    source: EventSource
+    system: HealthSystem
+    severity: Severity
+    score: float = Field(ge=0, le=1, description="Güven/şiddet 0-1. UI: <0.5 düşük, 0.5-0.75 orta, >0.75 yüksek")
+    title: str
+    window: DateWindow
+    contributors: list[Contributor]
+    changepoint_date: dt.date | None = None
+    forecast: Forecast | None = None
+    share_with_ground: bool = False
+    # --- Şemaya eklenen alanlar ---
+    status: EventStatus = Field("active", description="active: as_of itibarıyla sürüyor | resolved: bitti")
+    detector: str = Field(examples=["rule.threshold", "rule.baseline_deviation", "ml.isolation_forest"])
+    description: str | None = Field(None, description="Kural tarafından üretilen, sayıları içeren kısa açıklama")
+    feedback: Verdict | None = Field(None, description="Son kullanıcı geri bildirimi")
+
+
+class EventCounts(BaseModel):
+    critical: int = 0
+    warning: int = 0
+    info: int = 0
+
+
+# =============================================================================
+# /api/crew
+# =============================================================================
+class CrewMember(AstronautInfo):
+    status: StatusColor
+    score: float | None = Field(None, description="Genel skor 0-100 (en zayıf sistemin skoru)")
+    active_events: EventCounts
+    attention_systems: list[HealthSystem] = Field(description="green olmayan sistemler (kötüden iyiye)")
+    last_measurement_at: dt.datetime | None = None
+
+
+class CrewResponse(BaseModel):
+    mission: MissionInfo
+    astronauts: list[CrewMember]
+
+
+# =============================================================================
+# /api/astronauts/{id}/summary
+# =============================================================================
+class ScorePenalty(BaseModel):
+    event_id: str
+    title: str
+    metric: str | None = None
+    severity: Severity
+    penalty: float
+
+
+class SystemScore(BaseModel):
+    system: HealthSystem
+    display_name: str
+    score: float | None = Field(None, description="0-100; sistemde veri yoksa null")
+    status: StatusColor
+    metrics: list[str]
+    penalties: list[ScorePenalty] = Field(description="Skoru düşüren aktif olaylar (açıklanabilirlik)")
+
+
+class OverallStatus(BaseModel):
+    status: StatusColor
+    score: float | None = None
+    worst_system: HealthSystem | None = None
+
+
+class MetricSnapshot(BaseModel):
+    metric: str
+    display_name: str
+    unit: str
+    system: HealthSystem
+    date: dt.date | None = None
+    value: float | None = None
+    baseline_mean: float | None = None
+    baseline_std: float | None = None
+    z: float | None = Field(None, description="Günlük değerin baseline z-skoru")
+    z7: float | None = Field(None, description="7 günlük ortalamanın baseline z-skoru")
+    slope7: float | None = Field(None, description="Son 7 günün lineer eğimi (birim/gün)")
+    threshold_verified: bool
+    state: MetricState
+
+
+class AstronautSummary(BaseModel):
+    astronaut: AstronautInfo
+    mission: MissionInfo
+    overall: OverallStatus
+    systems: list[SystemScore]
+    latest: list[MetricSnapshot]
+    active_events: list[HealthEvent]
+    last_measurement_at: dt.datetime | None = None
+
+
+# =============================================================================
+# /api/astronauts/{id}/metrics
+# =============================================================================
+class Baseline(BaseModel):
+    mean: float
+    std: float
+    n_days: int
+    start: dt.date
+    end: dt.date
+
+
+class DailyPoint(BaseModel):
+    date: dt.date
+    value: float
+    min: float
+    max: float
+    n: int = Field(description="O gün kaç ham ölçüm var")
+    roll7: float | None = None
+    z7: float | None = None
+
+
+class RawPoint(BaseModel):
+    timestamp: dt.datetime
+    value: float
+    source: str | None = None
+
+
+class MetricSeriesResponse(BaseModel):
+    astronaut_id: str
+    metric: MetricInfo = Field(description="Birim, normal aralık, eşikler ve threshold_verified dahil")
+    as_of: dt.date | None
+    resolution: Literal["daily", "raw"]
+    baseline: Baseline | None = Field(None, description="Kişisel normal bant: mean ± std")
+    daily: list[DailyPoint]
+    raw: list[RawPoint] = Field([], description="Sadece resolution=raw iken dolu")
+    events: list[HealthEvent] = Field(
+        [], description="Bu metriği içeren olaylar (window gölgesi, changepoint_date, forecast çizimi için)"
+    )
+
+
+# =============================================================================
+# Check-in
+# =============================================================================
+class EmergencyProtocol(BaseModel):
+    id: str
+    title: str
+    steps: list[str]
+    contacts: list[str]
+    verified: bool = Field(description="false → protokol metni placeholder")
+
+
+class EmergencyNotice(BaseModel):
+    triggered: bool = True
+    matched_symptoms: list[str] = Field(description="Belirti kimlikleri, örn. chest_pain")
+    matched_labels: list[str] = Field(description="Okunur belirti adları")
+    matched_terms: list[str]
+    protocol: EmergencyProtocol
+    message: str
+
+
+class CheckinRequest(BaseModel):
+    astronaut_id: str
+    mood: int = Field(ge=1, le=5, description="1 çok kötü … 5 çok iyi")
+    stress: int = Field(ge=1, le=5, description="1 çok düşük … 5 çok yüksek")
+    sleep_quality: int = Field(ge=1, le=5, description="1 çok kötü … 5 çok iyi")
+    note: str | None = Field(None, max_length=2000)
+    share_with_ground: bool = False
+    timestamp: dt.datetime | None = Field(None, description="Boşsa sunucu zamanı (UTC)")
+    lang: Lang = "tr"
+
+
+class CheckinRecord(BaseModel):
+    id: int
+    astronaut_id: str
+    timestamp: dt.datetime
+    mood: int
+    stress: int
+    sleep_quality: int
+    note: str | None = None
+    share_with_ground: bool
+    emergency: bool = Field(description="Not acil belirti içeriyor muydu")
+
+
+class CheckinResponse(BaseModel):
+    checkin: CheckinRecord
+    emergency: EmergencyNotice | None = None
+
+
+class CheckinListResponse(BaseModel):
+    astronaut_id: str
+    checkins: list[CheckinRecord]
+
+
+# =============================================================================
+# /api/alerts
+# =============================================================================
+class AlertListResponse(BaseModel):
+    as_of: dt.date | None
+    count: int
+    events: list[HealthEvent]
+
+
+class ExplainRequest(BaseModel):
+    lang: Lang = "tr"
+    as_of: dt.date | None = None
+    refresh: bool = Field(False, description="true → cache'i atla, yeniden üret")
+
+
+class AlertExplanation(BaseModel):
+    """LLM'in üretmesi gereken yapılandırılmış çıktı (json_schema)."""
+
+    summary: str
+    likely_factors: list[str]
+    recommended_actions: list[str]
+    escalate_to_ground: bool
+    sources: list[str] = Field(description="Kullanılan veri/belge referansları, örn. 'metric:sleep_duration', 'doc:file.md#Bölüm'")
+    uncertainty: str | None = Field(None, description="Belirsizlik/veri eksikliği notu")
+
+
+class DocRef(BaseModel):
+    file: str
+    section: str | None = None
+    page: int | None = None
+    snippet: str
+    score: float
+
+
+class ExplainResponse(BaseModel):
+    event_id: str
+    event: HealthEvent
+    explanation: AlertExplanation
+    generated_by: GeneratedBy
+    model: str | None = None
+    cached: bool
+    ungrounded_numbers: list[str] = Field([], description="Çıktıda olup bağlam verisinde bulunmayan sayılar (uyarı amaçlı)")
+    doc_refs: list[DocRef] = []
+    created_at: dt.datetime
+
+
+class FeedbackRequest(BaseModel):
+    verdict: Verdict
+    comment: str | None = Field(None, max_length=1000)
+
+
+class FeedbackResponse(BaseModel):
+    feedback_id: int
+    event_id: str
+    verdict: Verdict
+    comment: str | None = None
+    created_at: dt.datetime
+
+
+class ShareRequest(BaseModel):
+    share_with_ground: bool
+
+
+class ShareResponse(BaseModel):
+    event_id: str
+    share_with_ground: bool
+    updated_at: dt.datetime
+
+
+# =============================================================================
+# /api/astronauts/{id}/briefing
+# =============================================================================
+class DailyBriefing(BaseModel):
+    """LLM'in üretmesi gereken yapılandırılmış çıktı (json_schema)."""
+
+    summary: str
+    highlights: list[str] = Field(description="Olumlu/normal giden noktalar")
+    concerns: list[str] = Field(description="warning/critical olaylar")
+    recommended_actions: list[str]
+    info_notes: list[str] = Field(description="info seviyesindeki olaylar (sadece brifingde gösterilir)")
+    escalate_to_ground: bool
+    sources: list[str]
+    uncertainty: str | None = None
+
+
+class BriefingResponse(BaseModel):
+    astronaut_id: str
+    as_of: dt.date | None
+    lang: Lang
+    briefing: DailyBriefing
+    generated_by: GeneratedBy
+    model: str | None = None
+    cached: bool
+    ungrounded_numbers: list[str] = []
+    info_events: list[HealthEvent] = []
+    created_at: dt.datetime
+
+
+# =============================================================================
+# /api/chat (SSE)
+# =============================================================================
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
+
+
+class ChatRequest(BaseModel):
+    astronaut_id: str
+    messages: list[ChatMessage] = Field(min_length=1, max_length=50)
+    as_of: dt.date | None = None
+    lang: Lang | None = Field(None, description="Boşsa kullanıcının dilinden tahmin edilir")
+
+    @model_validator(mode="after")
+    def _last_is_user(self) -> "ChatRequest":
+        if self.messages[-1].role != "user":
+            raise ValueError("son mesaj 'user' rolünde olmalı")
+        return self
+
+
+ChatEventName = Literal["meta", "token", "thinking", "tool_call", "tool_result", "emergency", "done", "error"]
+
+
+class SSEMeta(BaseModel):
+    request_id: str
+    provider: str
+    model: str
+    tool_mode: str
+    astronaut_id: str
+    as_of: dt.date | None = None
+
+
+class SSEToken(BaseModel):
+    text: str
+
+
+class SSEThinking(BaseModel):
+    text: str
+
+
+class SSEToolCall(BaseModel):
+    id: str
+    name: str
+    arguments: dict[str, Any]
+
+
+class SSEToolResult(BaseModel):
+    id: str
+    name: str
+    ok: bool
+    duration_ms: float
+    preview: str = Field(description="Sonucun kısaltılmış JSON'u (≤500 karakter)")
+    error: str | None = None
+
+
+class SSEDone(BaseModel):
+    message: str = Field(description="Asistanın tam cevabı")
+    finish_reason: Literal["stop", "max_steps", "error", "llm_unavailable"]
+    steps: int
+    tool_calls: int
+    ungrounded_numbers: list[str] = []
+    doc_refs: list[DocRef] = []
+    degraded: bool = Field(False, description="true → LLM yok, kural tabanlı yedek cevap")
+
+
+class SSEError(BaseModel):
+    code: str
+    message: str
+
+
+SSE_MODELS: dict[str, type[BaseModel]] = {
+    "meta": SSEMeta,
+    "token": SSEToken,
+    "thinking": SSEThinking,
+    "tool_call": SSEToolCall,
+    "tool_result": SSEToolResult,
+    "emergency": EmergencyNotice,
+    "done": SSEDone,
+    "error": SSEError,
+}
+
+
+# =============================================================================
+# /api/ingest
+# =============================================================================
+class IngestRowError(BaseModel):
+    row: int
+    reason: str
+    value: str | None = None
+
+
+class IngestReport(BaseModel):
+    batch_id: int | None = None
+    filename: str
+    adapter: str
+    rows_total: int
+    rows_accepted: int
+    rows_duplicate: int
+    rows_rejected: int
+    unknown_metrics: list[str] = []
+    astronauts: list[str] = []
+    date_range: DateWindow | None = None
+    warnings: list[str] = []
+    errors_sample: list[IngestRowError] = Field([], description="İlk 20 reddedilen satır")
+
+
+# =============================================================================
+# /api/ground-report
+# =============================================================================
+class GroundReportMember(BaseModel):
+    astronaut: AstronautInfo
+    status: StatusColor
+    score: float | None = None
+    shared_checkins: list[CheckinRecord]
+    shared_events: list[HealthEvent]
+
+
+class GroundReport(BaseModel):
+    generated_at: dt.datetime
+    as_of: dt.date | None
+    period: DateWindow | None
+    crew: list[GroundReportMember]
+    note: str

@@ -1,0 +1,4160 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Astronaut Health Monitor API",
+    "description": "\nAstronot sağlık izleme sistemi — tamamen offline/gemide çalışır.\n\n**Mimari ilke:** Sayısal analizi LLM yapmaz. Analiz motoru (Python) baseline, trend,\nanomali, skor ve uyarıları üretir; LLM sadece yorumlar. Kural tabanlı uyarılar LLM\nkapalıyken de çalışır.\n\nZaman kaydırıcısı: çoğu GET endpoint'i `as_of=YYYY-MM-DD` alır.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Sistem durumu (DB, LLM, RAG)",
+        "operationId": "get_health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/metrics/catalog": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Metrik kataloğu",
+        "operationId": "get_catalog_api_metrics_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/crew": {
+      "get": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Tüm astronotlar + genel durum",
+        "operationId": "get_crew_api_crew_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/astronauts/{astronaut_id}/summary": {
+      "get": {
+        "tags": [
+          "astronauts"
+        ],
+        "summary": "Sistem skorları, son değerler, aktif olaylar",
+        "operationId": "get_summary_api_astronauts__astronaut_id__summary_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AstronautSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/astronauts/{astronaut_id}/metrics": {
+      "get": {
+        "tags": [
+          "astronauts"
+        ],
+        "summary": "Metrik zaman serisi + baseline + eşikler + ilgili olaylar",
+        "operationId": "get_metric_series_api_astronauts__astronaut_id__metrics_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Katalogdaki metrik adı, örn. sleep_duration",
+              "title": "Metric"
+            },
+            "description": "Katalogdaki metrik adı, örn. sleep_duration"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 1,
+              "description": "as_of'tan geriye kaç gün",
+              "default": 30,
+              "title": "Days"
+            },
+            "description": "as_of'tan geriye kaç gün"
+          },
+          {
+            "name": "resolution",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "daily",
+                "raw"
+              ],
+              "type": "string",
+              "description": "raw → ham (saatlik) noktalar da döner",
+              "default": "daily",
+              "title": "Resolution"
+            },
+            "description": "raw → ham (saatlik) noktalar da döner"
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricSeriesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/astronauts/{astronaut_id}/checkins": {
+      "get": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Check-in geçmişi (yeniden eskiye)",
+        "operationId": "get_checkins_api_astronauts__astronaut_id__checkins_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 400,
+              "minimum": 1,
+              "default": 14,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/astronauts/{astronaut_id}/briefing": {
+      "get": {
+        "tags": [
+          "llm"
+        ],
+        "summary": "Günlük LLM brifingi (LLM yoksa kural tabanlı şablon)",
+        "operationId": "get_briefing_api_astronauts__astronaut_id__briefing_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "tr",
+                "en"
+              ],
+              "type": "string",
+              "default": "tr",
+              "title": "Lang"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "true → cache'i atla",
+              "default": false,
+              "title": "Refresh"
+            },
+            "description": "true → cache'i atla"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Olay/uyarı listesi",
+        "operationId": "list_alerts_api_alerts_get",
+        "parameters": [
+          {
+            "name": "astronaut_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Astronaut Id"
+            }
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "info",
+                      "warning",
+                      "critical"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tam eşleşme; tekrarlanabilir",
+              "title": "Severity"
+            },
+            "description": "Tam eşleşme; tekrarlanabilir"
+          },
+          {
+            "name": "min_severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "info",
+                    "warning",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bu seviye ve üstü",
+              "title": "Min Severity"
+            },
+            "description": "Bu seviye ve üstü"
+          },
+          {
+            "name": "system",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "cardiovascular",
+                    "musculoskeletal",
+                    "immune",
+                    "behavioral",
+                    "sleep",
+                    "radiation"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "System"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "rule",
+                    "anomaly",
+                    "changepoint",
+                    "forecast"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "active",
+                "resolved",
+                "all"
+              ],
+              "type": "string",
+              "default": "active",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{event_id}": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Tek olay",
+        "operationId": "get_alert_api_alerts__event_id__get",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthEvent"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{event_id}/explain": {
+      "post": {
+        "tags": [
+          "llm"
+        ],
+        "summary": "Olayın LLM açıklaması (AlertExplanation)",
+        "operationId": "explain_alert_api_alerts__event_id__explain_post",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ExplainRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{event_id}/feedback": {
+      "post": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "'Yanlış alarm' / 'Faydalı' geri bildirimi",
+        "operationId": "post_feedback_api_alerts__event_id__feedback_post",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/{event_id}/share": {
+      "put": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Olayı yer ekibiyle paylaş / paylaşımı kaldır",
+        "operationId": "put_share_api_alerts__event_id__share_put",
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Event Id"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/checkin": {
+      "post": {
+        "tags": [
+          "checkin"
+        ],
+        "summary": "Günlük öz bildirim (not acil belirti için taranır)",
+        "operationId": "post_checkin_api_checkin_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckinResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": [
+          "llm"
+        ],
+        "summary": "Streaming sohbet (SSE)",
+        "operationId": "post_chat_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "text/event-stream. Her olay `event: <ad>` + `data: <json>` satırlarıdır. Olay adları ve payload şemaları: meta→SSEMeta, token→SSEToken, thinking→SSEThinking, tool_call→SSEToolCall, tool_result→SSEToolResult, emergency→EmergencyNotice, done→SSEDone, error→SSEError. Tarayıcıda EventSource POST desteklemez: @microsoft/fetch-event-source kullanın.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingest": {
+      "post": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "CSV/JSON veri yükleme (format otomatik algılanır)",
+        "operationId": "post_ingest_api_ingest_post",
+        "parameters": [
+          {
+            "name": "adapter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Adaptörü zorla: long_csv | wide_csv | json_records",
+              "title": "Adapter"
+            },
+            "description": "Adaptörü zorla: long_csv | wide_csv | json_records"
+          },
+          {
+            "name": "astronaut_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Dosyada astronaut_id kolonu yoksa kullanılır",
+              "title": "Astronaut Id"
+            },
+            "description": "Dosyada astronaut_id kolonu yoksa kullanılır"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_post_ingest_api_ingest_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ground-report": {
+      "get": {
+        "tags": [
+          "crew"
+        ],
+        "summary": "Yer ekibi raporu (sadece paylaşılan check-in ve olaylar)",
+        "operationId": "get_ground_report_api_ground_report_get",
+        "parameters": [
+          {
+            "name": "as_of",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün.",
+              "title": "As Of"
+            },
+            "description": "Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün."
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 60,
+              "minimum": 1,
+              "default": 7,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroundReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertExplanation": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "likely_factors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Likely Factors"
+          },
+          "recommended_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Actions"
+          },
+          "escalate_to_ground": {
+            "type": "boolean",
+            "title": "Escalate To Ground"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources",
+            "description": "Kullanılan veri/belge referansları, örn. 'metric:sleep_duration', 'doc:file.md#Bölüm'"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty",
+            "description": "Belirsizlik/veri eksikliği notu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "likely_factors",
+          "recommended_actions",
+          "escalate_to_ground",
+          "sources"
+        ],
+        "title": "AlertExplanation",
+        "description": "LLM'in üretmesi gereken yapılandırılmış çıktı (json_schema)."
+      },
+      "AlertListResponse": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HealthEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "as_of",
+          "count",
+          "events"
+        ],
+        "title": "AlertListResponse"
+      },
+      "AstronautInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "AST-02"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AstronautInfo"
+      },
+      "AstronautSummary": {
+        "properties": {
+          "astronaut": {
+            "$ref": "#/components/schemas/AstronautInfo"
+          },
+          "mission": {
+            "$ref": "#/components/schemas/MissionInfo"
+          },
+          "overall": {
+            "$ref": "#/components/schemas/OverallStatus"
+          },
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/SystemScore"
+            },
+            "type": "array",
+            "title": "Systems"
+          },
+          "latest": {
+            "items": {
+              "$ref": "#/components/schemas/MetricSnapshot"
+            },
+            "type": "array",
+            "title": "Latest"
+          },
+          "active_events": {
+            "items": {
+              "$ref": "#/components/schemas/HealthEvent"
+            },
+            "type": "array",
+            "title": "Active Events"
+          },
+          "last_measurement_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Measurement At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut",
+          "mission",
+          "overall",
+          "systems",
+          "latest",
+          "active_events"
+        ],
+        "title": "AstronautSummary"
+      },
+      "Baseline": {
+        "properties": {
+          "mean": {
+            "type": "number",
+            "title": "Mean"
+          },
+          "std": {
+            "type": "number",
+            "title": "Std"
+          },
+          "n_days": {
+            "type": "integer",
+            "title": "N Days"
+          },
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mean",
+          "std",
+          "n_days",
+          "start",
+          "end"
+        ],
+        "title": "Baseline"
+      },
+      "Body_post_ingest_api_ingest_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "CSV veya JSON dosyası"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_post_ingest_api_ingest_post"
+      },
+      "BriefingResponse": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "tr",
+              "en"
+            ],
+            "title": "Lang"
+          },
+          "briefing": {
+            "$ref": "#/components/schemas/DailyBriefing"
+          },
+          "generated_by": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "mock",
+              "template_fallback"
+            ],
+            "title": "Generated By"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "ungrounded_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ungrounded Numbers",
+            "default": []
+          },
+          "info_events": {
+            "items": {
+              "$ref": "#/components/schemas/HealthEvent"
+            },
+            "type": "array",
+            "title": "Info Events",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "as_of",
+          "lang",
+          "briefing",
+          "generated_by",
+          "cached",
+          "created_at"
+        ],
+        "title": "BriefingResponse"
+      },
+      "CatalogResponse": {
+        "properties": {
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/SystemInfo"
+            },
+            "type": "array",
+            "title": "Systems"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricInfo"
+            },
+            "type": "array",
+            "title": "Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "systems",
+          "metrics"
+        ],
+        "title": "CatalogResponse"
+      },
+      "ChatMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ChatMessage"
+      },
+      "ChatRequest": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Messages"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "lang": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tr",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lang",
+            "description": "Boşsa kullanıcının dilinden tahmin edilir"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "messages"
+        ],
+        "title": "ChatRequest"
+      },
+      "CheckinListResponse": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "checkins": {
+            "items": {
+              "$ref": "#/components/schemas/CheckinRecord"
+            },
+            "type": "array",
+            "title": "Checkins"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "checkins"
+        ],
+        "title": "CheckinListResponse"
+      },
+      "CheckinRecord": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "mood": {
+            "type": "integer",
+            "title": "Mood"
+          },
+          "stress": {
+            "type": "integer",
+            "title": "Stress"
+          },
+          "sleep_quality": {
+            "type": "integer",
+            "title": "Sleep Quality"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "share_with_ground": {
+            "type": "boolean",
+            "title": "Share With Ground"
+          },
+          "emergency": {
+            "type": "boolean",
+            "title": "Emergency",
+            "description": "Not acil belirti içeriyor muydu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "astronaut_id",
+          "timestamp",
+          "mood",
+          "stress",
+          "sleep_quality",
+          "share_with_ground",
+          "emergency"
+        ],
+        "title": "CheckinRecord"
+      },
+      "CheckinRequest": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "mood": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Mood",
+            "description": "1 çok kötü … 5 çok iyi"
+          },
+          "stress": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Stress",
+            "description": "1 çok düşük … 5 çok yüksek"
+          },
+          "sleep_quality": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Sleep Quality",
+            "description": "1 çok kötü … 5 çok iyi"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "share_with_ground": {
+            "type": "boolean",
+            "title": "Share With Ground",
+            "default": false
+          },
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp",
+            "description": "Boşsa sunucu zamanı (UTC)"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "tr",
+              "en"
+            ],
+            "title": "Lang",
+            "default": "tr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "mood",
+          "stress",
+          "sleep_quality"
+        ],
+        "title": "CheckinRequest"
+      },
+      "CheckinResponse": {
+        "properties": {
+          "checkin": {
+            "$ref": "#/components/schemas/CheckinRecord"
+          },
+          "emergency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmergencyNotice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "checkin"
+        ],
+        "title": "CheckinResponse"
+      },
+      "Contributor": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z"
+          },
+          "weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "description": "Olaya katkı payı; bir olayın katkıları toplamı 1"
+          },
+          "threshold_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Verified",
+            "description": "Metriğin eşiği doğrulandı mı (eşiği yoksa null)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "weight"
+        ],
+        "title": "Contributor"
+      },
+      "CrewMember": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "AST-02"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "Genel skor 0-100 (en zayıf sistemin skoru)"
+          },
+          "active_events": {
+            "$ref": "#/components/schemas/EventCounts"
+          },
+          "attention_systems": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "cardiovascular",
+                "musculoskeletal",
+                "immune",
+                "behavioral",
+                "sleep",
+                "radiation"
+              ]
+            },
+            "type": "array",
+            "title": "Attention Systems",
+            "description": "green olmayan sistemler (kötüden iyiye)"
+          },
+          "last_measurement_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Measurement At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "active_events",
+          "attention_systems"
+        ],
+        "title": "CrewMember"
+      },
+      "CrewResponse": {
+        "properties": {
+          "mission": {
+            "$ref": "#/components/schemas/MissionInfo"
+          },
+          "astronauts": {
+            "items": {
+              "$ref": "#/components/schemas/CrewMember"
+            },
+            "type": "array",
+            "title": "Astronauts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mission",
+          "astronauts"
+        ],
+        "title": "CrewResponse"
+      },
+      "DBHealth": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "astronauts": {
+            "type": "integer",
+            "title": "Astronauts",
+            "default": 0
+          },
+          "measurements": {
+            "type": "integer",
+            "title": "Measurements",
+            "default": 0
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Date"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "DBHealth"
+      },
+      "DailyBriefing": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "highlights": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Highlights",
+            "description": "Olumlu/normal giden noktalar"
+          },
+          "concerns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Concerns",
+            "description": "warning/critical olaylar"
+          },
+          "recommended_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Recommended Actions"
+          },
+          "info_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Info Notes",
+            "description": "info seviyesindeki olaylar (sadece brifingde gösterilir)"
+          },
+          "escalate_to_ground": {
+            "type": "boolean",
+            "title": "Escalate To Ground"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "highlights",
+          "concerns",
+          "recommended_actions",
+          "info_notes",
+          "escalate_to_ground",
+          "sources"
+        ],
+        "title": "DailyBriefing",
+        "description": "LLM'in üretmesi gereken yapılandırılmış çıktı (json_schema)."
+      },
+      "DailyPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "min": {
+            "type": "number",
+            "title": "Min"
+          },
+          "max": {
+            "type": "number",
+            "title": "Max"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "O gün kaç ham ölçüm var"
+          },
+          "roll7": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roll7"
+          },
+          "z7": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z7"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value",
+          "min",
+          "max",
+          "n"
+        ],
+        "title": "DailyPoint"
+      },
+      "DateWindow": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date",
+            "title": "End"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "DateWindow"
+      },
+      "DocRef": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "snippet",
+          "score"
+        ],
+        "title": "DocRef"
+      },
+      "EmergencyNotice": {
+        "properties": {
+          "triggered": {
+            "type": "boolean",
+            "title": "Triggered",
+            "default": true
+          },
+          "matched_symptoms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Symptoms",
+            "description": "Belirti kimlikleri, örn. chest_pain"
+          },
+          "matched_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Labels",
+            "description": "Okunur belirti adları"
+          },
+          "matched_terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Terms"
+          },
+          "protocol": {
+            "$ref": "#/components/schemas/EmergencyProtocol"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matched_symptoms",
+          "matched_labels",
+          "matched_terms",
+          "protocol",
+          "message"
+        ],
+        "title": "EmergencyNotice"
+      },
+      "EmergencyProtocol": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "contacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contacts"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified",
+            "description": "false → protokol metni placeholder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "steps",
+          "contacts",
+          "verified"
+        ],
+        "title": "EmergencyProtocol"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "EventCounts": {
+        "properties": {
+          "critical": {
+            "type": "integer",
+            "title": "Critical",
+            "default": 0
+          },
+          "warning": {
+            "type": "integer",
+            "title": "Warning",
+            "default": 0
+          },
+          "info": {
+            "type": "integer",
+            "title": "Info",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "EventCounts"
+      },
+      "ExplainRequest": {
+        "properties": {
+          "lang": {
+            "type": "string",
+            "enum": [
+              "tr",
+              "en"
+            ],
+            "title": "Lang",
+            "default": "tr"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "refresh": {
+            "type": "boolean",
+            "title": "Refresh",
+            "description": "true → cache'i atla, yeniden üret",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ExplainRequest"
+      },
+      "ExplainResponse": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "event": {
+            "$ref": "#/components/schemas/HealthEvent"
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/AlertExplanation"
+          },
+          "generated_by": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "mock",
+              "template_fallback"
+            ],
+            "title": "Generated By"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "ungrounded_numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ungrounded Numbers",
+            "description": "Çıktıda olup bağlam verisinde bulunmayan sayılar (uyarı amaçlı)",
+            "default": []
+          },
+          "doc_refs": {
+            "items": {
+              "$ref": "#/components/schemas/DocRef"
+            },
+            "type": "array",
+            "title": "Doc Refs",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "event",
+          "explanation",
+          "generated_by",
+          "cached",
+          "created_at"
+        ],
+        "title": "ExplainResponse"
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "false_alarm",
+              "useful"
+            ],
+            "title": "Verdict"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "FeedbackRequest"
+      },
+      "FeedbackResponse": {
+        "properties": {
+          "feedback_id": {
+            "type": "integer",
+            "title": "Feedback Id"
+          },
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "false_alarm",
+              "useful"
+            ],
+            "title": "Verdict"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feedback_id",
+          "event_id",
+          "verdict",
+          "created_at"
+        ],
+        "title": "FeedbackResponse"
+      },
+      "Forecast": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "examples": [
+              "linear",
+              "prophet"
+            ]
+          },
+          "horizon_days": {
+            "type": "integer",
+            "title": "Horizon Days"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ForecastPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "method",
+          "horizon_days",
+          "points"
+        ],
+        "title": "Forecast"
+      },
+      "ForecastPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "lower": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lower"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "value"
+        ],
+        "title": "ForecastPoint"
+      },
+      "GroundReport": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "crew": {
+            "items": {
+              "$ref": "#/components/schemas/GroundReportMember"
+            },
+            "type": "array",
+            "title": "Crew"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "as_of",
+          "period",
+          "crew",
+          "note"
+        ],
+        "title": "GroundReport"
+      },
+      "GroundReportMember": {
+        "properties": {
+          "astronaut": {
+            "$ref": "#/components/schemas/AstronautInfo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "shared_checkins": {
+            "items": {
+              "$ref": "#/components/schemas/CheckinRecord"
+            },
+            "type": "array",
+            "title": "Shared Checkins"
+          },
+          "shared_events": {
+            "items": {
+              "$ref": "#/components/schemas/HealthEvent"
+            },
+            "type": "array",
+            "title": "Shared Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut",
+          "status",
+          "shared_checkins",
+          "shared_events"
+        ],
+        "title": "GroundReportMember"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthEvent": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id",
+            "description": "Deterministik: astronot+kaynak+dedektör+metrik+başlangıç hash'i",
+            "examples": [
+              "evt_3f9a1c2b7d10"
+            ]
+          },
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "detected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Detected At"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "rule",
+              "anomaly",
+              "changepoint",
+              "forecast"
+            ],
+            "title": "Source"
+          },
+          "system": {
+            "type": "string",
+            "enum": [
+              "cardiovascular",
+              "musculoskeletal",
+              "immune",
+              "behavioral",
+              "sleep",
+              "radiation"
+            ],
+            "title": "System"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "description": "Güven/şiddet 0-1. UI: <0.5 düşük, 0.5-0.75 orta, >0.75 yüksek"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "window": {
+            "$ref": "#/components/schemas/DateWindow"
+          },
+          "contributors": {
+            "items": {
+              "$ref": "#/components/schemas/Contributor"
+            },
+            "type": "array",
+            "title": "Contributors"
+          },
+          "changepoint_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changepoint Date"
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Forecast"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "share_with_ground": {
+            "type": "boolean",
+            "title": "Share With Ground",
+            "default": false
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "resolved"
+            ],
+            "title": "Status",
+            "description": "active: as_of itibarıyla sürüyor | resolved: bitti",
+            "default": "active"
+          },
+          "detector": {
+            "type": "string",
+            "title": "Detector",
+            "examples": [
+              "rule.threshold",
+              "rule.baseline_deviation",
+              "ml.isolation_forest"
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "Kural tarafından üretilen, sayıları içeren kısa açıklama"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "false_alarm",
+                  "useful"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback",
+            "description": "Son kullanıcı geri bildirimi"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "astronaut_id",
+          "detected_at",
+          "source",
+          "system",
+          "severity",
+          "score",
+          "title",
+          "window",
+          "contributors",
+          "detector"
+        ],
+        "title": "HealthEvent"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded",
+              "error"
+            ],
+            "title": "Status",
+            "description": "ok: her şey çalışıyor | degraded: LLM/RAG erişilemiyor (kural tabanlı uyarılar çalışır) | error: DB yok"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Time"
+          },
+          "db": {
+            "$ref": "#/components/schemas/DBHealth"
+          },
+          "llm": {
+            "$ref": "#/components/schemas/LLMHealth"
+          },
+          "rag": {
+            "$ref": "#/components/schemas/RAGHealth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "time",
+          "db",
+          "llm",
+          "rag"
+        ],
+        "title": "HealthResponse"
+      },
+      "IngestReport": {
+        "properties": {
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "adapter": {
+            "type": "string",
+            "title": "Adapter"
+          },
+          "rows_total": {
+            "type": "integer",
+            "title": "Rows Total"
+          },
+          "rows_accepted": {
+            "type": "integer",
+            "title": "Rows Accepted"
+          },
+          "rows_duplicate": {
+            "type": "integer",
+            "title": "Rows Duplicate"
+          },
+          "rows_rejected": {
+            "type": "integer",
+            "title": "Rows Rejected"
+          },
+          "unknown_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknown Metrics",
+            "default": []
+          },
+          "astronauts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Astronauts",
+            "default": []
+          },
+          "date_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateWindow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "errors_sample": {
+            "items": {
+              "$ref": "#/components/schemas/IngestRowError"
+            },
+            "type": "array",
+            "title": "Errors Sample",
+            "description": "İlk 20 reddedilen satır",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "adapter",
+          "rows_total",
+          "rows_accepted",
+          "rows_duplicate",
+          "rows_rejected"
+        ],
+        "title": "IngestReport"
+      },
+      "IngestRowError": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "reason"
+        ],
+        "title": "IngestRowError"
+      },
+      "LLMHealth": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "openai"
+            ],
+            "title": "Provider"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "reachable": {
+            "type": "boolean",
+            "title": "Reachable",
+            "description": "LLM sunucusuna erişilebildi mi (GET {base_url}/models)"
+          },
+          "model_available": {
+            "type": "boolean",
+            "title": "Model Available",
+            "description": "LLM_MODEL sunucuda yüklü mü"
+          },
+          "available_models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Models",
+            "default": []
+          },
+          "tool_mode": {
+            "type": "string",
+            "title": "Tool Mode"
+          },
+          "thinking": {
+            "type": "boolean",
+            "title": "Thinking"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "model",
+          "reachable",
+          "model_available",
+          "tool_mode",
+          "thinking",
+          "checked_at"
+        ],
+        "title": "LLMHealth"
+      },
+      "MetricInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "sleep_duration"
+            ]
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "display_name_en": {
+            "type": "string",
+            "title": "Display Name En"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "system": {
+            "type": "string",
+            "enum": [
+              "cardiovascular",
+              "musculoskeletal",
+              "immune",
+              "behavioral",
+              "sleep",
+              "radiation"
+            ],
+            "title": "System"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "hourly",
+              "daily",
+              "weekly",
+              "event"
+            ],
+            "title": "Frequency"
+          },
+          "bad_direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "both"
+            ],
+            "title": "Bad Direction",
+            "description": "Hangi yöne değişim kötüleşme sayılır"
+          },
+          "aggregation": {
+            "type": "string",
+            "title": "Aggregation"
+          },
+          "normal_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Thresholds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "threshold_verified": {
+            "type": "boolean",
+            "title": "Threshold Verified"
+          },
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "decimals": {
+            "type": "integer",
+            "title": "Decimals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "display_name",
+          "display_name_en",
+          "unit",
+          "system",
+          "frequency",
+          "bad_direction",
+          "aggregation",
+          "threshold_verified",
+          "rules",
+          "decimals"
+        ],
+        "title": "MetricInfo"
+      },
+      "MetricSeriesResponse": {
+        "properties": {
+          "astronaut_id": {
+            "type": "string",
+            "title": "Astronaut Id"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/MetricInfo",
+            "description": "Birim, normal aralık, eşikler ve threshold_verified dahil"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "resolution": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "raw"
+            ],
+            "title": "Resolution"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Baseline"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kişisel normal bant: mean ± std"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DailyPoint"
+            },
+            "type": "array",
+            "title": "Daily"
+          },
+          "raw": {
+            "items": {
+              "$ref": "#/components/schemas/RawPoint"
+            },
+            "type": "array",
+            "title": "Raw",
+            "description": "Sadece resolution=raw iken dolu",
+            "default": []
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HealthEvent"
+            },
+            "type": "array",
+            "title": "Events",
+            "description": "Bu metriği içeren olaylar (window gölgesi, changepoint_date, forecast çizimi için)",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "astronaut_id",
+          "metric",
+          "as_of",
+          "resolution",
+          "daily"
+        ],
+        "title": "MetricSeriesResponse"
+      },
+      "MetricSnapshot": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "system": {
+            "type": "string",
+            "enum": [
+              "cardiovascular",
+              "musculoskeletal",
+              "immune",
+              "behavioral",
+              "sleep",
+              "radiation"
+            ],
+            "title": "System"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "baseline_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Mean"
+          },
+          "baseline_std": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Std"
+          },
+          "z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z",
+            "description": "Günlük değerin baseline z-skoru"
+          },
+          "z7": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z7",
+            "description": "7 günlük ortalamanın baseline z-skoru"
+          },
+          "slope7": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slope7",
+            "description": "Son 7 günün lineer eğimi (birim/gün)"
+          },
+          "threshold_verified": {
+            "type": "boolean",
+            "title": "Threshold Verified"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "watch",
+              "alert",
+              "no_data"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "display_name",
+          "unit",
+          "system",
+          "threshold_verified",
+          "state"
+        ],
+        "title": "MetricSnapshot"
+      },
+      "MissionInfo": {
+        "properties": {
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "Görevin (verinin) ilk günü"
+          },
+          "latest_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Date",
+            "description": "Verideki son gün"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of",
+            "description": "Bu cevabın hesaplandığı gün (zaman kaydırıcısı)"
+          },
+          "mission_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mission Day",
+            "description": "as_of gününün görev günü (1'den başlar)"
+          },
+          "total_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Days"
+          }
+        },
+        "type": "object",
+        "title": "MissionInfo"
+      },
+      "OverallStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "worst_system": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "cardiovascular",
+                  "musculoskeletal",
+                  "immune",
+                  "behavioral",
+                  "sleep",
+                  "radiation"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst System"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "OverallStatus"
+      },
+      "RAGHealth": {
+        "properties": {
+          "backend": {
+            "type": "string",
+            "enum": [
+              "keyword",
+              "embedding",
+              "disabled"
+            ],
+            "title": "Backend"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents",
+            "default": 0
+          },
+          "chunks": {
+            "type": "integer",
+            "title": "Chunks",
+            "default": 0
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backend",
+          "ok"
+        ],
+        "title": "RAGHealth"
+      },
+      "RawPoint": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "value"
+        ],
+        "title": "RawPoint"
+      },
+      "ScorePenalty": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "metric": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "penalty": {
+            "type": "number",
+            "title": "Penalty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "title",
+          "severity",
+          "penalty"
+        ],
+        "title": "ScorePenalty"
+      },
+      "ShareRequest": {
+        "properties": {
+          "share_with_ground": {
+            "type": "boolean",
+            "title": "Share With Ground"
+          }
+        },
+        "type": "object",
+        "required": [
+          "share_with_ground"
+        ],
+        "title": "ShareRequest"
+      },
+      "ShareResponse": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "share_with_ground": {
+            "type": "boolean",
+            "title": "Share With Ground"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "share_with_ground",
+          "updated_at"
+        ],
+        "title": "ShareResponse"
+      },
+      "SystemInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "cardiovascular",
+              "musculoskeletal",
+              "immune",
+              "behavioral",
+              "sleep",
+              "radiation"
+            ],
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "display_name_en": {
+            "type": "string",
+            "title": "Display Name En"
+          },
+          "metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "display_name",
+          "display_name_en",
+          "metrics"
+        ],
+        "title": "SystemInfo"
+      },
+      "SystemScore": {
+        "properties": {
+          "system": {
+            "type": "string",
+            "enum": [
+              "cardiovascular",
+              "musculoskeletal",
+              "immune",
+              "behavioral",
+              "sleep",
+              "radiation"
+            ],
+            "title": "System"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "0-100; sistemde veri yoksa null"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Status"
+          },
+          "metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metrics"
+          },
+          "penalties": {
+            "items": {
+              "$ref": "#/components/schemas/ScorePenalty"
+            },
+            "type": "array",
+            "title": "Penalties",
+            "description": "Skoru düşüren aktif olaylar (açıklanabilirlik)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "system",
+          "display_name",
+          "status",
+          "metrics",
+          "penalties"
+        ],
+        "title": "SystemScore"
+      },
+      "Thresholds": {
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "title": "Verified",
+            "description": "false → placeholder, NASA-STD-3001 ile doğrulanmadı"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Eşiğin kaynağı",
+            "default": "placeholder"
+          },
+          "warning": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "critical": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "verified"
+        ],
+        "title": "Thresholds"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValueRange": {
+        "properties": {
+          "low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "title": "ValueRange"
+      },
+      "SSEMeta": {
+        "properties": {
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "tool_mode": {
+            "title": "Tool Mode",
+            "type": "string"
+          },
+          "astronaut_id": {
+            "title": "Astronaut Id",
+            "type": "string"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "As Of"
+          }
+        },
+        "required": [
+          "request_id",
+          "provider",
+          "model",
+          "tool_mode",
+          "astronaut_id"
+        ],
+        "title": "SSEMeta",
+        "type": "object"
+      },
+      "SSEToken": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SSEToken",
+        "type": "object"
+      },
+      "SSEThinking": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SSEThinking",
+        "type": "object"
+      },
+      "SSEToolCall": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "title": "Arguments",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "arguments"
+        ],
+        "title": "SSEToolCall",
+        "type": "object"
+      },
+      "SSEToolResult": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "preview": {
+            "description": "Sonucun kısaltılmış JSON'u (≤500 karakter)",
+            "title": "Preview",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "ok",
+          "duration_ms",
+          "preview"
+        ],
+        "title": "SSEToolResult",
+        "type": "object"
+      },
+      "SSEDone": {
+        "properties": {
+          "message": {
+            "description": "Asistanın tam cevabı",
+            "title": "Message",
+            "type": "string"
+          },
+          "finish_reason": {
+            "enum": [
+              "stop",
+              "max_steps",
+              "error",
+              "llm_unavailable"
+            ],
+            "title": "Finish Reason",
+            "type": "string"
+          },
+          "steps": {
+            "title": "Steps",
+            "type": "integer"
+          },
+          "tool_calls": {
+            "title": "Tool Calls",
+            "type": "integer"
+          },
+          "ungrounded_numbers": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ungrounded Numbers",
+            "type": "array"
+          },
+          "doc_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DocRef"
+            },
+            "title": "Doc Refs",
+            "type": "array"
+          },
+          "degraded": {
+            "default": false,
+            "description": "true → LLM yok, kural tabanlı yedek cevap",
+            "title": "Degraded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message",
+          "finish_reason",
+          "steps",
+          "tool_calls"
+        ],
+        "title": "SSEDone",
+        "type": "object"
+      },
+      "SSEError": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "SSEError",
+        "type": "object"
+      },
+      "ChatEventName": {
+        "type": "string",
+        "enum": [
+          "meta",
+          "token",
+          "thinking",
+          "tool_call",
+          "tool_result",
+          "emergency",
+          "done",
+          "error"
+        ],
+        "title": "ChatEventName"
+      }
+    }
+  }
+}

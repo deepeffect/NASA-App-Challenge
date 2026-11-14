@@ -1,0 +1,37 @@
+# =============================================================================
+# ANALİZ KURAL PARAMETRELERİ
+# =============================================================================
+# Bunlar istatistiksel parametrelerdir (klinik eşikler metrics.yaml'dadır).
+# Değiştirdikten sonra: pytest tests/analysis  (demo senaryosu testleri dahil)
+
+baseline:
+  days: 14          # kişisel baseline: astronotun ilk N günü
+  min_days: 7       # baseline penceresinde bundan az veri varsa baseline yok sayılır
+
+window_days: 7      # rolling ortalama / z-score / eğim penceresi
+min_periods: 4      # pencerede en az bu kadar gün veri olmalı
+
+deviation:          # |z7| = |7 günlük ortalama - baseline| / baseline_std (kötü yönde)
+  z_info: 1.5
+  z_warning: 2.0
+  z_critical: 3.5
+
+trend:              # 7 günlük eğim art arda N gün kötü yönde VE değişim yeterince büyük
+  min_consecutive_days: 3
+  info_change_std: 1.0      # rolling ortalamadaki değişim / baseline_std
+  warning_change_std: 2.0
+
+episodes:
+  merge_gap_days: 2   # aradaki boşluk ≤ N gün olan ardışık tetiklenmeler tek olay sayılır;
+                      # olay bitişinden sonra N gün daha "active" kalır (histerezis)
+
+pattern:            # system_pattern: aynı sistemde ≥N metrikte eşzamanlı aktif olay
+  min_metrics: 2
+  min_severity: warning
+
+scoring:            # sistem skoru = 100 - Σ(metrik başına en yüksek ceza)
+  penalties: {critical: 45, warning: 20, info: 3}
+  green_min: 80     # skor ≥ 80 → green
+  yellow_min: 50    # 50 ≤ skor < 80 → yellow, altı red
+  critical_forces_red: true   # aktif critical olay varsa skor ne olursa olsun red
+  warning_forces_yellow: true # aktif warning olay varsa en iyi ihtimalle yellow

@@ -1,0 +1,102 @@
+# =============================================================================
+# ACİL BELİRTİ TESPİTİ — KURAL TABANLI, LLM'DEN BAĞIMSIZ
+# =============================================================================
+# Sohbet mesajları ve check-in notları bu listeyle taranır. Eşleşme olursa
+# LLM'e gitmeden ÖNCE `emergency` olayı üretilir; LLM kapalıyken de çalışır.
+#
+# Eşleştirme: büyük/küçük harf ve Türkçe karakter duyarsız alt-dize araması
+# ("gogus agrisi" = "Göğüs ağrısı"). Olumsuzlamaları ("ağrım yok") ayırt etmez:
+# güvenlik için bilinçli olarak fazla tetiklemeyi tercih eder.
+#
+# ⚠ PROTOKOL METNİ PLACEHOLDER'DIR.
+# TODO: Mürettebat tıbbi acil durum prosedürleri ve uçuş cerrahı ile doğrula.
+# =============================================================================
+
+protocol:
+  id: EMERGENCY-PLACEHOLDER-01
+  verified: false
+  title:
+    tr: "Olası acil durum — tıbbi acil protokolü başlatın"
+    en: "Possible emergency — start the medical emergency protocol"
+  steps:
+    tr:
+      - "Mürettebat sağlık sorumlusunu (CMO) hemen çağırın; kişiyi yalnız bırakmayın."
+      - "Gemideki tıbbi acil durum kontrol listesini açın ve adımları uygulayın."
+      - "Yer ekibine (uçuş cerrahı) acil durum bildirimi gönderin; iletişim gecikmesini hesaba katın."
+      - "Belirtileri ve zamanlarını kaydedin."
+    en:
+      - "Call the crew medical officer (CMO) immediately; do not leave the person alone."
+      - "Open the onboard medical emergency checklist and follow its steps."
+      - "Send an emergency notice to the ground team (flight surgeon); account for the communication delay."
+      - "Record the symptoms and their timing."
+  contacts:
+    - "Mürettebat sağlık sorumlusu (CMO)"
+    - "Yer ekibi: uçuş cerrahı"
+
+symptoms:
+  chest_pain:
+    label: {tr: Göğüs ağrısı, en: Chest pain}
+    terms:
+      - göğüs ağrısı
+      - göğsüm ağrıyor
+      - göğsümde ağrı
+      - göğsüm sıkışıyor
+      - göğsümde baskı
+      - chest pain
+      - chest tightness
+      - chest pressure
+  altered_consciousness:
+    label: {tr: Bilinç değişikliği, en: Altered consciousness}
+    terms:
+      - bilinç kaybı
+      - bilincini kaybetti
+      - bayıldım
+      - bayıldı
+      - bayılacak gibi
+      - kendimden geçtim
+      - nerede olduğumu bilmiyorum
+      - passed out
+      - fainted
+      - lost consciousness
+      - unconscious
+      - confused and disoriented
+  breathing:
+    label: {tr: Solunum güçlüğü, en: Breathing difficulty}
+    terms:
+      - nefes alamıyorum
+      - nefes darlığı
+      - nefesim daralıyor
+      - boğuluyorum
+      - can't breathe
+      - cannot breathe
+      - shortness of breath
+      - short of breath
+  stroke_signs:
+    label: {tr: İnme belirtileri, en: Stroke signs}
+    terms:
+      - yüzüm kaydı
+      - konuşamıyorum
+      - kolumu hissetmiyorum
+      - bir tarafım uyuşuk
+      - face drooping
+      - slurred speech
+      - arm weakness
+  severe_bleeding:
+    label: {tr: Ciddi kanama, en: Severe bleeding}
+    terms:
+      - kanama durmuyor
+      - çok kan kaybediyorum
+      - bleeding won't stop
+      - heavy bleeding
+  self_harm:
+    label: {tr: Kendine zarar verme riski, en: Self-harm risk}
+    terms:
+      - kendimi öldürmek
+      - intihar
+      - yaşamak istemiyorum
+      - kendime zarar
+      - kill myself
+      - suicide
+      - suicidal
+      - hurt myself
+      - want to die
