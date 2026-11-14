@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     # --- Check-in ---
     # scripted: prototipteki kural tabanlı akış | llm: LLM (Qwen) JSON şemalı | auto: LLM, olmazsa scripted
     checkin_mode: Literal["scripted", "llm", "auto"] = "scripted"
+    # Check-in kartında gösterilen model adı ("Asistan: Qwen"). Boşsa LLM_MODEL'den türetilir (qwen3:14b → Qwen).
+    assistant_name: str = ""
 
     # --- Veri kaynağı ---
     # astronaut_health: data/raw/astronaut_health.json (yeni mimari, /me ve /monitor)

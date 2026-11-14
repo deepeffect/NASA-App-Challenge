@@ -10,7 +10,7 @@ istasyonda değil" gösterilir (`GET /api/station`):
 
 | Rota | İstasyon | Klasör | Durum |
 |---|---|---|---|
-| `/me` | gemi (astronot terminali) | `src/apps/personal/` | yer tutucu — kişisel ekran ekibi |
+| `/me` | gemi (astronot terminali) | `src/apps/personal/` | astronot ekranı: giriş, durum + şerit, yapılacaklar ("Yaptım"), günlük check-in + paylaşım, ayrıntılar, "Asistana sor" |
 | `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı; astronot detayı `/monitor/astronaut/:id` (ortak bileşenler, `audience="earth"`) |
 | `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
 
@@ -149,6 +149,31 @@ Ayrıca: detaydaki ortak bileşenlerin bütün hesaplanmış stili `.mon` dış�
 atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki yerine döner (bu sırada dev:earth
 backend'i de bir kez yeniden başlar; izleyici yoksa gemi kapalı kalır, smoke arka planda sunucu bırakmaz). Paylaşım geri
 alınamadığı için süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
+
+### Astronot ekranı smoke testi
+
+Ön koşul yok; açık bir geliştirme sunucusu gerekmez:
+
+```powershell
+npm run smoke -- personal   # kökte veya frontend/ içinde; görüntüler: screenshots/personal/
+```
+
+`scripts/smoke-personal.ts`: giriş kartı (kimlik aralığı API'den, EARTH yok) · A000 ile giriş · şeritte gün seçimi
+(geçmiş gün salt okunur) · "Yaptım" · bugünün check-in'i sonuna kadar · "Sadece skorlar" ile paylaşım → geminin
+downlink akışındaki `checkin.shared` olayında ruh hali / stres skoru var, cevap metni yok · ayrıntılar ve öz bakım
+penceresi · "Asistana sor" (mock) + acil belirti kutusu (sohbet downlink'e girmez) · check-in'de acil belirti →
+"Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış · hesap değiştirme
+(önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz: cevaplar bilerek geciktirilir) · oturum
+biterse (401) giriş kartına dönüş. Ana durumlar 390 ve
+1440 px'te, açık ve koyu temada kaydedilir. Ortak bileşenlerin ölçüleri prototipin CSS değerleriyle karşılaştırılır
+(başka bir stil dosyası `/me`'ye sızarsa yakalanır).
+Test kendi kendine yeter: arayüzü derler ve kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı);
+backend hem API'yi hem derlenmiş arayüzü servis eder — gerçek kurulumdaki (`npm run serve`) gibi. `ship.db`'ye,
+`frontend/dist`'e ve çalışan sunuculara dokunmaz; her çalıştırmada baştan tekrarlanabilir. Derleme ve veritabanı
+depoda değil sistemin geçici klasöründe durur (depo klasörünü izleyen OneDrive / Google Drive gibi bir eşitleme
+istemcisi SQLite dosyalarına takılmasın diye); sonunda geçici backend'le birlikte silinir. Depoda sadece ekran
+görüntüleri ve geçici geminin logu (`screenshots/personal/ship-smoke*.log`) kalır.
+Port doluysa `npm run stop -- --port 8010` ya da `SMOKE_PERSONAL_PORT`.
 
 ## URL'de zaman
 

@@ -1126,6 +1126,24 @@ export interface components {
              * @description Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez
              */
             share_cmo_note?: string | null;
+            /**
+             * Mode
+             * @description Bu check-in'de cevapları kim üretiyor. llm: asistan modeli | scripted: hazır sorular. Tur atıldıysa SON turun modu (auto modda LLM düşerse scripted olur); atılmadıysa ayarın öngördüğü mod
+             * @default scripted
+             * @enum {string}
+             */
+            mode: "scripted" | "llm";
+            /**
+             * Mode Text
+             * @description Kartta gösterilecek satır: 'Asistan: Qwen' / 'Hazır sorular, model çevrim dışı'
+             * @default
+             */
+            mode_text: string;
+            /**
+             * Assistant Name
+             * @description mode = llm iken modelin görünen adı (ASSISTANT_NAME veya LLM_MODEL'den)
+             */
+            assistant_name?: string | null;
         };
         /** CheckinTurnRequest */
         CheckinTurnRequest: {

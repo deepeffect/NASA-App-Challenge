@@ -119,6 +119,11 @@ Sadece **bugün** yapılır; geçmiş günler `GET /api/checkin/days/{gün}` ile
 `GET /api/checkin` → `CheckinState` (ilk soru, hızlı cevaplar `options`, `messages`, `notes`, `done`, `share`,
 `can_reset`, `cmo_notified` / `cmo_notice`, bitince `share_options` / `share_note` / `share_cmo_note`).
 
+Aktif mod (kartta gösterilen satır): `mode` = `llm` | `scripted`, `mode_text` = "Asistan: Qwen" / "Hazır sorular,
+model çevrim dışı" (dilde), `assistant_name` (`mode = llm` iken; `ASSISTANT_NAME`, boşsa `LLM_MODEL`'den türetilir).
+Tur atıldıysa **son turun gerçek modu**dur (`auto` modda LLM düşerse `scripted` olur); atılmadıysa ayarın öngördüğü
+mod. Bu bilgi için model yoklanmaz. Sadece gemide; Dünya'ya gitmez.
+
 `POST /api/checkin/turn` `{"answer": "Kötü"}` → prototip çıktısı aynen + güncel durum:
 
 ```json

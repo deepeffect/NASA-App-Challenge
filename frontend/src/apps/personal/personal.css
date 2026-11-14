@@ -1,0 +1,32 @@
+/**
+ * Astronot ekranına (/me) özel stil. Temel görünüm ortak dosyadan gelir (shared/health/health.css:
+ * prototipin teması, kartlar, giriş, check-in, paylaşım). Burada sadece prototipte OLMAYAN ekler vardır:
+ * üst bardaki TR/EN seçimi, "Asistana sor" kartı ve yüklenme durumu.
+ */
+@layer properties, theme, base, components, utilities; /* health.css ile aynı sıra (yükleme sırasından bağımsız) */
+
+@layer components {
+  /* ---------- üst bar: TR/EN seçimi (prototipin "basılı" düğme görünümü) ---------- */
+  .ahc .langseg { display: flex; flex: none; }
+  .ahc .langseg button { padding: 7px 9px; font-size: 13px; font-weight: 500; border-radius: 0; }
+  .ahc .langseg button:first-child { border-radius: 8px 0 0 8px; }
+  .ahc .langseg button:last-child { border-radius: 0 8px 8px 0; margin-left: -1px; }
+  .ahc .langseg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); border-color: var(--accent); position: relative; }
+
+  /* ---------- yüklenme / hata satırları ---------- */
+  .ahc .waiting { color: var(--ink-2); }
+  .ahc .err button { margin-left: 8px; padding: 3px 10px; }
+  .ahc [aria-busy="true"] { opacity: 0.6; transition: opacity 0.15s; }
+
+  /* ---------- check-in: gönderilmeyi bekleyen cevap ---------- */
+  .ahc .msg.pending { opacity: 0.7; }
+
+  /* ---------- Asistana sor ---------- */
+  .ahc .ask .cilog { margin: 0; }
+  .ahc .ask .cilog:empty { display: none; }
+  .ahc .ask .msg { white-space: pre-wrap; }
+  .ahc .ask .cirow { margin-top: 0; }
+  .ahc .ask .ground { margin: 0; }
+  .ahc .ask .ground ol { margin: 6px 0; padding-left: 20px; list-style: decimal; }
+  .ahc .ask .stack { gap: 12px; }
+}

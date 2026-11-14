@@ -173,6 +173,9 @@ MESSAGES: dict[str, dict[Lang, str]] = {
         "en": "If an answer points to an urgent medical problem, the crew medical officer on board is told even "
         "when the entry is private. It is still not sent to Earth.",
     },
+    # ---- check-in kartındaki aktif mod satırı
+    "checkin_mode_llm": {"tr": "Asistan: {name}", "en": "Assistant: {name}"},
+    "checkin_mode_scripted": {"tr": "Hazır sorular, model çevrim dışı", "en": "Scripted questions, model offline"},
     "downlink_disabled": {
         "tr": "Downlink kapalı: gemide EARTH_LINK_TOKEN ayarlı değil.",
         "en": "Downlink is off: EARTH_LINK_TOKEN is not set on the ship.",

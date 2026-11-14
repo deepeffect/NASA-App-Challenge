@@ -5,6 +5,8 @@
  * Çalıştır:  npm run smoke   (kökte veya frontend/ içinde)
  * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts
  * (gemi :8000 ve Dünya :8001/:5174 açıkken; argümansız çalıştırınca :8000 yeni mimarideyse o seçilir).
+ * Astronot ekranı (/me) için: `npm run smoke -- personal` → scripts/smoke-personal.ts (ön koşul yok: arayüzü
+ * derler ve kendi geçici gemi backend'ini başlatır; geliştirme veritabanına ve çalışan sunuculara dokunmaz).
  *
  * Ekranları sırayla açar, tam sayfa ekran görüntülerini frontend/screenshots/ altına yazar ve
  * konsol hatalarını, yakalanmamış JS hatalarını, başarısız/4xx-5xx istekleri raporlar.
@@ -218,10 +220,13 @@ const screens: Screen[] = [
 ];
 
 // ----------------------------------------------------------------------------- ana akış
-/** `npm run smoke -- earth` → Dünya ekranı; `-- legacy` → eski ekranlar. Argümansız: :8000 eski moddaysa legacy, yeni mimarideyse earth. */
-async function pickSuite(): Promise<"legacy" | "earth"> {
+/**
+ * `npm run smoke -- earth` → Dünya ekranı; `-- personal` → astronot ekranı (/me); `-- legacy` → eski ekranlar.
+ * Argümansız: :8000 eski moddaysa legacy, yeni mimarideyse earth.
+ */
+async function pickSuite(): Promise<"legacy" | "earth" | "personal"> {
   const arg = (process.argv[2] ?? process.env.SMOKE_SUITE ?? "").toLowerCase();
-  if (arg === "earth" || arg === "legacy") return arg;
+  if (arg === "earth" || arg === "legacy" || arg === "personal") return arg;
   try {
     const st = (await (await fetch(`${API}/api/station`, { signal: AbortSignal.timeout(3000) })).json()) as { legacy_enabled?: boolean };
     return st.legacy_enabled === false ? "earth" : "legacy";
@@ -231,7 +236,9 @@ async function pickSuite(): Promise<"legacy" | "earth"> {
 }
 
 async function main(): Promise<number> {
-  if ((await pickSuite()) === "earth") return (await import("./smoke-earth.ts")).runEarthSmoke();
+  const suite = await pickSuite();
+  if (suite === "earth") return (await import("./smoke-earth.ts")).runEarthSmoke();
+  if (suite === "personal") return (await import("./smoke-personal.ts")).runPersonalSmoke();
   if (!(await reachable(`${API}/api/health`)) || !(await reachable(WEB))) {
     console.error(`${c.red}Backend (${API}) veya Vite (${WEB}) açık değil. Önce kökte: npm run dev${c.off}`);
     return 2;
