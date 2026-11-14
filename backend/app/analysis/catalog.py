@@ -124,15 +124,17 @@ class BaselineCfg(BaseModel):
 
 
 class DeviationCfg(BaseModel):
-    z_info: float = 1.5
+    z_info: float = 1.75
     z_warning: float = 2.0
     z_critical: float = 3.5
 
 
 class TrendCfg(BaseModel):
     min_consecutive_days: int = 3
-    info_change_std: float = 1.0
-    warning_change_std: float = 2.0
+    info_change_std: float = 2.0
+    warning_change_std: float = 2.5
+    min_z7: float = 1.0
+    suppress_when_deviation: bool = True
 
 
 class EpisodeCfg(BaseModel):

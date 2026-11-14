@@ -11,15 +11,18 @@ baseline:
 window_days: 7      # rolling ortalama / z-score / eğim penceresi
 min_periods: 4      # pencerede en az bu kadar gün veri olmalı
 
-deviation:          # |z7| = |7 günlük ortalama - baseline| / baseline_std (kötü yönde)
-  z_info: 1.5
+deviation:          # z7 = (7 günlük ortalama - baseline) / baseline_std, kötü yönde
+  z_info: 1.75      # sadece brifingde gösterilir
   z_warning: 2.0
   z_critical: 3.5
 
-trend:              # 7 günlük eğim art arda N gün kötü yönde VE değişim yeterince büyük
-  min_consecutive_days: 3
-  info_change_std: 1.0      # rolling ortalamadaki değişim / baseline_std
-  warning_change_std: 2.0
+trend:              # "gelişen sapma" erken uyarısı; üç koşul birlikte:
+  min_consecutive_days: 3   # 1) 7 günlük eğim art arda ≥ N gün kötü yönde
+  info_change_std: 2.0      # 2) 7 günlük ortalama bu sürede ≥ X baseline_std kötüleşmiş
+  warning_change_std: 2.5
+  min_z7: 1.0               # 3) 7 günlük ortalama baseline'dan zaten ≥ 1 std kötü yönde
+                            #    (7 günlük eğim tek başına gürültüye çok duyarlı; bu koşul yanlış alarmı keser)
+  suppress_when_deviation: true   # aynı metrikte warning+ sapma varken trend olayı üretme
 
 episodes:
   merge_gap_days: 2   # aradaki boşluk ≤ N gün olan ardışık tetiklenmeler tek olay sayılır;
