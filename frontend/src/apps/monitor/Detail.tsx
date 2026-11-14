@@ -71,7 +71,10 @@ export function AstronautDetail({ theme }: { theme: Theme }) {
   const [prev, next] = neighbours(DEMO_CREW.includes(id) ? DEMO_CREW : allIds, id);
 
   // Başka bir astronota geçince sayfanın başına
-  useEffect(() => window.scrollTo({ top: 0 }), [id]);
+  // Gövde süslü parantezde: yeni tarayıcılarda scrollTo bir Promise döndürür, React onu temizlik fonksiyonu sanar
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [id]);
 
   const keepDay = params.get("day") ? day : undefined;
   const go = (target: string) => navigate(detailPath(target, keepDay));
