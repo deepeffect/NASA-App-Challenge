@@ -10,7 +10,7 @@ istasyonda değil" gösterilir (`GET /api/station`):
 
 | Rota | İstasyon | Klasör | Durum |
 |---|---|---|---|
-| `/me` | gemi (astronot terminali) | `src/apps/personal/` | yer tutucu — kişisel ekran ekibi |
+| `/me` | gemi (astronot terminali) | `src/apps/personal/` | astronot ekranı (`feat/personal`): giriş, durum + şerit, yapılacaklar ("Yaptım"), günlük check-in + paylaşım, ayrıntılar, "Asistana sor" |
 | `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı (`feat/earth`; astronot detayı ortak bileşenleri bekliyor) |
 | `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
 
@@ -145,6 +145,23 @@ npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: scre
 Dünya ekranı gemiye hiç istek atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki
 yerine döner (bu sırada dev:earth backend'i de bir kez yeniden başlar). A000'ın paylaşımı geri alınamadığı için
 süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
+
+### Astronot ekranı smoke testi
+
+Gemi lokal açıkken (`npm run dev:ship`, web :5173):
+
+```powershell
+npm run smoke -- personal   # kökte veya frontend/ içinde; görüntüler: screenshots/personal/
+```
+
+`scripts/smoke-personal.ts`: giriş kartı (kimlik aralığı API'den, EARTH yok) · A000 ile giriş · şeritte gün seçimi
+(geçmiş gün salt okunur) · "Yaptım" · bugünün check-in'i sonuna kadar · "Sadece skorlar" ile paylaşım → geminin
+downlink akışındaki `checkin.shared` olayında ruh hali / stres skoru var, cevap metni yok · ayrıntılar ve öz bakım
+penceresi · "Asistana sor" (mock) + acil belirti kutusu (sohbet downlink'e girmez) · check-in'de acil belirti →
+"Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış. Ana durumlar 390 ve
+1440 px'te, açık ve koyu temada kaydedilir.
+Test kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı) ve sayfanın API isteklerini oraya
+yönlendirir: `ship.db`'ye dokunmaz, her çalıştırmada baştan tekrarlanabilir. Port doluysa `SMOKE_PERSONAL_PORT`.
 
 ## URL'de zaman
 
