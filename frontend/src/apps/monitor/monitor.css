@@ -122,9 +122,9 @@
 .mon .ccard:not(:where(.ahc, .ahc *)) { display: flex; flex-direction: column; gap: 10px; position: relative; }
 .mon .ccard.is-s2:not(:where(.ahc, .ahc *)) { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); }
 .mon .ccard.is-s1:not(:where(.ahc, .ahc *)) { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
-.mon .ccard-top:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mon .ccard-top:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; align-items: baseline; gap: 2px 8px; flex-wrap: wrap; }
 .mon .ccard-id:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.35em; font-weight: 700; letter-spacing: 0.01em; }
-.mon .ccard-meta:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.85em; text-align: right; }
+.mon .ccard-meta:not(:where(.ahc, .ahc *)) { color: var(--ink-2); font-size: 0.85em; text-align: right; white-space: nowrap; margin-left: auto; }
 .mon .ccard-head:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .mon .ccard-state:not(:where(.ahc, .ahc *)) { font-family: var(--font-display); font-size: 1.5em; font-weight: 700; line-height: 1.15; display: flex; align-items: center; gap: 0.4em; }
 .mon .ccard-state .glyph:not(:where(.ahc, .ahc *)) { width: 0.55em; height: 0.55em; }
