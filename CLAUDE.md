@@ -8,6 +8,24 @@ değerlendiren ve aksiyon önerisi sunan, **tamamen offline / gemide** çalışa
 
 ## Mimari
 
+**İstasyonlar (yeni mimari).** Aynı kod iki rolde çalışır (`STATION_ROLE`), aynı yerel ağda 3 bilgisayar,
+internet / Docker / bulut / tünel yok (kurulum: README → "3 bilgisayar kurulumu"):
+
+```
+Astronot terminali (tarayıcı) → GEMİ :8000 /me ──downlink (snapshot + SSE)──▶ DÜNYA ÜSSÜ :8000 /monitor
+                                Ollama + backend + bütün veri (ship.db)         earth.db, salt okunur
+                                gizlilik filtresi BURADA
+```
+
+- Veri: `data/raw/astronaut_health.json` (200 astronot × 30 gün; prototipten yeniden üretildi, orijinal
+  bulunana kadar bağlayıcı şema) → `app/personal/` (adaptör, değerlendirme, check-in, gizlilik).
+- Kurallar için TEK DOĞRU KAYNAK: `frontend/reference/personal-artifact.html` (prototip). Değerlendirme ve
+  check-in prototipin JS'iyle golden testlidir (`tests/golden/`, Node gerekir).
+- Durum, ana endişe, ground, self-care kodları ve skorlar VERİDEN okunur; Python sadece seviyeyi,
+  tetikleyicileri, Dünya'nın göreceği ground'u ve alt başlığı hesaplar.
+
+**Eski mimari (`DATA_SOURCE=synthetic`, sadece gemide, `/legacy` ekranları):**
+
 ```
 Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, metric, value, unit, source)
         → SQLite (measurement tablosu)
@@ -23,11 +41,14 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
    tool sonuçlarından / verilen bağlamdan alır. `safety/grounding.py` çıktıdaki kaynağı olmayan
    sayıları `ungrounded_numbers` alanında işaretler (birimli sayılar her zaman, birimsiz 0–10 tam sayılar hariç; ±%2 / yarım basamak tolerans). LLM'e skor, eşik veya istatistik hesaplatma.
 2. **Uyarılar LLM'den bağımsızdır.** Eşik/sapma/trend uyarıları ve acil belirti tespiti
-   (`safety/emergency.py`) kural tabanlıdır; LLM kapalıyken de çalışır. LLM katmanında bir hata
-   asla uyarı üretimini engellememeli. Explain/briefing LLM'siz şablon cevaba düşer.
-3. **Eşik değerleri uydurulmaz.** `config/metrics.yaml` içindeki tüm eşikler placeholder'dır
-   (`verified: false`, `# TODO: NASA-STD-3001 ile doğrula`). Yeni eşik eklerken aynı işaretlemeyi yap.
-   API bunu `threshold_verified: false` ile iletir. Acil protokol metni de placeholder'dır.
+   (`safety/emergency.py`, check-in'de `personal/checkin_script.py`) kural tabanlıdır; LLM kapalıyken de
+   çalışır. LLM katmanında bir hata asla uyarı üretimini / check-in'i engellememeli (`CHECKIN_MODE=auto`
+   → scripted). Explain/briefing LLM'siz şablon cevaba düşer. Acil belirti → gemide CMO kaydı
+   (`CmoNotification`); Dünya'ya gitmeyip gitmeyeceğine CMO karar verir.
+3. **Eşik değerleri uydurulmaz.** `config/metrics.yaml` (eski) eşikleri placeholder'dır (`verified: false`,
+   `# TODO: NASA-STD-3001 ile doğrula`). `config/catalog.yaml` (yeni) aralıkları simüle veri setinden
+   gelir: `threshold_source: dataset`, `verified: false`; arayüzde tek dipnot (`threshold_note`).
+   Yeni eşik eklerken aynı işaretlemeyi yap. Acil protokol metni de placeholder'dır.
 4. **Belge içeriği uydurulmaz.** RAG için `data/docs/`'a sadece gerçek kaynak belgeler girer.
    Test belgeleri `backend/tests/fixtures/docs/` altındadır ve açıkça "ÖRNEK" yazar.
 5. **Asistan teşhis koymaz**, karar desteği verir; belirsizliği açıkça söyler; ciddi belirtide acil
@@ -36,18 +57,35 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
 7. **Önce sözleşme.** `backend/app/models/schemas.py` arayüzle sözleşmedir. Değiştirirsen:
    `python -m app.cli export-openapi` → `docs/API.md` güncelle → `frontend: npm run gen:api`.
    Alan silme/yeniden adlandırma yerine ekleme tercih et.
+8. **Gizlilik filtresi gemide.** Dünya'ya giden her şey `app/personal/privacy.py` (`EarthDay`) üzerinden
+   outbox'a yazılmadan ÖNCE filtrelenir: ruh hali / stres ve davranışsal alan skoru sadece o günün check-in'i
+   en az `scores` paylaşıldıysa; maskeli to-do öğeleri sadece sayı; check-in mesajları, `urgent` ve CMO
+   bilgisi asla. Paylaşım seviyesi sadece artar. Bu kuralları gevşeten değişiklik gizlilik testlerini
+   (`tests/station/test_sharing_privacy.py`, `test_downlink.py`) kırmalı.
 
 ## Klasörler
 
 ```
+frontend/reference/personal-artifact.html   prototip — kurallar için tek doğru kaynak
+data/raw/astronaut_health.json              veri seti (repoda; gemi git pull ile alır)
+scripts/extract_dataset_from_artifact.py    veri setini prototipten yeniden üretir + doğrular
+scripts/station.mjs                         dev:ship | dev:earth | reset | serve
 backend/
-  config/metrics.yaml      metrik kataloğu + placeholder eşikler (tek doğru kaynak)
+  config/catalog.yaml      YENİ: 18 ölçüm + 14 self-care çözümü (TR/EN, aralıklar, trig, gizli)
+  app/station.py, auth.py, i18n.py, errors.py, web.py   rol, giriş/token, dil, hata biçimi, arayüz servisi
+  app/personal/            catalog, dataset (adaptörler), store, evaluate, view, earth_view, privacy,
+                           checkin_script / checkin_context / checkin_llm
+  app/downlink/            outbox (gemi), receiver + earth_store + broadcast (Dünya)
+  app/api/                 station, auth, personal, checkin, assistant (/chat), downlink, monitor; routes.py = eski
+  app/llm/personal_tools.py  "Asistana sor" tool'ları (sadece giriş yapan astronot)
+  tests/station/, tests/golden/   yeni mimarinin testleri (golden: prototipin JS'i Node'da)
+  config/metrics.yaml      ESKİ mod metrik kataloğu + placeholder eşikler
   config/rules.yaml        baseline/z/trend/skor parametreleri
   config/emergency.yaml    acil belirti terimleri (TR/EN) + placeholder protokol
   app/main.py              FastAPI app (CORS, OpenAPI'ye SSE modelleri eklenir)
   app/config.py            pydantic-settings (.env)
   app/db.py                SQLite (WAL) engine
-  app/cli.py               seed | reindex | export-openapi | analyze
+  app/cli.py               reset | seed | reindex | export-openapi | analyze
   app/api/routes.py        ince route'lar
   app/models/schemas.py    API sözleşmesi (Pydantic)
   app/models/tables.py     SQLModel tabloları
@@ -60,14 +98,18 @@ backend/
   app/llm/rag/             chunker, Embedder arayüzü, keyword (BM25) retriever
   app/data/synthetic.py    sentetik veri + demo senaryosu
   tests/
-frontend/                  Vite + React + TS + Tailwind + Recharts + TanStack Query
+frontend/                  Vite + React + TS + Tailwind; src/apps/personal (/me), src/apps/monitor (/monitor),
+                           src/shared/health (ortak), src/api/station.ts (yeni istemci), /legacy = eski ekranlar
 data/raw | processed | docs
 docs/API.md, docs/openapi.json
 ```
 
 ## Komutlar
 
-Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev` · `npm run test` · `npm run seed` · `npm run smoke` (ayrıntı: README → "Kök npm komutları"). Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
+Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev:ship` (API :8000 + /me :5173) ·
+`npm run dev:earth` (API :8001 + /monitor :5174) · `npm run reset -- ship|earth` · `npm run serve` (gerçek kurulum) ·
+`npm run test` · eski ekranlar: `npm run dev` / `npm run seed` / `npm run smoke` (ayrıntı: README → "Kök npm komutları").
+Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
 
 Backend (`backend/` içinde; venv: `.venv`):
 
@@ -83,9 +125,10 @@ uv venv .venv && uv pip install -e ".[dev]"        # veya: python -m venv .venv 
 
 (Linux/macOS'ta `.venv/Scripts/python` yerine `.venv/bin/python`.)
 
-> **Durum:** `main` branch'inde endpoint'ler stub (sözleşmeye uygun sahte) veri döner.
-> `feat/backend-core`'da her şey gerçek: veri katmanı, analiz motoru, LLM katmanı (mock + OpenAI uyumlu),
-> RAG iskeleti (BM25). Testler: `pytest` → ~140 test, ~10 sn.
+> **Durum:** `feat/foundation`: istasyon rolleri, astronaut_health verisi, değerlendirme (golden testli),
+> giriş/yetki, check-in, paylaşım + gizlilik, downlink, TR/EN, frontend iskeleti (/me, /monitor yer tutucu).
+> Eski mimari `DATA_SOURCE=synthetic` ile çalışmaya devam eder. Testler: `pytest` → ~330 test (testler global
+> olarak `DATA_SOURCE=synthetic`; yeni mimari testleri kendi `Settings` ve geçici DB'lerini kurar).
 
 ## Açık işler (kim, nerede)
 
@@ -98,7 +141,15 @@ uv venv .venv && uv pip install -e ".[dev]"        # veya: python -m venv .venv 
 | Herkes | Eşikleri NASA-STD-3001 ile doğrula (`verified: true` + `source`) | `config/metrics.yaml` |
 | UI | Ekranları `feat/ui-*` branch'lerinde geliştir; changepoint/forecast için örnek dedektörleri aç | `frontend/src/features/*` |
 
-## Analiz motoru — bilinmesi gerekenler
+## Değerlendirme (yeni mimari) — bilinmesi gerekenler
+
+- Sağlık ölçümleri son 3 günün ortalaması (JS ile aynı toplama sırası: `avg3`), `exposure` o günün değeri.
+- Seviye 0/1/2; gösterilen durum = max(health_status, ground ? 1 : 0). Sayı biçimi JS `toFixed` ile aynı
+  (`to_fixed`, yarımda yukarı). Bilinçli prototip farkları golden testte D1–D4 olarak belgeli.
+- "Bugün" = her astronotun son kaydı; check-in sadece bugün. `CHECKIN_MODE=scripted|llm|auto`.
+- Kural değişince: `pytest tests/golden tests/station`.
+
+## Analiz motoru (eski mod) — bilinmesi gerekenler
 
 - Günlük değer: katalogdaki `aggregation` (saatlik metrikler günlüğe indirgenir). Eşik kuralı ortalama
   metriklerde günün **en kötü** ölçümüne bakar (tek bir düşük SpO2 saati yakalanır).
@@ -120,6 +171,10 @@ npm run build       # tip kontrolü + üretim derlemesi
 ```
 
 ## Nasıl genişletilir
+
+- **Orijinal astronaut_health.json gelirse:** `app/personal/dataset.py` → `ADAPTERS` listesine yeni adaptör
+  ekle ve `tests/station/test_dataset.py`'deki gibi yeniden üretilen dosyayla aynı sonucu verdiğini test et.
+- **Yeni ölçüm / self-care çözümü (yeni mod):** `config/catalog.yaml` (TR/EN, `verified: false`).
 
 - **Yeni veri formatı (NASA verisi geldiğinde):** `app/ingest/` altına `BaseAdapter`'dan türeyen
   bir sınıf yaz, `@register_adapter` ile kaydet. Sadece `can_handle()` ve `parse()` →

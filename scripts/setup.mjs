@@ -114,9 +114,10 @@ if (hasData.status === 0) {
 console.log(`
 ${c.green}${c.bold}✔ Kurulum tamam.${c.off}
 
-  ${c.bold}npm run dev${c.off}        backend + frontend birlikte
-  Arayüz:  http://localhost:5173
-  API:     http://127.0.0.1:8000/docs   ·   sağlık: http://127.0.0.1:8000/api/health
+  ${c.bold}npm run dev:ship${c.off}    gemi: API http://127.0.0.1:8000/docs · astronot ekranı http://localhost:5173/me
+  ${c.bold}npm run dev:earth${c.off}   Dünya üssü: API :8001 · http://localhost:5174/monitor (gemiden downlink alır)
+  ${c.bold}npm run serve${c.off}       gerçek kurulum (3 bilgisayar): README → "3 bilgisayar kurulumu"
+  ${c.bold}npm run dev${c.off}         eski ekranlar (sentetik veri): http://localhost:5173/legacy
 
   LLM varsayılan olarak mock modda. Gerçek model için backend/.env → LLM_PROVIDER=openai, LLM_BASE_URL=...
 `);
