@@ -5,10 +5,10 @@ import json
 import pytest
 
 from app.models.tables import CheckinSession
-from app.personal.earth_view import earth_checkin_view, earth_day_view
+from app.personal.earth_view import earth_checkin_view, earth_day_view, earth_strip
 from app.personal.evaluate import SHARE_LEVELS
 from app.personal.privacy import earth_day
-from app.personal.view import build_day_view
+from app.personal.view import build_day_view, build_strip
 
 from .conftest import login
 
@@ -53,6 +53,33 @@ def test_masked_items_are_counted_not_named(dataset, catalog) -> None:
             assert len(rec.todo) + rec.todo_masked_count == len(day.self_care)
             total_masked += rec.todo_masked_count
     assert total_masked > 0
+
+
+@pytest.mark.parametrize("share", [None, "private", "scores", "full"])
+def test_overall_health_scores_always_reach_earth(dataset, catalog, share) -> None:
+    """Genel sağlık skoru (kümülatif VE tek günlük) gizli değildir: paylaşım seviyesinden bağımsız her gün gider.
+    Gizli olan, davranışsal ALAN skorudur (paylaşılmadıysa kayıtta yoktur)."""
+    astronauts = dataset.astronauts if share is None else dataset.astronauts[::25]
+    for a in astronauts:
+        for i, day in enumerate(a.days):
+            row = None if share is None else CheckinSession(
+                astronaut_id=a.meta.id, day_index=i, mission_day=day.mission_day, notes=[], done=True, share=share)
+            rec = earth_day(catalog, a, i, row)
+            assert (rec.cumulative_score, rec.daily_score) == (day.cumulative_score, day.daily_score), (a.meta.id, i)
+            assert ("behavioral" in rec.area_scores) == (share in ("scores", "full")), (a.meta.id, i, share)
+
+
+def test_strip_daily_score_same_on_ship_and_earth(dataset, catalog) -> None:
+    """Şerit (grafiğin iki çizgisi): tek günlük skor gemide de Dünya'da da veri setindeki değerdir, ve Dünya'nın
+    downlink kaydından kurduğu şerit gemide hesaplanan Dünya şeridiyle birebir aynıdır."""
+    for a in dataset.astronauts:
+        daily = [d.daily_score for d in a.days]
+        assert [s.daily_score for s in build_strip(catalog, a, "en")] == daily, a.meta.id
+        recs = [earth_day(catalog, a, i) for i in range(len(a.days))]
+        for lang in ("en", "tr"):
+            strip = earth_strip(catalog, recs, lang)
+            assert [s.daily_score for s in strip] == daily, a.meta.id
+            assert strip == build_strip(catalog, a, lang, earth=True), (a.meta.id, lang)
 
 
 @pytest.mark.parametrize("share", ["scores", "full"])

@@ -8709,6 +8709,11 @@
             "type": "string",
             "title": "Score Text"
           },
+          "daily_score": {
+            "type": "number",
+            "title": "Daily Score",
+            "description": "O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da)"
+          },
           "label": {
             "type": "string",
             "title": "Label",
@@ -8723,6 +8728,7 @@
           "status_label",
           "score",
           "score_text",
+          "daily_score",
           "label"
         ],
         "title": "StripDay"

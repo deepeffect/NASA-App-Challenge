@@ -76,7 +76,8 @@ Sonraki isteklerde `Authorization: Bearer <token>` (SSE'de `?access_token=`). Ha
 ### `GET /api/me` → `PersonalOverview`
 
 Astronot bilgisi (`mission_label`, `profile_label` dilde), `today` (= `n_days`), 30 günlük şerit
-(`strip[]`: `day`, `mission_day`, `status` 0/1/2, `status_label`, `score` = kümülatif skor, `label`).
+(`strip[]`: `day`, `mission_day`, `status` 0/1/2, `status_label`, `score` = kümülatif skor, `score_text`,
+`daily_score` = o günün tek günlük skoru, `label`). `score` ve `daily_score` skor grafiğinin iki çizgisidir.
 
 ### `GET /api/me/days/{gün}` → `DayView`
 
@@ -162,7 +163,7 @@ Her olay ilgili günün **gizlilik filtresinden geçmiş** güncel halini (`payl
  "ship_time": "2026-11-14T13:49:24.957Z", "publish_time": "2026-11-14T13:49:24.957Z", "earth_received_time": null,
  "simulated_light_delay_minutes": 20.0,
  "payload": {"share": "scores", "day": {"day_index": 29, "status": 2, "ground": false, "cumulative_score": 60.3,
-   "behavioral_hidden": false, "area_scores": {"behavioral": 66.3, "…": 0},
+   "daily_score": 72.8, "behavioral_hidden": false, "area_scores": {"behavioral": 66.3, "…": 0},
    "readings": {"exp_radiation_mSv_day": {"today": 0.798, "used": 0.798, "level": 1}},
    "todo": [{"code": "SYMPTOM_CARE", "triggers": ["imm_symptom_score"], "done": false}], "todo_masked_count": 0,
    "checkin": {"share": "scores", "notes": [{"topic_key": "sleep", "flag": true, "text": null}]}}}}
@@ -171,7 +172,8 @@ Her olay ilgili günün **gizlilik filtresinden geçmiş** güncel halini (`payl
 **Gizlilik (gemide, outbox'a yazmadan önce):** ruh hali / stres ve "uyku, ruh hali ve stres" alan skoru sadece o
 günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli ölçümler olan to-do öğeleri maskeli
 (sadece `todo_masked_count`); ground sadece görünür ölçümlerden; check-in: yok / `private` / `scores` (konu + flag)
-/ `full` (+ metin). Mesajlar, `urgent` ve CMO bilgisi hiçbir zaman gitmez.
+/ `full` (+ metin). Mesajlar, `urgent` ve CMO bilgisi hiçbir zaman gitmez. Genel sağlık skoru (`cumulative_score`
+ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider.
 
 `DOWNLINK_DELAY_SECONDS`: olaylar `ship_time + gecikme` anında yayınlanır (sıra atlanmaz).
 `DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES`: gerçek ışık gecikmesi etiketi (bekletmez).
@@ -179,7 +181,7 @@ günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli �
 ## Dünya üssü
 
 - `GET /api/monitor/crew` → `{link: LinkStatus, astronauts: [{astronaut, today, status, status_label, subtitle, score, ground, share, checkin_text}]}`
-- `GET /api/monitor/astronauts/{id}` → `PersonalOverview` (Dünya şeridi)
+- `GET /api/monitor/astronauts/{id}` → `PersonalOverview` (Dünya şeridi; `score` ve `daily_score` gemidekiyle aynıdır)
 - `GET /api/monitor/astronauts/{id}/days/{gün}` → `{view: DayView (viewer=earth, gizliler hidden), checkin: EarthCheckinView, updated_seq, received_at}`
 - `GET /api/monitor/events?limit=100&astronaut_id=&type=&before_seq=` → `{events: [MonitorEvent], total, last_seq}`:
   Dünya'nın aldığı olaylar (canlı akışın geçmişi), yeniden eskiye. `MonitorEvent`: `seq, type, astronaut_id, day,

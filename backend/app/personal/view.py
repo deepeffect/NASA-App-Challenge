@@ -318,6 +318,7 @@ def build_strip(
                 status_label=label,
                 score=day.cumulative_score,
                 score_text=score,
+                daily_score=day.daily_score,
                 label=tx("strip_label", lang, day=k + 1, status=label, score=score),
             )
         )
