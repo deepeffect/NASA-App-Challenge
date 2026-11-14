@@ -16,8 +16,8 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AsOfProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <AsOfProvider>
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<CrewPage />} />
@@ -27,8 +27,8 @@ export function App() {
               <Route path="*" element={<p>Sayfa bulunamadı.</p>} />
             </Route>
           </Routes>
-        </BrowserRouter>
-      </AsOfProvider>
+        </AsOfProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

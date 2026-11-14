@@ -11,8 +11,8 @@ export function EmergencyBanner({ notice, onDismiss }: { notice: EmergencyNotice
           <p className="text-xl font-bold">ACİL: {notice.protocol.title}</p>
           <p className="text-lg">{notice.message}</p>
           <ol className="list-decimal space-y-1 pl-6 text-lg">
-            {notice.protocol.steps.map((s) => (
-              <li key={s}>{s}</li>
+            {notice.protocol.steps.map((s, i) => (
+              <li key={i}>{s}</li>
             ))}
           </ol>
           <p className="text-base text-red-200">İletişim: {notice.protocol.contacts.join(" · ")}</p>

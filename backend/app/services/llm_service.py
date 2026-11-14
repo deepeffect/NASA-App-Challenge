@@ -54,6 +54,8 @@ from app.services.data import checkins as list_checkins
 from app.services.data import get_data_service
 
 LANG_NAME = {"tr": "Turkish", "en": "English"}
+# Bağlam/şablon mantığı değişince artır → eski LLM cache kayıtları kullanılmaz
+CACHE_VERSION = 2
 HISTORY_LIMIT = 12
 
 _client: tuple[tuple, LLMClient] | None = None
@@ -143,12 +145,15 @@ def build_explain_context(session: Session, event: HealthEvent, as_of: date | No
             "recent_daily": recent,
         }
     own_metrics = {c.metric for c in event.contributors}
-    related = [
-        {"metric": e.contributors[0].metric, "severity": e.severity, "title": e.title, "system": e.system}
-        for e in a.active_events
-        if e.event_id != event.event_id and e.severity != "info" and e.contributors[0].metric not in own_metrics
-        and len(e.contributors) == 1
-    ][:6]
+    rank = {"info": 1, "warning": 2, "critical": 3}
+    by_metric: dict[str, dict[str, Any]] = {}  # metrik başına en ciddi olay (sapma + trend tekrarını önler)
+    for e in a.active_events:
+        metric = e.contributors[0].metric
+        if (e.event_id == event.event_id or e.severity == "info" or metric in own_metrics or len(e.contributors) != 1):
+            continue
+        if metric not in by_metric or rank[e.severity] > rank[by_metric[metric]["severity"]]:
+            by_metric[metric] = {"metric": metric, "severity": e.severity, "title": e.title, "system": e.system}
+    related = sorted(by_metric.values(), key=lambda r: -rank[r["severity"]])[:6]
     for r in related:  # şablon ve model ilgili metriklerin okunur adlarına ihtiyaç duyar
         m = cat.get(r["metric"])
         if m:
@@ -173,7 +178,7 @@ def build_explain_context(session: Session, event: HealthEvent, as_of: date | No
 
 async def explain(session: Session, event: HealthEvent, req: ExplainRequest) -> ExplainResponse:
     client = get_client()
-    state = f"{event.event_id}|{event.window.end}|{event.severity}|{req.lang}|{client.provider}|{client.model}"
+    state = f"v{CACHE_VERSION}|{event.event_id}|{event.window.end}|{event.severity}|{req.lang}|{client.provider}|{client.model}"
     key = "explain:" + hashlib.sha1(state.encode()).hexdigest()
     if not req.refresh and (hit := _cache_get(session, key)):
         resp = ExplainResponse.model_validate(hit)
@@ -239,7 +244,7 @@ async def briefing(session: Session, aid: str, as_of: date | None, lang: str, re
     client = get_client()
     ctx, info_events = build_briefing_context(session, aid, as_of)
     sig = json.dumps([ctx["as_of"], ctx["overall"], [(x["event_id"], x["severity"]) for x in ctx["active_alerts"] + ctx["info_alerts"]]])
-    key = "briefing:" + hashlib.sha1(f"{aid}|{sig}|{lang}|{client.provider}|{client.model}".encode()).hexdigest()
+    key = "briefing:" + hashlib.sha1(f"v{CACHE_VERSION}|{aid}|{sig}|{lang}|{client.provider}|{client.model}".encode()).hexdigest()
     if not refresh and (hit := _cache_get(session, key)):
         resp = BriefingResponse.model_validate(hit)
         return resp.model_copy(update={"cached": True, "info_events": info_events})

@@ -10,7 +10,8 @@ const navCls = ({ isActive }: { isActive: boolean }) =>
 export function Layout() {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+      {/* Telefonda header uzun (menü + kaydırıcı): sadece geniş ekranda sabitlenir */}
+      <header className="z-20 border-b border-slate-800 bg-slate-950/95 backdrop-blur md:sticky md:top-0">
         <div className="mx-auto max-w-7xl space-y-3 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">

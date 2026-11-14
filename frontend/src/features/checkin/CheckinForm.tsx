@@ -73,10 +73,18 @@ export function CheckinForm({ astronautId }: { astronautId: string }) {
               return (
                 <label
                   key={n}
-                  className={`flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border text-xl font-semibold ${
-                    selected ? "border-sky-400 bg-sky-500 text-slate-950" : "border-slate-600 bg-slate-800 hover:bg-slate-700"
+                  className={`relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-xl border text-xl font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-sky-400 ${
+                    selected
+                      ? "border-white bg-sky-500 text-slate-950 ring-2 ring-white ring-offset-2 ring-offset-slate-900"
+                      : "border-slate-600 bg-slate-800 hover:bg-slate-700"
                   }`}
                 >
+                  {/* Seçim sadece renkle anlatılmaz: köşede onay işareti + çerçeve */}
+                  {selected && (
+                    <span className="absolute -right-2 -top-2 rounded-full bg-white text-slate-950" aria-hidden>
+                      <CheckCircleIcon className="h-5 w-5" />
+                    </span>
+                  )}
                   <input
                     type="radio"
                     name={s.key}
@@ -116,9 +124,16 @@ export function CheckinForm({ astronautId }: { astronautId: string }) {
       </label>
 
       {submit.isError && <ErrorBox error={submit.error} />}
-      <Button variant="primary" type="submit" disabled={!complete || submit.isPending} className="text-lg">
-        {submit.isPending ? "Kaydediliyor…" : "Kaydet"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button variant="primary" type="submit" disabled={!complete || submit.isPending} className="text-lg">
+          {submit.isPending ? "Kaydediliyor…" : "Kaydet"}
+        </Button>
+        {!complete && (
+          <p className="text-slate-400">
+            Kaydetmek için üç ölçeğin hepsini seçin ({SCALES.filter((s) => values[s.key] !== null).length}/3).
+          </p>
+        )}
+      </div>
     </form>
   );
 }

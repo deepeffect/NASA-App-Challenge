@@ -39,6 +39,21 @@ interface ThresholdLine {
 }
 
 const THRESHOLD_COLORS = { warning: "#fb923c", critical: "#f87171" };
+const SEV_RANK = { info: 1, warning: 2, critical: 3 } as const;
+const RANK_SEV = { 1: "info", 2: "warning", 3: "critical" } as const;
+
+/** Okunur eksen değerleri: 1-2-2,5-5 × 10^n adımlarıyla yuvarlanmış alan ve tikler. */
+function niceScale(lo: number, hi: number, count = 5): { domain: [number, number]; ticks: number[] } {
+  const raw = Math.max((hi - lo) / count, 1e-9);
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const norm = raw / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
+  const a = Math.floor(lo / step) * step;
+  const b = Math.ceil(hi / step) * step;
+  const ticks: number[] = [];
+  for (let v = a; v <= b + step / 2; v += step) ticks.push(Number(v.toFixed(10)));
+  return { domain: [a, b], ticks };
+}
 
 export function MetricChart({ series, height = 320 }: { series: MetricSeriesResponse; height?: number }) {
   const { metric, baseline, daily, events } = series;
@@ -80,7 +95,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
   }, [metric.thresholds]);
 
   // Y ekseni: veri + bant + tahmin; uzak eşikler grafiği ezmesin diye ayrıca listelenir.
-  const { domain, visibleThresholds, hiddenThresholds } = useMemo(() => {
+  const { domain, ticks, visibleThresholds, hiddenThresholds } = useMemo(() => {
     const vals: number[] = [];
     for (const r of rows) {
       if (r.value != null) vals.push(r.value);
@@ -88,7 +103,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
       if (r.range) vals.push(...r.range);
     }
     if (baseline) vals.push(baseline.mean - baseline.std, baseline.mean + baseline.std);
-    if (!vals.length) return { domain: [0, 1] as [number, number], visibleThresholds: thresholds, hiddenThresholds: [] };
+    if (!vals.length) return { ...niceScale(0, 1), visibleThresholds: thresholds, hiddenThresholds: [] };
     let lo = Math.min(...vals);
     let hi = Math.max(...vals);
     const span = Math.max(hi - lo, Math.abs(hi) * 0.05, 1e-6);
@@ -98,9 +113,34 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
       lo = Math.min(lo, t.y);
       hi = Math.max(hi, t.y);
     }
-    const pad = (hi - lo) * 0.08 || 1;
-    return { domain: [lo - pad, hi + pad] as [number, number], visibleThresholds: visible, hiddenThresholds: hidden };
+    const pad = (hi - lo) * 0.05 || 1;
+    return { ...niceScale(lo - pad, hi + pad), visibleThresholds: visible, hiddenThresholds: hidden };
   }, [rows, baseline, thresholds]);
+
+  // Olay pencereleri: üst üste binen pencereler opaklığı katlayıp veriyi örtmesin diye gün bazında
+  // birleştirilir; her gün, onu kapsayan olayların en yüksek ciddiyetinin rengini alır.
+  const windowBands = useMemo(() => {
+    const level = new Map<string, number>();
+    for (const e of events) {
+      if (e.source === "forecast") continue; // tahminin penceresi uydurma aralığıdır, olay dönemi değil
+      for (const d of dates) {
+        if (d >= e.window.start && d <= e.window.end) level.set(d, Math.max(level.get(d) ?? 0, SEV_RANK[e.severity]));
+      }
+    }
+    const bands: { x1: string; x2: string; severity: keyof typeof SEV_RANK }[] = [];
+    let cur: { x1: string; x2: string; l: number } | null = null;
+    for (const d of dates) {
+      const l = level.get(d) ?? 0;
+      if (cur && l === cur.l) {
+        cur.x2 = d;
+        continue;
+      }
+      if (cur) bands.push({ x1: cur.x1, x2: cur.x2, severity: RANK_SEV[cur.l as 1 | 2 | 3] });
+      cur = l ? { x1: d, x2: d, l } : null;
+    }
+    if (cur) bands.push({ x1: cur.x1, x2: cur.x2, severity: RANK_SEV[cur.l as 1 | 2 | 3] });
+    return bands;
+  }, [events, dates]);
 
   if (!rows.length) {
     return <p className="text-slate-400">Bu aralıkta veri yok.</p>;
@@ -109,8 +149,6 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
   const first = dates[0];
   const lastDate = dates[dates.length - 1];
   const inRange = (d: string) => d >= first && d <= lastDate;
-  const clamp = (d: string) => (d < first ? first : d > lastDate ? lastDate : d);
-  const windowEvents = events.filter((e) => e.window.end >= first && e.window.start <= lastDate);
   const changepoints = events.filter((e): e is HealthEvent & { changepoint_date: string } =>
     Boolean(e.changepoint_date && inRange(e.changepoint_date) && dates.includes(e.changepoint_date)),
   );
@@ -125,6 +163,7 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
             <XAxis dataKey="date" tickFormatter={fmtDateShort} stroke="#94a3b8" tick={{ fontSize: 14 }} minTickGap={24} />
             <YAxis
               domain={domain}
+              ticks={ticks}
               stroke="#94a3b8"
               tick={{ fontSize: 14 }}
               width={56}
@@ -153,13 +192,13 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
               />
             )}
 
-            {windowEvents.map((e) => (
+            {windowBands.map((b) => (
               <ReferenceArea
-                key={`w-${e.event_id}`}
-                x1={clamp(e.window.start)}
-                x2={clamp(e.window.end)}
-                fill={SEVERITY_COLORS[e.severity]}
-                fillOpacity={0.12}
+                key={`w-${b.x1}`}
+                x1={b.x1}
+                x2={b.x2}
+                fill={SEVERITY_COLORS[b.severity]}
+                fillOpacity={0.14}
                 stroke="none"
                 ifOverflow="hidden"
               />
@@ -214,8 +253,11 @@ export function MetricChart({ series, height = 320 }: { series: MetricSeriesResp
         {visibleThresholds.length > 0 && (
           <span><span className="mr-1 inline-block w-5 border-t-2 border-dashed border-orange-400 align-middle" />Eşik{verifiedNote}</span>
         )}
-        {windowEvents.length > 0 && (
-          <span><span className="mr-1 inline-block h-3 w-5 bg-orange-400/20 align-middle" />Olay penceresi</span>
+        {windowBands.length > 0 && (
+          <span>
+            <span className="mr-1 inline-block h-3 w-5 bg-orange-400/25 align-middle" />
+            Olay dönemi (turuncu: uyarı, kırmızı: kritik)
+          </span>
         )}
         {changepoints.length > 0 && (
           <span><span className="mr-1 inline-block h-3 w-0 border-l-2 border-dashed border-violet-300 align-middle" />Değişim noktası</span>

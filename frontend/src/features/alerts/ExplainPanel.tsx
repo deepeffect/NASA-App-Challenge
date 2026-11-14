@@ -13,20 +13,20 @@ export function ExplainPanel({ data }: { data: ExplainResponse }) {
     <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/60 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Tag tone="sky">{GENERATED_BY[data.generated_by]}</Tag>
-        {data.model && <Tag>{data.model}</Tag>}
+        {data.model && data.generated_by === "llm" && <Tag>{data.model}</Tag>}
         {data.cached && <Tag>önbellekten</Tag>}
       </div>
       <p className="text-lg">{e.summary}</p>
       {e.likely_factors.length > 0 && (
         <div>
           <p className="text-sm font-medium text-slate-400">Olası etkenler</p>
-          <ul className="list-disc space-y-1 pl-6">{e.likely_factors.map((f) => <li key={f}>{f}</li>)}</ul>
+          <ul className="list-disc space-y-1 pl-6">{e.likely_factors.map((f, i) => <li key={i}>{f}</li>)}</ul>
         </div>
       )}
       {e.recommended_actions.length > 0 && (
         <div>
           <p className="text-sm font-medium text-slate-400">Önerilen adımlar</p>
-          <ul className="list-disc space-y-1 pl-6">{e.recommended_actions.map((a) => <li key={a}>{a}</li>)}</ul>
+          <ul className="list-disc space-y-1 pl-6">{e.recommended_actions.map((a, i) => <li key={i}>{a}</li>)}</ul>
         </div>
       )}
       {e.escalate_to_ground && (
@@ -44,7 +44,7 @@ export function ExplainPanel({ data }: { data: ExplainResponse }) {
         <details className="text-sm text-slate-400">
           <summary className="cursor-pointer">Kaynaklar</summary>
           <ul className="mt-1 list-disc pl-6">
-            {e.sources.map((s) => <li key={s}>{s}</li>)}
+            {e.sources.map((s, i) => <li key={`s${i}`}>{s}</li>)}
             {data.doc_refs.map((d) => (
               <li key={`${d.file}-${d.section}-${d.page}`}>
                 {d.file}

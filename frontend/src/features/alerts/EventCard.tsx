@@ -39,7 +39,7 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
   const primaryMetric = event.contributors[0]?.metric;
 
   return (
-    <article className={`space-y-4 rounded-2xl border border-l-8 border-slate-800 bg-slate-900/80 p-5 ${BORDER[event.severity]}`}>
+    <article className={`scroll-mt-40 space-y-4 rounded-2xl border border-l-8 border-slate-800 bg-slate-900/80 p-5 ${BORDER[event.severity]}`}>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={event.severity} />

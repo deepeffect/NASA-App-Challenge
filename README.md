@@ -35,6 +35,7 @@ Hepsi kök klasörde, Windows PowerShell ve bash'te aynı şekilde çalışır.
 | `npm run dev:backend:lan` | backend'i ağa aç (`0.0.0.0:8000`) — takım arkadaşları bağlanacaksa |
 | `npm run seed` | demo verisini yeniden yükle (DB'yi sıfırlar). Ek argüman: `npm run seed -- --spe-day 120` |
 | `npm run test` | backend `pytest` + frontend tip kontrolü |
+| `npm run smoke` | Playwright ile 7 ekranın tam sayfa görüntüsü (`frontend/screenshots/`) + konsol hatası / başarısız istek raporu. `npm run dev` açıkken çalıştırın; ilk sefer: `npx --prefix frontend playwright install --only-shell chromium` |
 
 Aşağıdaki bölümler aynı adımların elle yapılışını anlatır.
 

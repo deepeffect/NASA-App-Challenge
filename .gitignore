@@ -27,6 +27,7 @@ data/docs/*
 # Node
 node_modules/
 frontend/dist/
+frontend/screenshots/
 *.tsbuildinfo
 
 # IDE / OS

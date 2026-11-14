@@ -50,7 +50,7 @@ export function Button({
 
 export function Spinner({ label = "Yükleniyor…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 text-slate-400" role="status">
+    <div className="flex items-center gap-3 text-slate-400" role="status" data-spinner="">
       <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-sky-400" />
       <span>{label}</span>
     </div>

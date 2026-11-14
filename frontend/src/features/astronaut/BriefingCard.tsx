@@ -59,8 +59,8 @@ function Section({ title, items }: { title: string; items: string[] }) {
     <div>
       <p className="text-sm font-medium text-slate-400">{title}</p>
       <ul className="list-disc space-y-1 pl-6">
-        {items.map((i) => (
-          <li key={i}>{i}</li>
+        {items.map((item, i) => (
+          <li key={i}>{item}</li>
         ))}
       </ul>
     </div>

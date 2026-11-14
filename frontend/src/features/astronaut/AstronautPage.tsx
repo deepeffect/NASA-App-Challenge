@@ -80,7 +80,8 @@ export function AstronautPage() {
                 <EventList events={data.active_events} onShowMetric={showMetric} />
               </Card>
 
-              <div id="metric-panel">
+              {/* scroll-mt: "Grafikte göster" kaydırınca panel sabit header'ın altında kalmasın */}
+              <div id="metric-panel" className="scroll-mt-40">
                 {metric && (
                   <MetricPanel
                     astronautId={data.astronaut.id}
@@ -96,7 +97,7 @@ export function AstronautPage() {
 
             <aside className="space-y-6">
               <BriefingCard astronautId={data.astronaut.id} />
-              <div className="lg:sticky lg:top-40">
+              <div className="scroll-mt-40 lg:sticky lg:top-40">
                 <ChatPanel astronautId={data.astronaut.id} />
               </div>
             </aside>

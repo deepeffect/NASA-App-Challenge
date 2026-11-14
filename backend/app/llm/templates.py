@@ -106,7 +106,8 @@ def alert_explanation(ctx: dict[str, Any], lang: str = "tr") -> dict[str, Any]:
     if L == "en":
         summary = f"{SYSTEMS['en'][ev['system']]} alert ({sev}) since {ev['window']['start']}: " + "; ".join(parts) + "."
     else:
-        summary = f"{ev['title']} ({sev}, {ev['window']['start']} tarihinden beri). " + (ev.get("description") or "; ".join(parts))
+        since = ".".join(reversed(ev["window"]["start"].split("-")))  # 2026-10-17 → 17.10.2026
+        summary = f"{ev['title']} ({sev}, {since} tarihinden beri). " + (ev.get("description") or "; ".join(parts))
 
     factors = []
     for r in ctx.get("related_active_events", [])[:3]:
@@ -175,9 +176,9 @@ def _tool_text(name: str, d: dict[str, Any], L: str) -> str:
         ov = d["overall"]
         score = fmt(ov.get("score"), 0) if ov.get("score") is not None else "—"
         if L == "en":
-            s = f"Your overall status is {STATUS['en'][ov['status']]} (score {score}/100)."
+            s = f"Your overall status is {STATUS['en'][ov['status']]}, score {score}/100."
         else:
-            s = f"Genel durumun {STATUS['tr'][ov['status']]} (skor {score}/100)."
+            s = f"Genel durumun {STATUS['tr'][ov['status']]}, skor {score}/100."
         alerts = d.get("active_alerts", [])
         if alerts:
             titles = "; ".join(a["title"] for a in alerts[:3])

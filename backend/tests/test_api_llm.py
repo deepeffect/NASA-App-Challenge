@@ -38,6 +38,8 @@ def test_explain_mock_end_to_end_and_cache(client, critical_event):
     assert r.explanation.recommended_actions and r.explanation.likely_factors
     assert f"event:{eid}" in r.explanation.sources
     assert r.ungrounded_numbers == [], "şablon sadece bağlamdaki sayıları kullanır"
+    factors = r.explanation.likely_factors
+    assert len(factors) == len(set(factors)), "aynı metrik için sapma + trend olayı tekrar etken üretmemeli"
     again = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "tr"}).json())
     assert again.cached is True and again.explanation == r.explanation
     en = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "en"}).json())

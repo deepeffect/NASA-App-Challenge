@@ -20,15 +20,15 @@ export function CrewCard({ member }: { member: CrewMember }) {
       className={`block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 transition-colors ${RING[member.status]}`}
       aria-label={`${member.name} detayına git`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-2xl font-bold">{member.name}</p>
-          <p className="text-slate-400">{member.role ?? member.id}</p>
-        </div>
+      <div className="min-w-0">
+        <p className="truncate text-2xl font-bold" title={member.name}>{member.name}</p>
+        <p className="truncate text-slate-400" title={member.role ?? member.id}>{member.role ?? member.id}</p>
+      </div>
+      <div className="mt-3">
         <StatusBadge status={member.status} size="lg" />
       </div>
 
-      <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
+      <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-slate-950/60 p-2">
           <dt className="text-sm text-slate-400">Skor</dt>
           <dd className="text-2xl font-semibold">{fmtNum(member.score, 0)}</dd>

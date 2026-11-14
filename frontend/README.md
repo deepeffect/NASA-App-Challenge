@@ -85,3 +85,23 @@ Kurallar:
 | `npm run build` | tip kontrolü + üretim derlemesi (`dist/`) |
 | `npm run preview` | derlemeyi önizle |
 | `npm run gen:api` | API tiplerini yeniden üret |
+
+## Görsel smoke testi (Playwright)
+
+Backend ve Vite açıkken (kökte `npm run dev`):
+
+```powershell
+npx playwright install --only-shell chromium   # ilk sefer, sadece headless Chromium (~290 MB, kullanıcı dizinine)
+npm run smoke                                  # kökte veya frontend/ içinde
+```
+
+`scripts/smoke.ts` şu ekranları açar ve `screenshots/` altına kaydeder (gitignore'da):
+mürettebat · AST-02 150. gün (yeşil) · AST-02 157. gün (kırmızı, açıklama açık) · örnek dedektörlerle metrik
+grafiği · sohbet (mock cevap + acil durum bandı) · check-in formu · mürettebat 390 px. Konsol hataları,
+yakalanmamış JS hataları ve 4xx/5xx istekler raporlanır; sorun varsa çıkış kodu 1.
+Örnek dedektörler ekranı için 8001 portunda geçici ikinci bir backend başlatılır (çalışan dev sunucusuna dokunmaz).
+
+## URL'de zaman
+
+Seçili gün URL'de tutulur: `/astronauts/AST-02?as_of=2026-10-22`. Link paylaşılabilir; geri/ileri çalışır;
+sayfalar arası gezinmede gün korunur. "Canlıya dön" parametreyi kaldırır.

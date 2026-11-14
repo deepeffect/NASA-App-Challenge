@@ -67,7 +67,7 @@ docs/API.md, docs/openapi.json
 
 ## Komutlar
 
-Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev` · `npm run test` · `npm run seed` (ayrıntı: README → "Kök npm komutları"). Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
+Kök klasörden (önerilen, Windows/bash aynı): `npm run setup` · `npm run dev` · `npm run test` · `npm run seed` · `npm run smoke` (ayrıntı: README → "Kök npm komutları"). Backend Python'u `node scripts/py.mjs <args>` ile de çağrılabilir.
 
 Backend (`backend/` içinde; venv: `.venv`):
 
@@ -141,6 +141,7 @@ npm run build       # tip kontrolü + üretim derlemesi
 - Her davranış değişikliğine test: `backend/tests/`. Analiz değişikliğinde demo senaryosu testleri
   (`tests/analysis/test_scenario.py`) geçmeli: AST-02 kırmızıya döner, diğerleri yeşil kalır.
 - Testler her zaman `LLM_PROVIDER=mock` ve geçici DB ile çalışır (`tests/conftest.py`).
+- Arayüz değişikliğinden sonra `npm run smoke` çalıştır ve `frontend/screenshots/` görüntülerine bak (durum hiçbir yerde sadece renkle anlatılmamalı: ikon + metin).
 
 ## Git akışı
 
