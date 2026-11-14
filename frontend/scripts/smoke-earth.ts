@@ -18,13 +18,14 @@
  * (backend/app/__init__.py'nin sadece zaman damgası güncellenir; bu dev:earth backend'ini de bir kez yeniden
  * başlatır). İzleyici yoksa (örn. `npm run serve`) gemi dev ayarlarıyla arka planda açık bırakılır.
  *
- * Ayrıca: sayfa gemiye hiç istek atmamalı; konsol hatası, yakalanmamış hata, 4xx/5xx olmamalı.
+ * Ayrıca: sayfa gemiye hiç istek atmamalı; konsol hatası, yakalanmamış hata, 4xx/5xx olmamalı;
+ * monitor.css'teki her seçici .mon ile başlamalı (dosya her rotada yüklenir, kapsamsız seçici /me'ye sızar).
  * Ortam değişkenleri: SMOKE_SHIP_API, SMOKE_EARTH_API, SMOKE_EARTH_WEB, SMOKE_ASTRONAUT
  * Not: Bu astronotun bugünkü check-in'i bir kez paylaşılınca geri alınamaz; ölçümü tekrarlamak için önce
  * `npm run reset -- ship` ve `npm run reset -- earth`.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { mkdirSync, openSync, rmSync, utimesSync } from "node:fs";
+import { mkdirSync, openSync, readFileSync, rmSync, utimesSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -205,6 +206,36 @@ async function check(issues: Issue[], what: string, fn: () => Promise<unknown>):
   }
 }
 
+/**
+ * monitor.css'te `.mon` kapsamı dışında kalan seçiciler ve mon- öneksiz @keyframes adları.
+ * App bu dosyayı her rotada yükler; kapsamsız bir seçici /me'deki ortak bileşenlerin stilini bozar.
+ */
+function unscopedMonitorSelectors(): string[] {
+  const css = readFileSync(join(FRONTEND, "src", "apps", "monitor", "monitor.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const bad: string[] = [];
+  const inKeyframes: boolean[] = []; // açık her blok için: @keyframes içinde mi
+  let prelude = "";
+  for (const ch of css) {
+    if (ch === "{") {
+      const p = prelude.trim();
+      const parentKf = inKeyframes.at(-1) ?? false;
+      if (p.startsWith("@")) {
+        if (/^@keyframes\s+(?!mon-)/.test(p)) bad.push(p);
+        inKeyframes.push(p.startsWith("@keyframes"));
+      } else {
+        if (!parentKf) bad.push(...p.split(",").map((s) => s.trim()).filter((s) => !/^\.mon(?![\w-])/.test(s)));
+        inKeyframes.push(parentKf);
+      }
+      prelude = "";
+    } else if (ch === "}") {
+      inKeyframes.pop();
+      prelude = "";
+    } else if (ch === ";") prelude = "";
+    else prelude += ch;
+  }
+  return bad;
+}
+
 // ----------------------------------------------------------------------------- ana akış
 export async function runEarthSmoke(): Promise<number> {
   const [shipSt, earthSt] = await Promise.all(
@@ -275,6 +306,10 @@ export async function runEarthSmoke(): Promise<number> {
 
     // ------------------------------------------------------------------ 1
     await step("1. Giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık)", async () => {
+      await check(current.issues, "monitor.css: her seçici .mon altında (diğer ekranlara sızmaz)", async () => {
+        const bad = unscopedMonitorSelectors();
+        if (bad.length) throw new Error(`kapsamsız: ${bad.slice(0, 8).join(" | ")}${bad.length > 8 ? ` … (+${bad.length - 8})` : ""}`);
+      });
       await loginEarth(page, web);
       await page.locator('.linkbar[data-link="up"]').waitFor({ timeout: 10_000 });
       await check(current.issues, "bağlantı çubuğu metni", () => page.getByText(/Gemi bağlantısı:/).first().waitFor({ timeout: 5000 }));
