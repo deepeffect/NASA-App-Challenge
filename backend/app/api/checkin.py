@@ -7,7 +7,7 @@ from fastapi import APIRouter, Path, Request
 
 from app.auth import AstronautDep
 from app.i18n import LangDep
-from app.models.schemas import CheckinState, CheckinTurnRequest, CheckinTurnResponse, ErrorResponse
+from app.models.schemas import CheckinShareRequest, CheckinState, CheckinTurnRequest, CheckinTurnResponse, ErrorResponse
 from app.personal.store import personal_data
 from app.services import checkin as svc
 from app.services.personal import day_index, get_series
@@ -63,3 +63,15 @@ async def post_reset(p: AstronautDep, request: Request, db: DBSession, lang: Lan
     series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
     async with _lock(request, p.subject):
         return svc.reset(db, series, lang)
+
+
+@router.post(
+    "/checkin/share",
+    response_model=CheckinState,
+    responses=ERRORS,
+    summary="Bitmiş check-in'i Dünya ile paylaş: private / scores / full (sadece artar, geri alınamaz)",
+)
+async def post_share(req: CheckinShareRequest, p: AstronautDep, request: Request, db: DBSession, lang: LangDep) -> CheckinState:
+    series = get_series(personal_data(request.app.state.engine), db, p.subject, lang)
+    async with _lock(request, p.subject):
+        return svc.share(db, series, req.level, lang)

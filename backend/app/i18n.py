@@ -123,6 +123,32 @@ MESSAGES: dict[str, dict[Lang, str]] = {
         "tr": "Dünya ile paylaşılmış bir check-in baştan başlatılamaz.",
         "en": "A check-in shared with Earth cannot be started over.",
     },
+    "share_downgrade": {
+        "tr": "Paylaşım geri alınamaz; daha düşük bir seviye seçilemez.",
+        "en": "Sharing cannot be undone; a lower level cannot be chosen.",
+    },
+    "share_label_private": {"tr": "Gizli tut", "en": "Keep private"},
+    "share_label_scores": {"tr": "Sadece skorlar", "en": "Scores only"},
+    "share_label_full": {"tr": "Her şey", "en": "Everything"},
+    "share_desc_private": {
+        "tr": "Dünya sadece check-in yaptığınızı görür.",
+        "en": "Earth sees only that you completed a check-in.",
+    },
+    "share_desc_scores": {
+        "tr": "Dünya ruh hali ve stres skorlarınızı ve hangi konuların işaretlendiğini görür; sözlerinizi görmez.",
+        "en": "Earth sees your mood and stress scores and which topics were flagged, not your words.",
+    },
+    "share_desc_full": {
+        "tr": "Dünya ruh hali ve stres skorlarınızı ve cevaplarınızı yazdığınız gibi görür.",
+        "en": "Earth sees your mood and stress scores and your answers as written.",
+    },
+    "share_irreversible": {"tr": "Paylaşım geri alınamaz.", "en": "Sharing cannot be undone."},
+    "share_cmo_note": {
+        "tr": "Bir cevap acil bir tıbbi soruna işaret ederse, kayıt gizli olsa bile gemideki sağlık sorumlusu "
+        "bilgilendirilir. Bu bilgi yine de Dünya'ya gönderilmez.",
+        "en": "If an answer points to an urgent medical problem, the crew medical officer on board is told even "
+        "when the entry is private. It is still not sent to Earth.",
+    },
     "cmo_title": {"tr": "Gemideki sağlık sorumlusu bilgilendirildi.", "en": "Crew medical officer told."},
     "cmo_text": {
         "tr": "Belirti cevabınız gemideki sağlık sorumlusuna iletildi. Dünya'ya gönderilmedi.",

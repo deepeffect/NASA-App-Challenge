@@ -60,3 +60,46 @@ def test_scripted_checkin_matches_prototype(golden, dataset, catalog) -> None:
         urgent_seen += st.cmo
         fever_seen += any("Take your temperature" in m["text"] for m in st.msgs)
     assert urgent_seen and fever_seen  # acil ve ateş dalları gerçekten denendi
+
+
+# ---------------------------------------------------------------- Dünya'nın gördüğü check-in
+def _parse_earth(html: str) -> dict:
+    import html as htmllib
+    import re
+
+    calm = re.match(r'<p class="calm">(.*?)</p>$', html)
+    if calm:
+        return {"text": calm.group(1), "notes": []}
+    head = re.match(r'<p class="muted">(.*?)</p><div class="cinotes">(.*)</div>$', html, re.S)
+    notes = [
+        (htmllib.unescape(m.group(1)), htmllib.unescape(m.group(2)), bool(m.group(3)))
+        for m in re.finditer(r'<div><span class="t">(.*?)</span><span>(.*?)</span>(<span class="glyph g1"[^>]*></span>)?</div>', head.group(2))
+    ]
+    return {"text": head.group(1), "notes": notes}
+
+
+@pytest.fixture(scope="module")
+def golden_earth(dataset):
+    index = {a.meta.id: k for k, a in enumerate(dataset.astronauts)}
+    spec = [
+        {"ai": index[aid], "di": di, "answers": ans, "share": share}
+        for aid, di in POINTS[:3]
+        for ans in ANSWERS
+        for share in ("private", "scores", "full")
+    ]
+    return run_prototype({"checkins": spec})["checkins"]
+
+
+def test_earth_checkin_view_matches_prototype(golden_earth, dataset, catalog) -> None:
+    from app.models.tables import CheckinSession
+    from app.personal.earth_view import earth_checkin_view
+    from app.personal.privacy import earth_checkin
+
+    for js in golden_earth:
+        series = dataset.astronauts[js["ai"]]
+        st = play_python(catalog, series, js["di"], js["answers"])
+        row = CheckinSession(astronaut_id=series.meta.id, day_index=js["di"], mission_day=0, notes=st.notes, done=st.done, share=js["share"])
+        view = earth_checkin_view(earth_checkin(row), "en")
+        ref = _parse_earth(js["earth"])
+        ours_notes = [(n.topic, n.text if js["share"] == "full" else n.flag_text, n.flag) for n in view.notes]
+        assert (view.text, ours_notes) == (ref["text"], ref["notes"]), (series.meta.id, js["share"], js["answers"])

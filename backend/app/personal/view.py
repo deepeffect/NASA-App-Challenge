@@ -6,6 +6,8 @@ aynı yapıdadır; sayılarda ondalık virgül kullanılır.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.i18n import Lang
 from app.models.schemas import AreaScoreView, DayView, ReadingView, StripDay, TodoItemView
 from app.personal.catalog import Indicator, PersonalCatalog
@@ -198,6 +200,21 @@ def status_label(cat: PersonalCatalog, status: int, lang: Lang) -> str:
 
 
 # ============================================================================ görünümler
+@dataclass(frozen=True)
+class DayFacts:
+    """Görünümün veriden okunan kısmı (gemide veri setinden, Dünya'da downlink kaydından)."""
+
+    astronaut_id: str
+    index: int
+    n_days: int
+    mission_day: int
+    health_status: int
+    cumulative_score: float
+    daily_score: float
+    main_concern: str
+    area_scores: dict[str, float]  # Dünya'da paylaşılmamış davranışsal alan yoktur
+
+
 def build_day_view(
     cat: PersonalCatalog,
     series: AstronautSeries,
@@ -210,42 +227,58 @@ def build_day_view(
 ) -> DayView:
     ev = evaluate_day(cat, series, i, earth=earth, shared=shared)
     day = series.days[i]
-    n = len(series.days)
+    facts = DayFacts(
+        astronaut_id=series.meta.id, index=i, n_days=len(series.days), mission_day=day.mission_day,
+        health_status=day.health_status, cumulative_score=day.cumulative_score, daily_score=day.daily_score,
+        main_concern=day.main_concern, area_scores=day.area_scores,
+    )
+    return render_day_view(cat, facts, ev, lang, share=share, done_codes=done_codes)
+
+
+def render_day_view(
+    cat: PersonalCatalog,
+    facts: DayFacts,
+    ev: DayEvaluation,
+    lang: Lang,
+    share: str | None = None,
+    done_codes: frozenset[str] = frozenset(),
+) -> DayView:
+    i, n = facts.index, facts.n_days
     visible = ev.visible_items
     masked = ev.masked_count
-    who = "earth" if earth else "astro"
+    who = "earth" if ev.earth else "astro"
     areas = []
     for area in cat.areas:
         hidden = area == "behavioral" and ev.behavioral_hidden
-        score = day.area_scores[area]
+        score = None if hidden else facts.area_scores[area]
         areas.append(
             AreaScoreView(
                 area=area,
                 label=area_label(cat, area, lang),
-                score=None if hidden else score,
-                score_text=tx("not_shared", lang) if hidden else num(score, 0, lang),
+                score=score,
+                score_text=tx("not_shared", lang) if score is None else num(score, 0, lang),
                 hidden=hidden,
-                main_concern=day.main_concern == area,
+                main_concern=facts.main_concern == area,
             )
         )
     return DayView(
-        astronaut_id=series.meta.id,
-        viewer="earth" if earth else "astronaut",
+        astronaut_id=facts.astronaut_id,
+        viewer="earth" if ev.earth else "astronaut",
         day=i + 1,
         n_days=n,
-        mission_day=day.mission_day,
+        mission_day=facts.mission_day,
         is_today=i == n - 1,
-        day_label=tx("day_label", lang, day=i + 1, n=n, md=day.mission_day),
+        day_label=tx("day_label", lang, day=i + 1, n=n, md=facts.mission_day),
         status=ev.status,
         status_label=status_label(cat, ev.status, lang),
-        health_status=day.health_status,
+        health_status=facts.health_status,
         ground=ev.ground,
         subtitle=subtitle(cat, ev, lang),
-        score=day.cumulative_score,
-        score_text=num(day.cumulative_score, 0, lang),
-        daily_score=day.daily_score,
-        main_concern=day.main_concern,
-        main_concern_label=None if day.main_concern == "none" else concern_label(cat, ev, lang),
+        score=facts.cumulative_score,
+        score_text=num(facts.cumulative_score, 0, lang),
+        daily_score=facts.daily_score,
+        main_concern=facts.main_concern,
+        main_concern_label=None if facts.main_concern == "none" else concern_label(cat, ev, lang),
         areas=areas,
         readings=[reading_view(r, lang) for r in ev.readings],
         todo_title=tx(f"todo_title_{who}", lang),

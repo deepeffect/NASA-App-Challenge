@@ -856,6 +856,9 @@ class CheckinState(BaseModel):
     cmo_notified: bool
     cmo_notice: CmoNotice | None = Field(description="'Gemideki sağlık sorumlusu bilgilendirildi'")
     completed_at: dt.datetime | None = None
+    share_options: list["ShareOption"] = Field([], description="Sadece tamamlanmış check-in'de")
+    share_note: str | None = Field(None, description="Seçili seviyenin açıklaması + 'paylaşım geri alınamaz'")
+    share_cmo_note: str | None = Field(None, description="Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez")
 
 
 class CheckinTurnRequest(BaseModel):
@@ -870,3 +873,91 @@ class CheckinTurnResponse(BaseModel):
     next: CheckinNext | None
     done: bool
     checkin: CheckinState
+
+
+# =============================================================================
+# Paylaşım ve Dünya'ya giden (gizlilik filtresinden geçmiş) kayıtlar
+# =============================================================================
+class ShareOption(BaseModel):
+    level: ShareLevel
+    label: str
+    description: str
+    selected: bool
+    enabled: bool = Field(description="false → mevcut seviyeden düşük (paylaşım geri alınamaz)")
+
+
+class CheckinShareRequest(BaseModel):
+    level: ShareLevel
+
+
+class EarthReading(BaseModel):
+    today: float
+    used: float = Field(description="Değerlendirilen değer (3 günlük ortalama veya o günün değeri)")
+    level: int
+
+
+class EarthTodo(BaseModel):
+    code: str
+    triggers: list[str] = Field(description="Görünür tetikleyici kolonlar; boş → veri setinin önerisi")
+    done: bool = False
+
+
+class EarthCheckinNote(BaseModel):
+    topic_key: str
+    flag: bool
+    text: str | None = Field(None, description="Sadece `full` paylaşımda")
+
+
+class EarthCheckin(BaseModel):
+    share: ShareLevel
+    notes: list[EarthCheckinNote] = Field(description="private → boş; scores → konu + flag; full → + metin")
+
+
+class EarthAstronaut(BaseModel):
+    id: str
+    age: int
+    sex: str
+    bmi: float
+    mission: str
+    profile: str
+    first_mission_day: int
+    last_mission_day: int
+    n_days: int
+
+
+class EarthDay(BaseModel):
+    """Bir günün Dünya'ya giden hali. Gizlilik filtresi GEMİDE uygulanır; bu kayıtta gizli ölçümler,
+    maskeli to-do kodları, paylaşılmamış davranışsal skor, check-in mesajları ve CMO bilgisi YOKTUR."""
+
+    astronaut_id: str
+    day_index: int
+    mission_day: int
+    n_days: int
+    health_status: int
+    ground: bool = Field(description="Sadece görünür ölçümlerden")
+    status: int = Field(description="max(health_status, ground ? 1 : 0)")
+    cumulative_score: float
+    daily_score: float
+    main_concern: str
+    behavioral_hidden: bool
+    area_scores: dict[str, float]
+    readings: dict[str, EarthReading]
+    todo: list[EarthTodo]
+    todo_masked_count: int
+    checkin: EarthCheckin | None
+
+
+class EarthCheckinNoteView(BaseModel):
+    topic: str
+    text: str | None
+    flag: bool
+    flag_text: str = Field(description="scores: 'İşaretlendi' / 'İşaret yok'; full: ''")
+
+
+class EarthCheckinView(BaseModel):
+    share: ShareLevel | None
+    text: str = Field(description="'Tamamlanmış check-in yok' / 'gizli tutuldu' / 'Astronotun paylaştığı: …'")
+    notes: list[EarthCheckinNoteView]
+
+
+CheckinState.model_rebuild()

@@ -10,6 +10,8 @@ Bilinçli farklar (kullanıcı kararları) açıkça kontrol edilir:
       (prototipte boş).
   D3  Dünya'da, check-in en az `scores` paylaşılmadıysa davranışsal alan skoru "Not shared";
       ana endişe davranışsalsa "behavioral area (details not shared)".
+  D4  Dünya'da (paylaşılmamışsa) çözümü sadece gizli ölçümlere bağlı "veri setinin önerisi" öğesi
+      (MOOD_CONNECT, A139 23–24. gün) maskelenir; prototip gösteriyordu.
 """
 
 import pytest
@@ -42,7 +44,7 @@ def ours_rows(cat, view):
 
 
 def test_every_day_matches_prototype(golden, dataset, catalog) -> None:
-    stats = {"views": 0, "D1": 0, "D2": 0, "D3": 0}
+    stats = {"views": 0, "D1": 0, "D2": 0, "D3": 0, "D4": 0}
     for js in golden["views"]:
         series = dataset.astronauts[js["ai"]]
         day = series.days[js["di"]]
@@ -50,6 +52,11 @@ def test_every_day_matches_prototype(golden, dataset, catalog) -> None:
         v = build_day_view(catalog, series, js["di"], "en", earth=earth, shared=share_rank(js["share"]), share=js["share"])
         where = f'{series.meta.id} gün {js["di"] + 1} {js["role"]} share={js["share"]}'
         stats["views"] += 1
+
+        todo = js["todo"]
+        d4 = []
+        if earth and share_rank(js["share"]) < 1:
+            d4 = [x for x in todo["items"] if x["why"] == "" and x["title"] == "Reconnect and recharge"]
 
         # ---- durum başlığı ve alt başlık
         proto_status = shown_status(day.health_status, day.needs_ground_support)
@@ -61,19 +68,28 @@ def test_every_day_matches_prototype(golden, dataset, catalog) -> None:
             if earth and day.main_concern == "behavioral" and v.status and share_rank(js["share"]) < 1:  # D3
                 assert v.subtitle == "Main concern: behavioral area (details not shared)", where
                 assert js["statesub"] == "Main concern: sleep, mood and stress", where
+            elif d4 and not v.status:  # D4: maskelenen öğe "küçük şey" sayısından düşer
+                n = len(todo["items"]) - len(d4)
+                assert v.subtitle == (f"{n} small thing{'s' if n > 1 else ''} to look at" if n else "Nothing to do today"), where
             else:
                 assert v.subtitle == js["statesub"], where
         assert v.score_text == js["score"], where
         assert v.day_label == js["daylabel"], where
 
         # ---- to-do
-        todo = js["todo"]
         assert v.todo_title == todo["title"], where
-        assert v.calm_text == todo["calm"], where
+        if not d4:
+            assert v.calm_text == todo["calm"], where
         assert (None if v.ground_title is None else {"title": v.ground_title, "text": v.ground_text}) == todo["ground"], where
-        assert v.todo_masked_text == todo["masked"], where
-        assert len(v.todo) == len(todo["items"]), where
-        for ours, ref in zip(v.todo, todo["items"], strict=True):
+        ref_items = todo["items"]
+        if d4:  # D4
+            stats["D4"] += len(d4)
+            ref_items = [x for x in ref_items if x not in d4]
+            assert v.todo_masked_count == len(d4) + (int(todo["masked"].split()[0]) if todo["masked"] else 0), where
+        else:
+            assert v.todo_masked_text == todo["masked"], where
+        assert len(v.todo) == len(ref_items), where
+        for ours, ref in zip(v.todo, ref_items, strict=True):
             assert (ours.title, ours.steps, ours.contact_ground_if) == (ref["title"], ref["steps"], ref["contact"]), where
             if ours.source == "dataset":  # D2
                 stats["D2"] += 1
@@ -95,7 +111,7 @@ def test_every_day_matches_prototype(golden, dataset, catalog) -> None:
 
     assert stats["views"] == len(dataset.astronauts) * 30 * 2 + len(dataset.astronauts) * 3
     # Farkların gerçekten ortaya çıktığını da belgeleyelim (sıfır olsaydı test hiçbir şey kanıtlamazdı)
-    assert stats["D2"] > 0 and stats["D3"] > 0, stats
+    assert stats["D2"] > 0 and stats["D3"] > 0 and stats["D4"] == 2, stats
     print("golden:", stats)
 
 

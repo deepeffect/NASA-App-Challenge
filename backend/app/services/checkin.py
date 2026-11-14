@@ -16,12 +16,22 @@ from sqlmodel import Session
 from app.config import Settings
 from app.errors import ApiError
 from app.i18n import Lang, t
-from app.models.schemas import CheckinMessage, CheckinNext, CheckinNote, CheckinState, CheckinTurnResponse, CmoNotice
+from app.models.schemas import (
+    CheckinMessage,
+    CheckinNext,
+    CheckinNote,
+    CheckinState,
+    CheckinTurnResponse,
+    CmoNotice,
+    ShareOption,
+)
 from app.models.tables import CheckinSession, CmoNotification, utcnow
 from app.personal.catalog import load_personal_catalog
 from app.personal.checkin_context import build_context
 from app.personal.checkin_script import TOPICS, FlowState, apply_turn, assistant_turn
 from app.personal.dataset import AstronautSeries
+from app.personal.evaluate import SHARE_LEVELS
+from app.personal.privacy import share_level_of
 
 log = logging.getLogger(__name__)
 
@@ -30,11 +40,20 @@ def load_session(db: Session, astronaut_id: str, day_index: int) -> CheckinSessi
     return db.get(CheckinSession, (astronaut_id, day_index))
 
 
-def share_of(row: CheckinSession | None) -> str | None:
-    """Prototip shareOf(): tamamlanmış check-in yoksa None, varsa seviye (varsayılan private)."""
-    if row is None or not row.done:
-        return None
-    return row.share or "private"
+share_of = share_level_of  # prototip shareOf()
+
+
+def share_options(current: str, lang: Lang) -> list[ShareOption]:
+    return [
+        ShareOption(
+            level=level,  # type: ignore[arg-type]
+            label=t(f"share_label_{level}", lang),
+            description=t(f"share_desc_{level}", lang),
+            selected=level == current,
+            enabled=SHARE_LEVELS[level] >= SHARE_LEVELS[current],
+        )
+        for level in SHARE_LEVELS
+    ]
 
 
 def _flow(row: CheckinSession | None, lang: Lang) -> FlowState:
@@ -65,6 +84,9 @@ def state_view(series: AstronautSeries, day_index: int, row: CheckinSession | No
         cmo_notified=st.cmo,
         cmo_notice=CmoNotice(title=t("cmo_title", lang), text=t("cmo_text", lang)) if st.cmo else None,
         completed_at=row.completed_at if row else None,
+        share_options=share_options(share, lang) if share else [],
+        share_note=(t(f"share_desc_{share}", lang) + " " + t("share_irreversible", lang)) if share else None,
+        share_cmo_note=t("share_cmo_note", lang) if share else None,
     )
 
 
@@ -167,6 +189,29 @@ def reset(db: Session, series: AstronautSeries, lang: Lang) -> CheckinState:
     return state_view(series, i, None, lang)
 
 
+def share(db: Session, series: AstronautSeries, level: str, lang: Lang) -> CheckinState:
+    """Paylaşım seviyesi sadece artar (private → scores → full); geri alınamaz."""
+    i = series.today_index
+    row = load_session(db, series.meta.id, i)
+    if row is None or not row.done:
+        raise ApiError(409, "checkin_not_done", t("checkin_not_done", lang))
+    current = share_of(row) or "private"
+    if SHARE_LEVELS[level] < SHARE_LEVELS[current]:
+        raise ApiError(409, "share_downgrade", t("share_downgrade", lang))
+    if level != current or row.share is None:
+        row.share = level
+        row.updated_at = utcnow()
+        if level != "private":
+            row.shared_at = utcnow()
+        db.add(row)
+        db.flush()
+        if level != current:
+            on_checkin_shared(db, series, row)
+        db.commit()
+        db.refresh(row)
+    return state_view(series, i, row, lang)
+
+
 # ---------------------------------------------------------------- downlink kancaları (7. bölüm)
 def on_checkin_completed(db: Session, series: AstronautSeries, row: CheckinSession) -> None:
     """Check-in tamamlandı: Dünya'ya gidecek olay (gizlilik filtresinden geçmiş) outbox'a yazılır."""
@@ -174,3 +219,7 @@ def on_checkin_completed(db: Session, series: AstronautSeries, row: CheckinSessi
 
 def on_checkin_reset(db: Session, series: AstronautSeries, day_index: int) -> None:
     """Tamamlanmış (private) check-in silindi: Dünya görünümü güncellenir."""
+
+
+def on_checkin_shared(db: Session, series: AstronautSeries, row: CheckinSession) -> None:
+    """Paylaşım seviyesi arttı: Dünya'ya filtrelenmiş check-in ve gün görünümü gider."""

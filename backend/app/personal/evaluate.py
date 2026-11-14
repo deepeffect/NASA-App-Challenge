@@ -12,6 +12,7 @@ Prototip karşılıkları (frontend/reference/personal-artifact.html):
 Bilinçli farklar (kullanıcı kararları; golden testte belgelenir):
   - Dünya'da ground her yerde (durum başlığı ve şerit dahil) sadece görünür ölçümlerden hesaplanır.
   - Tetikleyicisi olmayan self-care kodu "veri setinin önerisi" olarak işaretlenir (prototipte boş).
+  - Dünya'da (paylaşılmamışsa) çözümü sadece gizli ölçümlere bağlı öneri öğesi de maskelenir.
 """
 
 from __future__ import annotations
@@ -112,6 +113,9 @@ class TodoItem:
     solution: Solution
     triggers: list[Reading] = field(default_factory=list)  # bütün tetikleyiciler
     visible: list[Reading] = field(default_factory=list)  # gizli olmayanlar
+    # Dünya + paylaşılmamış + çözüm sadece gizli ölçümlere bağlı (MOOD_CONNECT): tetikleyicisiz
+    # "veri setinin önerisi" de maskelenir (D4; prototipte gösteriliyordu)
+    private_suggestion: bool = False
 
     @property
     def code(self) -> str:
@@ -120,7 +124,9 @@ class TodoItem:
     @property
     def masked(self) -> bool:
         """Tetikleyicisi var ama hepsi gizli → Dünya'da sadece sayısı görünür."""
-        return bool(self.triggers) and not self.visible
+        if not self.triggers:
+            return self.private_suggestion
+        return not self.visible
 
     @property
     def from_dataset(self) -> bool:
@@ -128,14 +134,29 @@ class TodoItem:
         return not self.triggers
 
 
-def todo_items(cat: PersonalCatalog, codes: Sequence[str], readings: Sequence[Reading]) -> list[TodoItem]:
+def private_only_solution(cat: PersonalCatalog, code: str) -> bool:
+    """Çözüm sadece gizli ölçümlerle ilişkili mi (örn. MOOD_CONNECT → sadece ruh hali)."""
+    inds = [i for i in cat.indicators if i.action == code]
+    return bool(inds) and all(i.private for i in inds)
+
+
+def todo_items(
+    cat: PersonalCatalog, codes: Sequence[str], readings: Sequence[Reading], hide_private: bool = False
+) -> list[TodoItem]:
     items = []
     for code in codes:
         sol = cat.solution(code)
         if sol is None:
             continue
         trig = [r for r in readings if r.ind.action == code and r.level >= r.ind.trig]
-        items.append(TodoItem(solution=sol, triggers=trig, visible=[r for r in trig if not r.hidden]))
+        items.append(
+            TodoItem(
+                solution=sol,
+                triggers=trig,
+                visible=[r for r in trig if not r.hidden],
+                private_suggestion=hide_private and not trig and private_only_solution(cat, code),
+            )
+        )
     return items
 
 
@@ -153,6 +174,7 @@ class DayEvaluation:
     health_status: int
     main_concern: str
     behavioral_hidden: bool  # Dünya: davranışsal alan skoru gizli (check-in en az `scores` paylaşılmadı)
+    extra_masked: int = 0  # Dünya kaydından kurulurken: maskeli öğeler kodlarıyla gelmez, sadece sayıları
 
     @property
     def visible_items(self) -> list[TodoItem]:
@@ -160,7 +182,7 @@ class DayEvaluation:
 
     @property
     def masked_count(self) -> int:
-        return len(self.items) - len(self.visible_items)
+        return len(self.items) - len(self.visible_items) + self.extra_masked
 
 
 def evaluate_day(
@@ -174,7 +196,7 @@ def evaluate_day(
         earth=earth,
         shared=shared,
         readings=rd,
-        items=todo_items(cat, day.self_care, rd),
+        items=todo_items(cat, day.self_care, rd, hide_private=earth and shared < SHARE_LEVELS["scores"]),
         ground=ground,
         status=shown_status(day.health_status, ground),
         health_status=day.health_status,
