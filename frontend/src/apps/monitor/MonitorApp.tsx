@@ -17,6 +17,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { auth, type StationInfo, stationApi } from "../../api/station";
 import { isUnauthorized } from "./api";
+import { LinkBar } from "./LinkBar";
 import { LiveProvider } from "./live";
 import { Login } from "./Login";
 import { Footer, Header } from "./Shell";
@@ -73,6 +74,7 @@ function Dashboard({ station, theme, setTheme, onLogout }: { station: StationInf
     <>
       <div className="mon-top" ref={topRef}>
         <Header theme={theme} setTheme={setTheme} onLogout={onLogout} />
+        <LinkBar />
       </div>
       <div className="mon-body">
         <main className="mon-main" />

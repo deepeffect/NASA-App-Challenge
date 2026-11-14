@@ -93,7 +93,7 @@
 @media (min-width: 1800px) { .linkbar { padding: 8px 32px; } }
 .linkbar .lk { display: inline-flex; align-items: center; gap: 8px; }
 .linkbar .lk b { font-weight: 600; }
-.linkbar .sep { color: var(--quiet); }
+.linkbar .sep { color: var(--muted); }
 .linkbar .delay { margin-left: auto; color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 .dot.up { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
