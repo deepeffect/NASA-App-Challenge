@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     # earth: gemi backend'inin adresi (downlink buradan alınır), örn. http://192.168.1.10:8000
     ship_url: str | None = None
 
+    # --- Giriş ---
+    # Astronot: kimlik = şifre (A000 …, büyük/küçük harf duyarsız). Dünya üssü: EARTH / EARTH_PASSWORD.
+    earth_password: str = "EARTH"
+    # Token imza anahtarı; boşsa istasyon DB'sinde rastgele üretilip saklanır
+    auth_secret: str | None = None
+    auth_token_ttl_hours: float = Field(24.0, gt=0)
+
     # --- Veri kaynağı ---
     # astronaut_health: data/raw/astronaut_health.json (yeni mimari, /me ve /monitor)
     # synthetic: eski sentetik veri + eski analiz motoru (/legacy ekranları ve eski testler)

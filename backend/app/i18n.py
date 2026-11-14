@@ -70,6 +70,51 @@ MESSAGES: dict[str, dict[Lang, str]] = {
         "tr": "Bu özellik bu istasyonda yok.",
         "en": "This feature is not available at this station.",
     },
+    # ---- giriş (prototip metinlerinden)
+    "login_empty_id": {"tr": "Bir kimlik girin.", "en": "Enter an ID."},
+    "login_unknown_id_ship": {
+        "tr": "{id} kimlikli bir hesap yok. Astronot kimlikleri {first} ile {last} arasındadır.",
+        "en": "No account has the ID {id}. Astronaut IDs run from {first} to {last}.",
+    },
+    "login_unknown_id_earth": {
+        "tr": "{id} kimlikli bir hesap yok. Dünya üssü hesabı: {earth}.",
+        "en": "No account has the ID {id}. The Earth base account is {earth}.",
+    },
+    "login_wrong_password": {
+        "tr": "Şifre yanlış. Bu demoda şifre kimlikle aynıdır.",
+        "en": "Wrong password. In this demo the password is the same as the ID.",
+    },
+    "login_wrong_password_earth": {"tr": "Dünya üssü şifresi yanlış.", "en": "Wrong password for the Earth base."},
+    "login_earth_on_ship": {
+        "tr": "Dünya üssü hesabı gemide kullanılmaz; Dünya üssü istasyonundan giriş yapın.",
+        "en": "The Earth base account is not used on the ship. Log in at the Earth base station.",
+    },
+    "login_astronaut_on_earth": {
+        "tr": "Astronot hesapları gemi bilgisayarındadır; bu istasyon Dünya üssüdür.",
+        "en": "Astronaut accounts are on the ship computer. This station is the Earth base.",
+    },
+    "hint_ship": {
+        "tr": "Astronotlar: {first} – {last} ({count} hesap); şifre kimlikle aynıdır.",
+        "en": "Astronauts: {first} to {last} ({count} accounts); the password is the same as the ID.",
+    },
+    "hint_ship_empty": {"tr": "Gemide henüz astronot verisi yok.", "en": "No astronaut data on the ship yet."},
+    "hint_earth": {"tr": "Dünya üssü: {earth}, şifre {password}.", "en": "Earth base: {earth}, password {password}."},
+    "hint_earth_custom": {
+        "tr": "Dünya üssü: {earth}; şifre EARTH_PASSWORD ile ayarlanır.",
+        "en": "Earth base: {earth}; the password is set with EARTH_PASSWORD.",
+    },
+    "auth_required": {"tr": "Önce giriş yapın.", "en": "Log in first."},
+    "auth_invalid": {
+        "tr": "Oturumunuz geçerli değil; yeniden giriş yapın.",
+        "en": "Your session is not valid. Log in again.",
+    },
+    "forbidden_other_astronaut": {
+        "tr": "Sadece kendi verinizi görebilirsiniz.",
+        "en": "You can only see your own data.",
+    },
+    "forbidden_kind": {"tr": "Bu hesap bu işlemi yapamaz.", "en": "This account cannot do that."},
+    "unknown_astronaut": {"tr": "Astronot bulunamadı: {id}", "en": "Astronaut not found: {id}"},
+    "unknown_day": {"tr": "Geçersiz gün: {day} (1–{n})", "en": "Invalid day: {day} (1–{n})"},
 }
 
 

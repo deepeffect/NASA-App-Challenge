@@ -39,6 +39,7 @@ MetricState = Literal["normal", "watch", "alert", "no_data"]
 
 class ErrorResponse(BaseModel):
     detail: str
+    code: str | None = Field(None, description="Makine tarafından okunur hata kodu (yeni uçlar), örn. unknown_id")
 
 
 class DateWindow(BaseModel):
@@ -693,3 +694,117 @@ class DayView(BaseModel):
     readings_note: str
     threshold_note: str = Field(description="Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı")
     share: ShareLevel | None = Field(None, description="Bu günün check-in paylaşım seviyesi (tamamlandıysa)")
+
+
+# =============================================================================
+# /api/auth
+# =============================================================================
+PrincipalKind = Literal["astronaut", "earth"]
+
+
+class LoginRequest(BaseModel):
+    id: str = Field("", max_length=64, description="Astronot kimliği (A000 …) veya EARTH; büyük/küçük harf duyarsız")
+    password: str = Field("", max_length=256)
+
+
+class LoginResponse(BaseModel):
+    token: str = Field(description="Authorization: Bearer <token>")
+    kind: PrincipalKind
+    subject: str = Field(description="A003 | EARTH")
+    astronaut_id: str | None = Field(None, description="Astronot girişinde kendi kimliği; token sadece bu astronota erişir")
+    station: StationRole
+    home_path: str
+    expires_at: dt.datetime
+
+
+class AccountRange(BaseModel):
+    first_id: str
+    last_id: str
+    count: int
+
+
+class AuthHint(BaseModel):
+    station: StationRole
+    astronauts: AccountRange | None = Field(description="Bu istasyonda giriş yapabilen astronot hesapları (sadece gemi)")
+    earth_id: str | None = Field(description="Dünya üssü hesabı (sadece Dünya istasyonu)")
+    text: str = Field(description="Giriş kartında gösterilecek ipucu")
+
+
+class PrincipalInfo(BaseModel):
+    kind: PrincipalKind
+    subject: str
+    astronaut_id: str | None
+    station: StationRole
+    read_only: bool
+
+
+# =============================================================================
+# /api/me, /api/personal/{id} (gemi) ve /api/catalog
+# =============================================================================
+class CrewInfo(BaseModel):
+    id: str
+    age: int
+    sex: str
+    bmi: float
+    mission: str
+    mission_label: str
+    profile: str = Field(description="Veri setindeki simülasyon deseni")
+    profile_label: str
+    first_mission_day: int
+    last_mission_day: int
+    n_days: int
+
+
+class PersonalOverview(BaseModel):
+    astronaut: CrewInfo
+    today: int = Field(description="Bugünün gün numarası (= n_days; son kayıt)")
+    n_days: int
+    strip: list[StripDay]
+    threshold_note: str
+
+
+class CatalogRange(BaseModel):
+    min: float
+    max: float | None
+
+
+class CatalogIndicator(BaseModel):
+    col: str
+    domain: str
+    domain_label: str
+    label: str
+    unit: str
+    dec: int
+    healthy: CatalogRange
+    warning: CatalogRange
+    healthy_text: str
+    action: str
+    trig: int
+    private: bool
+    averaged: bool
+
+
+class CatalogSolution(BaseModel):
+    code: str
+    domain: str
+    title: str
+    when: str
+    steps: list[str]
+    contact_ground_if: str
+    basis: str
+
+
+class CatalogDomain(BaseModel):
+    id: str
+    label: str
+
+
+class PersonalCatalogResponse(BaseModel):
+    statuses: list[str] = Field(description="Durum etiketleri, indeks = seviye")
+    domains: list[CatalogDomain]
+    areas: list[str]
+    indicators: list[CatalogIndicator]
+    solutions: list[CatalogSolution]
+    threshold_source: str
+    verified: bool
+    threshold_note: str

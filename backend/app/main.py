@@ -12,10 +12,14 @@ from fastapi.openapi.utils import get_openapi
 
 from app import __version__
 from app.api import router as legacy_router
+from app.api.auth import router as auth_router
+from app.api.personal import public_router as catalog_router
+from app.api.personal import router as personal_router
 from app.api.station import router as station_router
 from app.config import Settings, get_settings
 from app.db import engine_for, init_db
 from app.models.schemas import SSE_MODELS
+from app.errors import ApiError, api_error_handler
 from app.station import earth_read_only_middleware
 
 DESCRIPTION = """
@@ -85,7 +89,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
     app.include_router(station_router, prefix="/api")
+    app.include_router(auth_router, prefix="/api")
+    app.include_router(catalog_router, prefix="/api")
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        app.include_router(personal_router, prefix="/api")
     if settings.legacy_enabled:
         # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
         app.include_router(legacy_router, prefix="/api")
