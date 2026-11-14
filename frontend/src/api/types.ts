@@ -379,6 +379,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/monitor/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alınan olaylar (canlı akışın geçmişi), yeniden eskiye */
+        get: operations["get_events_api_monitor_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stream/monitor": {
         parameters: {
             query?: never;
@@ -2270,6 +2287,87 @@ export interface components {
             updated_seq: number;
             /** Received At */
             received_at: string | null;
+        };
+        /**
+         * MonitorEvent
+         * @description Dünya'nın aldığı bir olay (earth.db). Gün içeriği taşımaz; ekran ilgili günü ayrıca okur.
+         */
+        MonitorEvent: {
+            /** Seq */
+            seq: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot";
+            /** Astronaut Id */
+            astronaut_id: string | null;
+            /**
+             * Day
+             * @description 1'den başlar
+             */
+            day: number | null;
+            /** Mission Day */
+            mission_day: number | null;
+            /**
+             * Ship Time
+             * Format: date-time
+             * @description Olayın gemide oluştuğu an
+             */
+            ship_time: string;
+            /**
+             * Publish Time
+             * Format: date-time
+             * @description ship_time + DOWNLINK_DELAY_SECONDS
+             */
+            publish_time: string;
+            /**
+             * Earth Received Time
+             * Format: date-time
+             * @description Dünya'nın aldığı an
+             */
+            earth_received_time: string;
+            /** Simulated Light Delay Minutes */
+            simulated_light_delay_minutes: number;
+            /**
+             * Share
+             * @description checkin.*: paylaşım seviyesi
+             */
+            share?: ("private" | "scores" | "full") | null;
+            /**
+             * Code
+             * @description action.done: self-care kodu (Dünya'da maskeliyse null)
+             */
+            code?: string | null;
+            /**
+             * Masked
+             * @description action.done: öğe Dünya'da maskeli
+             * @default false
+             */
+            masked: boolean;
+            /**
+             * Done
+             * @description action.done: işaretlendi / kaldırıldı
+             */
+            done?: boolean | null;
+        };
+        /** MonitorEventsResponse */
+        MonitorEventsResponse: {
+            /**
+             * Events
+             * @description Yeniden eskiye (seq azalan)
+             */
+            events: components["schemas"]["MonitorEvent"][];
+            /**
+             * Total
+             * @description Filtreye uyan olay sayısı (limit'ten bağımsız)
+             */
+            total: number;
+            /**
+             * Last Seq
+             * @description Dünya'nın işlediği son seq
+             */
+            last_seq: number;
         };
         /** OverallStatus */
         OverallStatus: {
@@ -4283,6 +4381,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MonitorDay"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_events_api_monitor_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Sadece bu astronotun olayları */
+                astronaut_id?: string | null;
+                /** @description Tekrarlanabilir: type=checkin.completed&type=checkin.shared */
+                type?: ("checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot")[] | null;
+                /** @description Sayfalama: bu seq'ten ÖNCEKİ olaylar */
+                before_seq?: number | null;
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorEventsResponse"];
                 };
             };
             /** @description Unauthorized */

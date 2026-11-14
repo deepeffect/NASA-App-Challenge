@@ -1074,6 +1074,33 @@ class MonitorDay(BaseModel):
     received_at: dt.datetime | None
 
 
+MonitorEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot"]
+
+
+class MonitorEvent(BaseModel):
+    """Dünya'nın aldığı bir olay (earth.db). Gün içeriği taşımaz; ekran ilgili günü ayrıca okur."""
+
+    seq: int
+    type: MonitorEventType
+    astronaut_id: str | None
+    day: int | None = Field(description="1'den başlar")
+    mission_day: int | None
+    ship_time: dt.datetime = Field(description="Olayın gemide oluştuğu an")
+    publish_time: dt.datetime = Field(description="ship_time + DOWNLINK_DELAY_SECONDS")
+    earth_received_time: dt.datetime = Field(description="Dünya'nın aldığı an")
+    simulated_light_delay_minutes: float
+    share: ShareLevel | None = Field(None, description="checkin.*: paylaşım seviyesi")
+    code: str | None = Field(None, description="action.done: self-care kodu (Dünya'da maskeliyse null)")
+    masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
+    done: bool | None = Field(None, description="action.done: işaretlendi / kaldırıldı")
+
+
+class MonitorEventsResponse(BaseModel):
+    events: list[MonitorEvent] = Field(description="Yeniden eskiye (seq azalan)")
+    total: int = Field(description="Filtreye uyan olay sayısı (limit'ten bağımsız)")
+    last_seq: int = Field(description="Dünya'nın işlediği son seq")
+
+
 class MonitorStreamEvent(BaseModel):
     kind: Literal["event", "link"]
     type: str | None = None

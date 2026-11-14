@@ -164,3 +164,26 @@ def events_count(db: Session) -> int:
     from sqlalchemy import func
 
     return db.exec(select(func.count()).select_from(EarthEvent)).one()
+
+
+def list_events(
+    db: Session,
+    *,
+    limit: int = 100,
+    astronaut_id: str | None = None,
+    types: list[str] | None = None,
+    before_seq: int | None = None,
+) -> tuple[list[EarthEvent], int]:
+    """Alınan olaylar, yeniden eskiye. (sayfa, filtreye uyan toplam) döner."""
+    from sqlalchemy import func
+
+    conds = []
+    if astronaut_id:
+        conds.append(EarthEvent.astronaut_id == astronaut_id)
+    if types:
+        conds.append(col(EarthEvent.type).in_(types))
+    total = db.exec(select(func.count()).select_from(EarthEvent).where(*conds)).one()
+    if before_seq is not None:
+        conds.append(col(EarthEvent.seq) < before_seq)
+    rows = db.exec(select(EarthEvent).where(*conds).order_by(col(EarthEvent.seq).desc()).limit(limit)).all()
+    return list(rows), int(total)
