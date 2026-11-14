@@ -86,6 +86,9 @@ const T = {
   feedIntro: { tr: "Gemiden gelen olaylar, yeniden eskiye", en: "Events from the ship, newest first" },
   feedEmpty: { tr: "Henüz olay yok. Gemide bir check-in tamamlanınca burada görünür.", en: "No events yet. They appear here when a check-in is completed on the ship." },
   feedCount: { tr: "Son {n} olay · toplam {total}", en: "Last {n} events · {total} in total" },
+  crewOnly: { tr: "Sadece mürettebat", en: "Crew only" },
+  feedCountCrew: { tr: "Mürettebattan son {n} olay", en: "Last {n} crew events" },
+  feedEmptyCrew: { tr: "Mürettebattan henüz olay yok.", en: "No crew events yet." },
 
   // kart
   score: { tr: "sağlık skoru", en: "health score" },

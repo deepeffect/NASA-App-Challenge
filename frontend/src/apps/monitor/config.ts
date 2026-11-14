@@ -29,6 +29,8 @@ export const DEMO_CREW: readonly string[] = ["A168", "A076", "A115", "A117", "A0
 
 /** Canlı akışta gösterilen en fazla olay. */
 export const FEED_LIMIT = 60;
+/** "Sadece mürettebat" açıkken süzülmek üzere alınan son olay sayısı (mürettebat dışı olaylar arada kalmasın). */
+export const FEED_CREW_FETCH = 300;
 /** Yeni olay gelince kartın / satırın vurgulu kaldığı süre. */
 export const HIGHLIGHT_MS = 4000;
 /** SSE'ye ek olarak bağlantı durumunun yoklanma aralığı (SSE koparsa da güncel kalsın). */

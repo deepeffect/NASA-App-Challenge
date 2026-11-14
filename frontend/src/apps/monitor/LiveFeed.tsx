@@ -2,11 +2,13 @@
  * Canlı akış (sağ panel): gemiden gelen olaylar, yeniden eskiye; her olayda gemi zamanı, Dünya'ya ulaşma
  * zamanı ve aradaki süre. Geçmiş /api/monitor/events'ten gelir (sayfa yenilenince kaybolmaz); yeni olay SSE
  * ile tetiklenir ve kısa süre vurgulanır. Bağlantı kopma / geri gelme anları ekran işareti olarak araya girer.
+ * "Sadece mürettebat": sadece DEMO_CREW'un olayları (bağlantı işaretleri kalır); seçim tarayıcıda hatırlanır.
  */
+import { useState } from "react";
 import { Link } from "react-router";
 
 import { type MonitorEvent, useCatalog, useFeedEvents } from "./api";
-import { FEED_LIMIT } from "./config";
+import { DEMO_CREW, FEED_CREW_FETCH, FEED_LIMIT } from "./config";
 import { detailPath } from "./Detail";
 import { EventIcon } from "./icons";
 import { flashClass, type LinkMarker, useLive } from "./live";
@@ -29,14 +31,38 @@ function eventTitle(ev: MonitorEvent, t: TFn, solTitle: (code: string) => string
   }
 }
 
+const CREW_ONLY_KEY = "ahm-monitor-feed-crew";
+
+/** "Sadece mürettebat" seçimi bu tarayıcıda hatırlanır (kiosk yeniden açılınca aynı kalsın). */
+function useCrewOnly(): [boolean, (v: boolean) => void] {
+  const [value, setValue] = useState(() => {
+    try {
+      return localStorage.getItem(CREW_ONLY_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const set = (v: boolean) => {
+    setValue(v);
+    try {
+      localStorage.setItem(CREW_ONLY_KEY, v ? "1" : "0");
+    } catch {
+      /* depolama kapalı olabilir */
+    }
+  };
+  return [value, set];
+}
+
 export function LiveFeed() {
   const { t, locale } = useT();
-  const feed = useFeedEvents(FEED_LIMIT);
+  const [crewOnly, setCrewOnly] = useCrewOnly();
+  const feed = useFeedEvents(crewOnly ? FEED_CREW_FETCH : FEED_LIMIT);
   const catalog = useCatalog();
   const { markers, flashSeq } = useLive();
   const solTitle = (code: string) => catalog.data?.solutions.find((s) => s.code === code)?.title ?? code;
 
-  const events = feed.data?.events ?? [];
+  const fetched = feed.data?.events ?? [];
+  const events = crewOnly ? fetched.filter((ev) => ev.astronaut_id && DEMO_CREW.includes(ev.astronaut_id)).slice(0, FEED_LIMIT) : fetched;
   const oldest = events.length ? new Date(events[events.length - 1].earth_received_time).getTime() : 0;
   const items: Item[] = [
     ...events.map((ev) => ({ kind: "event" as const, at: new Date(ev.earth_received_time).getTime(), ev })),
@@ -46,7 +72,17 @@ export function LiveFeed() {
 
   return (
     <section className="card feed" aria-labelledby="feed-h">
-      <SectionHead id="feed-h" title={t("feedTitle")} intro={t("feedIntro")} />
+      <SectionHead
+        id="feed-h"
+        title={t("feedTitle")}
+        intro={t("feedIntro")}
+        right={
+          <button type="button" className="chip" data-filter="crew" aria-pressed={crewOnly} onClick={() => setCrewOnly(!crewOnly)}>
+            {crewOnly && <span aria-hidden="true">✓ </span>}
+            {t("crewOnly")}
+          </button>
+        }
+      />
       {feed.isPending ? (
         <p className="state-msg">{t("loading")}</p>
       ) : feed.isError && !feed.data ? (
@@ -54,7 +90,7 @@ export function LiveFeed() {
           {t("loadError")}
         </p>
       ) : items.length === 0 ? (
-        <p className="state-msg">{t("feedEmpty")}</p>
+        <p className="state-msg">{t(crewOnly ? "feedEmptyCrew" : "feedEmpty")}</p>
       ) : (
         <ol role="log" aria-live="polite" aria-relevant="additions" aria-labelledby="feed-h">
           {items.map((it) =>
@@ -74,7 +110,9 @@ export function LiveFeed() {
           )}
         </ol>
       )}
-      {feed.data && feed.data.total > 0 && <p className="foot num">{t("feedCount", { n: events.length, total: feed.data.total })}</p>}
+      {feed.data && feed.data.total > 0 && (
+        <p className="foot num">{crewOnly ? t("feedCountCrew", { n: events.length }) : t("feedCount", { n: events.length, total: feed.data.total })}</p>
+      )}
     </section>
   );
 }
