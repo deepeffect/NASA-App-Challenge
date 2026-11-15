@@ -21,7 +21,7 @@ from app.models.tables import ActionDone
 from app.personal.catalog import PersonalCatalog, load_personal_catalog
 from app.personal.dataset import AstronautMeta, AstronautSeries
 from app.personal.store import PersonalData
-from app.personal.view import build_day_view, build_strip, range_text
+from app.personal.view import build_day_view, build_strip, range_text, scores_note
 
 
 def crew_info(cat: PersonalCatalog, meta: AstronautMeta, first_day: int, last_day: int, n_days: int, lang: Lang) -> CrewInfo:
@@ -33,7 +33,7 @@ def crew_info(cat: PersonalCatalog, meta: AstronautMeta, first_day: int, last_da
         mission=meta.mission,
         mission_label=cat.missions[meta.mission].get(lang),
         profile=meta.profile,
-        profile_label=cat.profiles[meta.profile].get(lang),
+        profile_label=cat.profiles[meta.profile].get(lang) if meta.profile is not None else None,
         first_mission_day=first_day,
         last_mission_day=last_day,
         n_days=n_days,
@@ -64,7 +64,9 @@ def overview(series: AstronautSeries, lang: Lang) -> PersonalOverview:
         today=len(series.days),
         n_days=len(series.days),
         strip=build_strip(cat, series, lang),
-        threshold_note=cat.threshold_note.get(lang),
+        threshold_note=(series.info.threshold_note or cat.threshold_note).get(lang),
+        scores_note=scores_note(series.info, lang),
+        source_note=series.info.source_note.get(lang) if series.info.source_note else None,
     )
 
 
@@ -135,5 +137,8 @@ def mark_action(db: Session, settings: Settings, series: AstronautSeries, code: 
     db.flush()
     visible = {x.code for x in current_earth_day(db, series, i).todo}
     masked = code not in visible
-    emit_day_event(db, settings, "action.done", series, i, code=None if masked else code, masked=masked, done=done)
+    # Türetilmiş öz bakım (seviyesi veriden gelen veri seti): Dünya'da görünmeyen bir öğe için olay da gitmez;
+    # yoksa "maskeli bir öğe işaretlendi" olayı paylaşılmamış ruh hali / stresi ele verirdi.
+    if not (masked and series.info.levels_from_data):
+        emit_day_event(db, settings, "action.done", series, i, code=None if masked else code, masked=masked, done=done)
     db.commit()

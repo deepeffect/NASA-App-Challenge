@@ -8,6 +8,10 @@ Kurallar (prototip + kullanıcı kararları):
     tek günlük) her zaman gider. Genel skor gizli değildir; gizli olan ruh hali / stres ölçümleri ve
     davranışsal ALAN skorudur.
   - "Uyku, ruh hali ve stres" alan skoru: check-in en az `scores` paylaşılmadıysa gönderilmez.
+  - Seviyesi veriden gelen veri seti (DatasetInfo.levels_from_data): durum, ana endişe ve yapılacaklar
+    veride türetilmiş alanlardır; Dünya için SADECE görünür ölçümlerden yeniden türetilir (derive.py).
+    Maskeli öğe sayısı her zaman 0'dır ve Dünya'da görünmeyen bir öğenin işaretlenmesi olay üretmez:
+    paylaşılmamış ruh hali / stres kırmızı olsa bile Dünya'da hiçbir yerden anlaşılmaz.
   - Check-in: yok / private (tamamlandı, gizli) / scores (konu + flag) / full (+ cevap metni).
     Mesajlar, `urgent` ve CMO bildirimi asla gönderilmez.
   - Terminal varlığı: sadece kimlik, çevrimiçi / çevrimdışı ve son sinyalin zamanı. Terminalde ne yapıldığı
@@ -78,15 +82,21 @@ def earth_day(
         day_index=i,
         mission_day=day.mission_day,
         n_days=len(series.days),
-        health_status=day.health_status,
+        # Durum ve ana endişe değerlendirmeden gelir: türetilmiş veri setinde (levels_from_data) bunlar SADECE
+        # görünür ölçümlerden yeniden türetilmiştir (evaluate_day); diğer veri setinde verideki değerle aynıdır.
+        health_status=ev.health_status,
         ground=ev.ground,
         status=ev.status,
         cumulative_score=day.cumulative_score,
         daily_score=day.daily_score,
-        main_concern=day.main_concern,
+        main_concern=ev.main_concern,
         behavioral_hidden=ev.behavioral_hidden,
         area_scores={k: v for k, v in day.area_scores.items() if not (k == "behavioral" and ev.behavioral_hidden)},
-        readings={r.ind.col: EarthReading(today=r.today, used=r.used, level=r.level) for r in ev.readings if not r.hidden},
+        readings={
+            r.ind.col: EarthReading(today=r.today, used=r.used, level=r.level, normal=dict(r.normal) if r.normal else None, text=r.text)
+            for r in ev.readings
+            if not r.hidden
+        },
         todo=[EarthTodo(code=x.code, triggers=[r.ind.col for r in x.visible], done=x.code in done_codes) for x in ev.visible_items],
         todo_masked_count=ev.masked_count,
         checkin=earth_checkin(row),

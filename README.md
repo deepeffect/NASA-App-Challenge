@@ -241,6 +241,29 @@ sapar (eksi çıkarsa 0 gösterilir). Bu süreyi demoda gösterecekseniz önce i
 
 Güncelleme: her bilgisayarda `git pull` → `npm run serve` (veri seti değiştiyse gemi açılışta yeniden yükler).
 
+### Başka veri seti: AST-01..04 (ISS 180 gün, veri seti v3.1)
+
+Varsayılan veri seti `data/raw/astronaut_health.json`'dur (200 astronot × 30 gün, simüle). Veri ekibinin görev
+verisi (AST-01..04, görev günü 149–178; radyasyon NASA RadLab DOSTEL-2) ayrı bir dosyadadır ve gemide tek satırla
+seçilir. `backend/.env`:
+
+```ini
+DATASET_PATH=data/raw/astronaut_health_ast.json
+```
+
+Sonra `npm run serve`; giriş `AST-01` … `AST-04` (şifre kimlikle aynı). Bu veri seti kendi veritabanı dosyasına
+yüklenir (`data/processed/ship.astronaut_health_ast.db`), varsayılan veri setinin veritabanına dokunmaz; satırı
+silmek varsayılana döndürür. Dünya üssü veriyi diskten okumaz: gemiden downlink ile alır.
+
+Bu veri setinde panel farklı davranır (ayrıntı: `docs/API.md`): renk veri setindeki kural motorunun işaretidir
+(sabit aralık yerine), değerler o günün ölçümüdür, ruh hali ve stres 1–5 ölçeğindedir ("3/5"), aralık sütunu
+kişisel tabanı ya da NASA referansını gösterir, kaynakta olmayan ölçümler "Bu görevde ölçülmedi" yazar ve skor
+yoktur. Hiçbir değer üretilmez; dosya `data/raw/ast/` altındaki kaynaktan yeniden üretilebilir:
+
+```powershell
+cd backend ; .venv\Scripts\python -m app.cli convert-ast      # → data/raw/astronaut_health_ast.json
+```
+
 ### Tek makinede geliştirme
 
 ```powershell

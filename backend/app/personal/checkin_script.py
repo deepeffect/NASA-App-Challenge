@@ -160,6 +160,8 @@ TEXTS: dict[str, dict[Lang, str]] = {
     },
     "good": {"en": "Good, noted.", "tr": "Güzel, not edildi."},
     "seen": {"en": "{label} is averaging {value}{unit}", "tr": "{label} ortalaması {value}{unit}"},
+    # Veri seti ortalama almıyorsa (o günün değeri) "ortalaması" denmez
+    "seen_day": {"en": "{label} is {value}{unit}", "tr": "{label} {value}{unit}"},
     "fix_todo": {"en": '"{title}" is on your to-do list.', "tr": '"{title}" yapılacaklar listenizde.'},
     "fix_try": {"en": 'Try "{title}" (see the i button).', "tr": '"{title}" önerisini deneyin (i düğmesine bakın).'},
     "done_flagged": {"en": "Check-in complete. Flagged for today: {topics}.", "tr": "Check-in tamamlandı. Bugün işaretlenenler: {topics}."},
@@ -214,7 +216,7 @@ def assistant_turn(ctx: dict[str, Any], lang: Lang) -> dict[str, Any]:
     answer: str = ctx["answer"]
     g = grade(t, answer, lang)
     r = next((x for x in ctx["readings"] if x["col"] == t.ind), None) if t.ind else None
-    seen = tx("seen", lang, label=lower(r["label"], lang), value=r["value"], unit=r["unit"]) if r else ""
+    seen = tx("seen" if r.get("averaged", True) else "seen_day", lang, label=lower(r["label"], lang), value=r["value"], unit=r["unit"]) if r else ""
     fix = ""
     if t.sol:
         title = solution_title(ctx, t.sol)

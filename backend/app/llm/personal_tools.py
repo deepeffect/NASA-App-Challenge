@@ -16,9 +16,13 @@ from sqlmodel import Session
 from app.llm.tools import SearchDocsArgs, ToolContext, ToolRegistry, ToolSpec, search_docs
 from app.personal.catalog import load_personal_catalog
 from app.personal.dataset import AstronautSeries
-from app.personal.evaluate import evaluate_day, readings_for_day
+from app.personal.evaluate import absent_indicators, evaluate_day, readings_for_day
 from app.personal.store import personal_data
-from app.personal.view import build_day_view, num
+from app.personal.view import build_day_view, normal_text, tx, value_text
+
+# Seviyenin anlamı: sabit aralıklı veri seti / seviyesi veri setindeki kural motorundan gelen veri seti
+LEVEL_RANGE = ["in healthy range", "in caution range", "outside caution range"]
+LEVEL_ENGINE = ["no flag (green)", "warning flag (yellow)", "critical flag (red)"]
 
 
 class NoArgs(BaseModel):
@@ -46,18 +50,36 @@ def _series(ctx: ToolContext, session: Session) -> AstronautSeries:
 
 
 def _reading_dict(r, lang: str) -> dict[str, Any]:  # noqa: ANN001
-    return {
+    out = {
         "col": r.ind.col,
         "label": r.ind.label.get(lang),
         "unit": r.ind.unit.get(lang),
         "value": round(r.used, r.ind.dec),
-        "value_text": num(r.used, r.ind.dec, lang),  # type: ignore[arg-type]
+        "value_text": value_text(r, lang),  # type: ignore[arg-type]
         "averaged_3_days": r.averaged,
         "level": r.level,
-        "level_meaning": ["in healthy range", "in caution range", "outside caution range"][r.level],
-        "healthy_min": r.ind.healthy.min,
-        "healthy_max": r.ind.healthy.max,
     }
+    if r.ind.scale_max:
+        out["scale"] = f"self-report score, 1 (lowest) to {r.ind.scale_max} (highest)"
+    if r.normal is not None:
+        # Seviye ve normal metni veri setinden (kural motoru, kişisel taban ya da referans): katalog aralığı verilmez
+        out["level_meaning"] = LEVEL_ENGINE[r.level]
+        out["normal"] = normal_text(r, lang)  # type: ignore[arg-type]
+    else:
+        out["level_meaning"] = LEVEL_RANGE[r.level]
+        out["healthy_min"] = r.ind.healthy.min
+        out["healthy_max"] = r.ind.healthy.max
+    return out
+
+
+def _absent_dict(cat, series: AstronautSeries, i: int, lang: str) -> list[dict[str, Any]]:  # noqa: ANN001
+    """Bu veri setinde olmayan ölçümler: model 'ölçülmedi' diyebilsin, değer uydurmasın."""
+    absent = absent_indicators(cat, series, i)
+    return [
+        {"col": ind.col, "label": series.info.effective(ind).label.get(lang), "status": tx(f"absent_{absent[ind.col]}", lang)}  # type: ignore[arg-type]
+        for ind in cat.indicators
+        if ind.col in absent
+    ]
 
 
 def get_today_summary(ctx: ToolContext, session: Session, _args: NoArgs) -> dict[str, Any]:
@@ -66,7 +88,7 @@ def get_today_summary(ctx: ToolContext, session: Session, _args: NoArgs) -> dict
     i = series.today_index
     v = build_day_view(cat, series, i, ctx.lang)  # type: ignore[arg-type]
     ev = evaluate_day(cat, series, i)
-    return {
+    out = {
         "astronaut_id": series.meta.id,
         "day": v.day,
         "n_days": v.n_days,
@@ -75,14 +97,23 @@ def get_today_summary(ctx: ToolContext, session: Session, _args: NoArgs) -> dict
         "status": v.status_label,
         "status_level": v.status,
         "summary": v.subtitle,
-        "health_score": round(v.score, 1),
         "needs_ground_support": v.ground,
         "main_concern": v.main_concern_label,
-        "area_scores": {a.label: round(a.score, 1) for a in v.areas if a.score is not None},
         "out_of_range_readings": [_reading_dict(r, ctx.lang) for r in ev.readings if r.level > 0],
         "todo": [t.title for t in v.todo],
         "thresholds_note": v.threshold_note,
     }
+    if v.score is not None:
+        out["health_score"] = round(v.score, 1)
+        out["area_scores"] = {a.label: round(a.score, 1) for a in v.areas if a.score is not None}
+    else:
+        out["scores"] = v.scores_note  # bu veri setinde skor yok: model skor söylemez
+    if v.source_note:
+        out["data_source"] = v.source_note
+    absent = _absent_dict(cat, series, i, ctx.lang)
+    if absent:
+        out["not_available"] = absent
+    return out
 
 
 def get_recent_readings(ctx: ToolContext, session: Session, args: RecentReadingsArgs) -> dict[str, Any]:
@@ -96,12 +127,16 @@ def get_recent_readings(ctx: ToolContext, session: Session, args: RecentReadings
     start = max(0, i - args.days + 1)
     out = []
     for c in cols:
-        ind = cat.indicator(c)
+        ind = series.info.effective(cat.indicator(c))  # type: ignore[arg-type]
         points = []
         for k in range(start, i + 1):
-            r = next(x for x in readings_for_day(cat, series, k) if x.ind.col == c)
-            points.append({"day": k + 1, "mission_day": series.days[k].mission_day, **_reading_dict(r, ctx.lang)})
-        out.append({"col": c, "label": ind.label.get(ctx.lang), "points": points})  # type: ignore[union-attr, arg-type]
+            r = next((x for x in readings_for_day(cat, series, k) if x.ind.col == c), None)
+            if r is not None:  # o gün ölçülmediyse nokta yok
+                points.append({"day": k + 1, "mission_day": series.days[k].mission_day, **_reading_dict(r, ctx.lang)})
+        entry: dict[str, Any] = {"col": c, "label": ind.label.get(ctx.lang), "points": points}  # type: ignore[arg-type]
+        if not points:
+            entry["status"] = tx(f"absent_{series.info.absent.get(c, 'not_measured')}", ctx.lang)  # type: ignore[arg-type]
+        out.append(entry)
     return {"astronaut_id": series.meta.id, "days": args.days, "readings": out}
 
 

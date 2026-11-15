@@ -14,6 +14,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_DIR.parent
+DEFAULT_DATASET = REPO_ROOT / "data" / "raw" / "astronaut_health.json"
 
 
 class Settings(BaseSettings):
@@ -64,7 +65,8 @@ class Settings(BaseSettings):
     # astronaut_health: data/raw/astronaut_health.json (yeni mimari, /me ve /monitor)
     # synthetic: eski sentetik veri + eski analiz motoru (/legacy ekranları ve eski testler)
     data_source: Literal["astronaut_health", "synthetic"] = "astronaut_health"
-    dataset_path: Path = REPO_ROOT / "data" / "raw" / "astronaut_health.json"
+    # Başka bir veri seti: DATASET_PATH=data/raw/astronaut_health_ast.json (gemi kendi DB dosyasını kullanır, aşağıda)
+    dataset_path: Path = DEFAULT_DATASET
 
     # --- Genel ---
     app_env: Literal["dev", "demo", "test"] = "dev"
@@ -136,6 +138,10 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
         name = "health" if self.legacy_enabled else self.station_role
+        if name == "ship" and self.dataset_path.name != DEFAULT_DATASET.name:
+            # Varsayılan dışı veri seti kendi DB dosyasına yüklenir (ship.<veri seti>.db): mürettebat ve
+            # check-in'ler karışmaz, varsayılan veri setinin DB'sine dokunulmaz, geri dönmek için ayarı silmek yeter.
+            name = f"ship.{self.dataset_path.stem}"
         return f"sqlite:///{(self.data_dir / 'processed' / f'{name}.db').as_posix()}"
 
     @property

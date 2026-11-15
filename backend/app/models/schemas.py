@@ -626,13 +626,16 @@ class ReadingView(BaseModel):
     dec: int
     value: float | None = Field(description="Değerlendirilen değer (3 günlük ortalama; exposure → o günün değeri). Gizliyse null")
     today: float | None = Field(description="O günün ham değeri. Gizliyse null")
-    value_text: str = Field(description="Biçimli değer veya 'Paylaşılmadı'")
-    healthy_text: str = Field(description="Sağlıklı aralık metni, örn. '7–9' / '7 to 9'")
+    value_text: str = Field(description="Biçimli değer ('7,4' · ölçekli '3/5' · verideki yazılış '116/82') veya 'Paylaşılmadı'")
+    healthy_text: str = Field(description="Aralık sütunu: sağlıklı aralık ('7–9') ya da verideki normal metni "
+                              "(kişisel taban '45±2' / referans); gizli veya ölçülmemişse boş olabilir")
     level: int | None = Field(description="0 sağlıklı · 1 uyarı aralığında · 2 uyarı aralığının dışında. Gizliyse null")
     flag_text: str = Field(description="'' | 'Aralık dışında' | 'Çok dışında'")
     averaged: bool = Field(description="true → son 3 günün ortalaması, false → o günün değeri")
     private: bool = Field(description="Ruh hali / stres: Dünya sadece paylaşılırsa görür")
     hidden: bool = Field(description="Bu izleyiciden gizli (Dünya, paylaşılmadı)")
+    measured: bool = Field(True, description="false → bu veri setinde yok: value/level null, value_text nedenini söyler "
+                           "('Bu görevde ölçülmedi' / 'Bu veri dosyasında yok')")
 
 
 class AreaScoreView(BaseModel):
@@ -662,11 +665,11 @@ class StripDay(BaseModel):
     mission_day: int
     status: int = Field(description="Gösterilen durum 0/1/2 (bu izleyiciye göre)")
     status_label: str
-    score: float = Field(description="Kümülatif sağlık skoru")
-    score_text: str
-    daily_score: float = Field(
+    score: float | None = Field(description="Kümülatif sağlık skoru. Skoru olmayan veri setinde null")
+    score_text: str = Field(description="Skor yoksa boş")
+    daily_score: float | None = Field(
         description="O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: "
-        "genel skor her zaman görünür (Dünya'da da)"
+        "genel skor her zaman görünür (Dünya'da da). Skoru olmayan veri setinde null"
     )
     label: str = Field(description="Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'")
 
@@ -684,9 +687,9 @@ class DayView(BaseModel):
     health_status: int = Field(description="Veri setindeki durum (ground hariç)")
     ground: bool = Field(description="Yer desteği gerekli. Dünya'da sadece görünür ölçümlerden hesaplanır")
     subtitle: str
-    score: float = Field(description="Kümülatif sağlık skoru (her zaman görünür)")
-    score_text: str
-    daily_score: float
+    score: float | None = Field(description="Kümülatif sağlık skoru (her zaman görünür). Skoru olmayan veri setinde null")
+    score_text: str = Field(description="Skor yoksa boş")
+    daily_score: float | None
     main_concern: str = Field(description="none | immune | bone_muscle | cardiovascular | behavioral")
     main_concern_label: str | None
     areas: list[AreaScoreView]
@@ -701,6 +704,9 @@ class DayView(BaseModel):
     readings_note: str
     threshold_note: str = Field(description="Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı")
     share: ShareLevel | None = Field(None, description="Bu günün check-in paylaşım seviyesi (tamamlandıysa)")
+    scores_note: str | None = Field(None, description="Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not")
+    range_label: str | None = Field(None, description="Aralık sütununun başlığı (veri seti ezerse); null → 'Sağlıklı aralık'")
+    source_note: str | None = Field(None, description="Veri kaynağı satırı (veri seti verirse)")
 
 
 # =============================================================================
@@ -750,13 +756,13 @@ class PrincipalInfo(BaseModel):
 # =============================================================================
 class CrewInfo(BaseModel):
     id: str
-    age: int
-    sex: str
-    bmi: float
+    age: int | None = Field(description="Veri setinde yoksa null")
+    sex: str | None = Field(description="Veri setinde yoksa null")
+    bmi: float | None = Field(description="Veri setinde yoksa null")
     mission: str
     mission_label: str
-    profile: str = Field(description="Veri setindeki simülasyon deseni")
-    profile_label: str
+    profile: str | None = Field(description="Veri setindeki simülasyon deseni (yoksa null)")
+    profile_label: str | None
     first_mission_day: int
     last_mission_day: int
     n_days: int
@@ -768,6 +774,8 @@ class PersonalOverview(BaseModel):
     n_days: int
     strip: list[StripDay]
     threshold_note: str
+    scores_note: str | None = Field(None, description="Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not")
+    source_note: str | None = Field(None, description="Veri kaynağı satırı (veri seti verirse)")
 
 
 class CatalogRange(BaseModel):
@@ -908,6 +916,8 @@ class EarthReading(BaseModel):
     today: float
     used: float = Field(description="Değerlendirilen değer (3 günlük ortalama veya o günün değeri)")
     level: int
+    normal: dict[str, str] | None = Field(None, description="Verideki normal metni {tr, en} (seviyesi veriden gelen veri seti)")
+    text: str | None = Field(None, description="Verideki yazılış, örn. '116/82'")
 
 
 class EarthTodo(BaseModel):
@@ -929,11 +939,11 @@ class EarthCheckin(BaseModel):
 
 class EarthAstronaut(BaseModel):
     id: str
-    age: int
-    sex: str
-    bmi: float
+    age: int | None = None
+    sex: str | None = None
+    bmi: float | None = None
     mission: str
-    profile: str
+    profile: str | None = None
     first_mission_day: int
     last_mission_day: int
     n_days: int
@@ -950,8 +960,8 @@ class EarthDay(BaseModel):
     health_status: int
     ground: bool = Field(description="Sadece görünür ölçümlerden")
     status: int = Field(description="max(health_status, ground ? 1 : 0)")
-    cumulative_score: float
-    daily_score: float
+    cumulative_score: float | None = Field(None, description="Skoru olmayan veri setinde null")
+    daily_score: float | None = None
     main_concern: str
     behavioral_hidden: bool
     area_scores: dict[str, float]

@@ -17,12 +17,13 @@ Bilinçli farklar (kullanıcı kararları; golden testte belgelenir):
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.personal.catalog import Indicator, PersonalCatalog, Solution
 from app.personal.dataset import AstronautSeries
+from app.personal.derive import derive
 
 # Paylaşım seviyeleri (prototip LEVELS). -1 = o gün tamamlanmış check-in yok.
 SHARE_LEVELS: dict[str, int] = {"private": 0, "scores": 1, "full": 2}
@@ -69,22 +70,40 @@ def level_of(ind: Indicator, v: float) -> int:
 
 @dataclass(frozen=True)
 class Reading:
-    ind: Indicator
+    ind: Indicator  # veri setinin ezdiği alanlarla (DatasetInfo.effective)
     today: float
     used: float
     level: int
     hidden: bool = False
+    no_avg: bool = False  # veri seti ortalama almıyor: her ölçüm o günün değeri
+    normal: Mapping[str, str] | None = None  # verideki normal metni {tr, en} (kişisel taban ya da referans)
+    text: str | None = None  # verideki yazılış (ör. "116/82"); yoksa sayı biçimlenir
 
     @property
     def averaged(self) -> bool:
-        return self.ind.domain != "exposure"
+        return self.ind.domain != "exposure" and not self.no_avg
 
 
 def reading(series: AstronautSeries, ind: Indicator, i: int, hidden: bool = False) -> Reading:
-    arr = [d.values[ind.col] for d in series.days]
-    today = arr[i]
-    used = today if ind.domain == "exposure" else avg3(arr, i)
-    return Reading(ind=ind, today=today, used=used, level=level_of(ind, used), hidden=hidden)
+    info = series.info
+    day = series.days[i]
+    today = day.values[ind.col]
+    if ind.domain == "exposure" or not info.averaged:
+        used = today
+    else:
+        used = avg3([d.values[ind.col] for d in series.days], i)
+    # Seviye: veri seti veriyorsa oradan (kural motorunun işareti), yoksa katalogdaki sabit aralıklardan
+    level = day.levels[ind.col] if info.levels_from_data and day.levels is not None else level_of(ind, used)
+    return Reading(
+        ind=info.effective(ind),
+        today=today,
+        used=used,
+        level=level,
+        hidden=hidden,
+        no_avg=not info.averaged,
+        normal=(day.normal or {}).get(ind.col),
+        text=(day.display or {}).get(ind.col),
+    )
 
 
 def is_hidden(ind: Indicator, earth: bool, shared: int) -> bool:
@@ -95,7 +114,15 @@ def is_hidden(ind: Indicator, earth: bool, shared: int) -> bool:
 def readings_for_day(
     cat: PersonalCatalog, series: AstronautSeries, i: int, earth: bool = False, shared: int = NO_CHECKIN
 ) -> list[Reading]:
-    return [reading(series, ind, i, hidden=is_hidden(ind, earth, shared)) for ind in cat.indicators]
+    """O gün ÖLÇÜLEN kolonlar, katalog sırasıyla (veri setinde olmayanlar: `absent_indicators`)."""
+    measured = series.days[i].values
+    return [reading(series, ind, i, hidden=is_hidden(ind, earth, shared)) for ind in cat.indicators if ind.col in measured]
+
+
+def absent_indicators(cat: PersonalCatalog, series: AstronautSeries, i: int) -> dict[str, str]:
+    """O gün kaydı olmayan katalog kolonları → neden (`not_measured` | `not_in_file`)."""
+    measured = series.days[i].values
+    return {ind.col: series.info.absent.get(ind.col, "not_measured") for ind in cat.indicators if ind.col not in measured}
 
 
 # ============================================================================ durum
@@ -191,15 +218,24 @@ def evaluate_day(
     day = series.days[i]
     rd = readings_for_day(cat, series, i, earth, shared)
     ground = visible_ground(rd) if earth else day.needs_ground_support
+    unshared = earth and shared < SHARE_LEVELS["scores"]
+    codes, health_status, main_concern = day.self_care, day.health_status, day.main_concern
+    # Türetilmiş alanlar (seviyesi veriden gelen veri seti) Dünya için SADECE görünür ölçümlerden yeniden
+    # türetilir: paylaşılmamış ruh hali / stres ne durumdan, ne ana endişeden, ne yapılacaklardan anlaşılır.
+    strict = earth and series.info.levels_from_data
+    if strict:
+        seen = derive(cat, {r.ind.col: r.level for r in rd if not r.hidden})
+        codes, health_status, main_concern = seen.self_care, seen.health_status, seen.main_concern
     return DayEvaluation(
         index=i,
         earth=earth,
         shared=shared,
         readings=rd,
-        items=todo_items(cat, day.self_care, rd, hide_private=earth and shared < SHARE_LEVELS["scores"]),
+        items=todo_items(cat, codes, rd, hide_private=unshared),
         ground=ground,
-        status=shown_status(day.health_status, ground),
-        health_status=day.health_status,
-        main_concern=day.main_concern,
-        behavioral_hidden=earth and shared < SHARE_LEVELS["scores"],
+        status=shown_status(health_status, ground),
+        health_status=health_status,
+        main_concern=main_concern,
+        # Türetilmiş ana endişe zaten görünür ölçümlerden geldiği için "ayrıntı paylaşılmadı" denmez
+        behavioral_hidden=unshared and (not strict or series.info.has_scores),
     )

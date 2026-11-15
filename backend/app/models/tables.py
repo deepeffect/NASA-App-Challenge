@@ -106,11 +106,13 @@ class CrewProfile(SQLModel, table=True):
     """Veri setindeki astronot (A000 …). `first/last_mission_day`: verideki 30 günlük pencere."""
 
     id: str = Field(primary_key=True)
-    age: int
-    sex: str
-    bmi: float
+    # Yaş / cinsiyet / VKİ / desen veri setinde olmayabilir (null). Eski DB dosyalarında bu kolonlar NOT NULL'dır:
+    # böyle bir veri seti yeni bir DB dosyasına yüklenir (config.database_url_resolved veri setine göre ad verir).
+    age: int | None = None
+    sex: str | None = None
+    bmi: float | None = None
     mission: str
-    profile: str = Field(description="Simülasyon deseni (healthy, acute_episode …)")
+    profile: str | None = Field(None, description="Simülasyon deseni (healthy, acute_episode …)")
     first_mission_day: int
     last_mission_day: int
     n_days: int
@@ -124,12 +126,25 @@ class DayRecord(SQLModel, table=True):
     mission_day: int
     values: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
     area_scores: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
-    daily_score: float
-    cumulative_score: float
+    daily_score: float | None = None  # skoru olmayan veri setinde null
+    cumulative_score: float | None = None
     health_status: int
     main_concern: str
     self_care: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     needs_ground_support: bool
+
+
+class DayExtra(SQLModel, table=True):
+    """Seviyesi veriden gelen veri setinde günün ek alanları (DayData.levels / normal / display).
+
+    Ayrı tablo: eski DB dosyalarına kolon eklemek gerekmez (tablo açılışta kendiliğinden oluşur).
+    """
+
+    astronaut_id: str = Field(foreign_key="crewprofile.id", primary_key=True)
+    day_index: int = Field(primary_key=True)
+    levels: dict[str, int] | None = Field(default=None, sa_column=Column(JSON))
+    normal: dict[str, dict[str, str]] | None = Field(default=None, sa_column=Column(JSON))
+    display: dict[str, str] | None = Field(default=None, sa_column=Column(JSON))
 
 
 class CheckinSession(SQLModel, table=True):

@@ -12,7 +12,7 @@ from app.i18n import Lang
 from app.personal.catalog import PersonalCatalog
 from app.personal.dataset import AstronautSeries
 from app.personal.evaluate import readings_for_day
-from app.personal.view import num, range_text, unit_text
+from app.personal.view import normal_text, unit_text, value_text
 
 
 def build_context(
@@ -35,10 +35,11 @@ def build_context(
             {
                 "col": r.ind.col,
                 "label": r.ind.label.get(lang),
-                "value": num(r.used, r.ind.dec, lang),
+                "value": value_text(r, lang),
                 "unit": unit_text(r.ind, lang),
-                "healthy": range_text(r.ind, lang),
+                "healthy": normal_text(r, lang),  # sağlıklı aralık ya da verideki normal metni (kişisel taban / referans)
                 "level": r.level,
+                "averaged": r.averaged,  # false → o günün değeri (cümlede "ortalaması" denmez)
             }
             for r in readings_for_day(cat, series, i)
         ],

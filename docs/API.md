@@ -108,6 +108,28 @@ Kurallar (`app/personal/evaluate.py`, prototiple golden testli):
   Tetikleyicisi olmayan kod: `source: "dataset"`, `why`: "Veri setinin önerisi".
 - `subtitle`: durum varsa ana endişe (yoksa "Bir ölçüm aralığın çok dışında"), yoksa "Bakılacak N küçük şey" / "Bugün yapılacak bir şey yok".
 
+**Başka veri seti (`DATASET_PATH`).** Varsayılan `data/raw/astronaut_health.json`'dur ve yukarıdaki kurallar onun içindir.
+Veri seti kendi kurallarını taşıyabilir (`app/personal/dataset.py` → `DatasetInfo`); o zaman aynı uçlar şunları döner
+(örnek: `DATASET_PATH=data/raw/astronaut_health_ast.json`, AST-01..04, `python -m app.cli convert-ast` çıktısı):
+
+| Alan | Varsayılan veri seti | Seviyesi veriden gelen veri seti |
+|---|---|---|
+| `readings[].level` | katalogdaki sabit aralıktan | veri setindeki işaret (0 yeşil · 1 sarı · 2 kırmızı) |
+| `readings[].value`, `averaged` | 3 günlük ortalama (`true`) | o günün değeri (`false`) |
+| `readings[].value_text` | `"6,9"` | ölçekli `"3/5"` · verideki yazılış `"116/82"` |
+| `readings[].healthy_text` | sağlıklı aralık `"7–9"` | verideki normal metni (`"45±2"`, `"NASA limit ≤ 3 mmHg …"`) |
+| `readings[].measured` | hep `true` | `false` → veri setinde yok: `value`, `today`, `level` `null`; `value_text` "Bu görevde ölçülmedi" / "Bu veri dosyasında yok" |
+| `score`, `daily_score`, `strip[].score` | sayı | `null` (`score_text` boş, `areas` boş) ve `scores_note`: "Bu veri setinde skor yok." |
+| `astronaut.age`, `sex`, `bmi`, `profile`, `profile_label` | dolu | `null` (kaynakta yok) |
+| `range_label` | `null` (başlık "Sağlıklı aralık") | "Normal (kişisel taban ya da referans)" |
+| `source_note` (`PersonalOverview` ve `DayView`) | `null` | veri kaynağı satırı |
+| `readings_note`, `threshold_note` | katalogdaki metin | veri setinin kendi metni |
+
+Bu veri setinde `health_status`, `main_concern`, `todo` ve `ground` seviyelerden türetilir (`app/personal/derive.py`):
+durum = en kötü seviye · yer desteği = en az bir kırmızı · ana endişe = en kötü göstergenin alanı · öz bakım =
+seviyesi tetik eşiğine ulaşan göstergenin katalogdaki önerisi. Ana endişesiz "Dikkat" (sadece ortam ölçümü sarı)
+alt başlığı "Bir ölçüm aralığın dışında"dır.
+
 ### `POST /api/actions/done` `{"code": "PROTECT_SLEEP", "done": true}` → `{code, done, day: DayView}`
 
 Bugünün to-do öğesini işaretler/kaldırır; Dünya'ya `action.done` gider (öğe Dünya'da maskeliyse kodsuz).
@@ -202,6 +224,13 @@ günün check-in'i en az `scores` paylaşıldıysa; tetikleyicisi sadece gizli �
 / `full` (+ metin). Mesajlar, `urgent` ve CMO bilgisi hiçbir zaman gitmez. Genel sağlık skoru (`cumulative_score`
 ve `daily_score`) ve gösterilen durum gizli değildir, her gün gider. Terminal varlığı: sadece kimlik,
 çevrimiçi / çevrimdışı ve son sinyal zamanı; terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) gitmez.
+
+**Seviyesi veriden gelen veri setinde (`DATASET_PATH`, yukarıda) daha sıkıdır:** `health_status`, `status`,
+`main_concern` ve `todo` Dünya için SADECE görünür ölçümlerden yeniden türetilir; `todo_masked_count` hep 0'dır,
+`behavioral_hidden` `false`'tur ve Dünya'da görünmeyen bir öğenin işaretlenmesi `action.done` olayı üretmez.
+Paylaşılmamış ruh hali / stres kırmızı olsa bile Dünya'da hiçbir alandan anlaşılmaz. Bu kayıtta
+`cumulative_score` / `daily_score` `null`, `area_scores` boştur; `readings[kolon]` ek olarak `normal` (`{tr, en}`:
+verideki normal metni) ve `text` (verideki yazılış) taşıyabilir; `EarthAstronaut.age / sex / bmi / profile` `null` olabilir.
 
 `DOWNLINK_DELAY_SECONDS`: olaylar `ship_time + gecikme` anında yayınlanır (sıra atlanmaz).
 `DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES`: gerçek ışık gecikmesi etiketi (bekletmez).

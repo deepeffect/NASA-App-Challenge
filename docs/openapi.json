@@ -5407,16 +5407,40 @@
             "title": "Id"
           },
           "age": {
-            "type": "integer",
-            "title": "Age"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age",
+            "description": "Veri setinde yoksa null"
           },
           "sex": {
-            "type": "string",
-            "title": "Sex"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sex",
+            "description": "Veri setinde yoksa null"
           },
           "bmi": {
-            "type": "number",
-            "title": "Bmi"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bmi",
+            "description": "Veri setinde yoksa null"
           },
           "mission": {
             "type": "string",
@@ -5427,12 +5451,26 @@
             "title": "Mission Label"
           },
           "profile": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Profile",
-            "description": "Veri setindeki simülasyon deseni"
+            "description": "Veri setindeki simülasyon deseni (yoksa null)"
           },
           "profile_label": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Profile Label"
           },
           "first_mission_day": {
@@ -5830,16 +5868,31 @@
             "title": "Subtitle"
           },
           "score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Score",
-            "description": "Kümülatif sağlık skoru (her zaman görünür)"
+            "description": "Kümülatif sağlık skoru (her zaman görünür). Skoru olmayan veri setinde null"
           },
           "score_text": {
             "type": "string",
-            "title": "Score Text"
+            "title": "Score Text",
+            "description": "Skor yoksa boş"
           },
           "daily_score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Daily Score"
           },
           "main_concern": {
@@ -5960,6 +6013,42 @@
             ],
             "title": "Share",
             "description": "Bu günün check-in paylaşım seviyesi (tamamlandıysa)"
+          },
+          "scores_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores Note",
+            "description": "Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not"
+          },
+          "range_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Label",
+            "description": "Aralık sütununun başlığı (veri seti ezerse); null → 'Sağlıklı aralık'"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "description": "Veri kaynağı satırı (veri seti verirse)"
           }
         },
         "type": "object",
@@ -6101,15 +6190,36 @@
             "title": "Id"
           },
           "age": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Age"
           },
           "sex": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Sex"
           },
           "bmi": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Bmi"
           },
           "mission": {
@@ -6117,7 +6227,14 @@
             "title": "Mission"
           },
           "profile": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Profile"
           },
           "first_mission_day": {
@@ -6136,11 +6253,7 @@
         "type": "object",
         "required": [
           "id",
-          "age",
-          "sex",
-          "bmi",
           "mission",
-          "profile",
           "first_mission_day",
           "last_mission_day",
           "n_days"
@@ -6312,11 +6425,26 @@
             "description": "max(health_status, ground ? 1 : 0)"
           },
           "cumulative_score": {
-            "type": "number",
-            "title": "Cumulative Score"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Score",
+            "description": "Skoru olmayan veri setinde null"
           },
           "daily_score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Daily Score"
           },
           "main_concern": {
@@ -6372,8 +6500,6 @@
           "health_status",
           "ground",
           "status",
-          "cumulative_score",
-          "daily_score",
           "main_concern",
           "behavioral_hidden",
           "area_scores",
@@ -6429,6 +6555,33 @@
           "level": {
             "type": "integer",
             "title": "Level"
+          },
+          "normal": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normal",
+            "description": "Verideki normal metni {tr, en} (seviyesi veriden gelen veri seti)"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Verideki yazılış, örn. '116/82'"
           }
         },
         "type": "object",
@@ -8494,6 +8647,30 @@
           "threshold_note": {
             "type": "string",
             "title": "Threshold Note"
+          },
+          "scores_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores Note",
+            "description": "Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "description": "Veri kaynağı satırı (veri seti verirse)"
           }
         },
         "type": "object",
@@ -8719,12 +8896,12 @@
           "value_text": {
             "type": "string",
             "title": "Value Text",
-            "description": "Biçimli değer veya 'Paylaşılmadı'"
+            "description": "Biçimli değer ('7,4' · ölçekli '3/5' · verideki yazılış '116/82') veya 'Paylaşılmadı'"
           },
           "healthy_text": {
             "type": "string",
             "title": "Healthy Text",
-            "description": "Sağlıklı aralık metni, örn. '7–9' / '7 to 9'"
+            "description": "Aralık sütunu: sağlıklı aralık ('7–9') ya da verideki normal metni (kişisel taban '45±2' / referans); gizli veya ölçülmemişse boş olabilir"
           },
           "level": {
             "anyOf": [
@@ -8757,6 +8934,12 @@
             "type": "boolean",
             "title": "Hidden",
             "description": "Bu izleyiciden gizli (Dünya, paylaşılmadı)"
+          },
+          "measured": {
+            "type": "boolean",
+            "title": "Measured",
+            "description": "false → bu veri setinde yok: value/level null, value_text nedenini söyler ('Bu görevde ölçülmedi' / 'Bu veri dosyasında yok')",
+            "default": true
           }
         },
         "type": "object",
@@ -8969,18 +9152,33 @@
             "title": "Status Label"
           },
           "score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Score",
-            "description": "Kümülatif sağlık skoru"
+            "description": "Kümülatif sağlık skoru. Skoru olmayan veri setinde null"
           },
           "score_text": {
             "type": "string",
-            "title": "Score Text"
+            "title": "Score Text",
+            "description": "Skor yoksa boş"
           },
           "daily_score": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Daily Score",
-            "description": "O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da)"
+            "description": "O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da). Skoru olmayan veri setinde null"
           },
           "label": {
             "type": "string",
