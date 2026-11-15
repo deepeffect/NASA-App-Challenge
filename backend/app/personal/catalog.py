@@ -50,6 +50,8 @@ class Indicator(BaseModel):
     action: str
     trig: int = Field(ge=1, le=2)
     private: bool = False
+    # Öz bildirim ölçeğinin üst sınırı. Verilirse değer "3/5" biçiminde yazılır (veri seti ezebilir: DatasetInfo).
+    scale_max: int | None = Field(None, ge=1)
 
 
 class Solution(BaseModel):

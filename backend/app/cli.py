@@ -122,9 +122,40 @@ def cmd_export_openapi(args: argparse.Namespace) -> None:
     print(f"OpenAPI şeması yazıldı: {out}")
 
 
+def cmd_convert_ast(args: argparse.Namespace) -> None:
+    """AST görev verisi (data/raw/ast) → panel biçiminde ayrı dosya (DATASET_PATH ile seçilir)."""
+    from collections import Counter
+
+    from app.personal.ast_convert import convert, write
+
+    doc = convert(Path(args.source), args.first_day, args.last_day)
+    out = Path(args.out)
+    write(doc, out)
+    recs = doc["records"]
+    by_status = Counter((r["astronaut_id"], r["health_status"]) for r in recs)
+    print(f"Yazıldı: {out}  ({len(doc['astronauts'])} astronot × {len(recs) // len(doc['astronauts'])} gün, "
+          f"görev günü {args.first_day}–{args.last_day})")
+    for a in doc["astronauts"]:
+        aid = a["astronaut_id"]
+        print(f"  {aid}: Normal {by_status[(aid, 0)]} · Dikkat {by_status[(aid, 1)]} · Rahatsız {by_status[(aid, 2)]} gün")
+    print(f"  ölçülen {len(recs[0]['levels'])} ölçüm; bu veri setinde olmayan {len(doc['dataset']['absent'])}; skor yok")
+    try:  # .env'de göreli yol repo köküne göre çözülür
+        shown = out.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        shown = out.as_posix()
+    print(f"Kullanmak için backend/.env:  DATASET_PATH={shown}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m app.cli", description="Astronaut Health Monitor CLI")
     sub = p.add_subparsers(dest="command", required=True)
+
+    c = sub.add_parser("convert-ast", help="AST görev verisini (data/raw/ast) panel biçimine çevir")
+    c.add_argument("--source", default=str(REPO_ROOT / "data" / "raw" / "ast"), help="payloads_tr_… ve payloads_… dosyalarının klasörü")
+    c.add_argument("--out", default=str(REPO_ROOT / "data" / "raw" / "astronaut_health_ast.json"))
+    c.add_argument("--first-day", type=int, default=149, help="Pencerenin ilk görev günü")
+    c.add_argument("--last-day", type=int, default=178, help="Pencerenin son görev günü (panelde 'bugün')")
+    c.set_defaults(func=cmd_convert_ast)
 
     z = sub.add_parser("reset", help="Bu istasyonun (STATION_ROLE) veritabanını sıfırla")
     z.set_defaults(func=cmd_reset)

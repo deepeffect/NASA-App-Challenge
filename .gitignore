@@ -20,6 +20,9 @@ data/raw/*
 !data/raw/.gitkeep
 # Simüle veri seti (gizli değil): gemi bilgisayarı git pull ile alır
 !data/raw/astronaut_health.json
+# AST-01..04 görev verisi: kaynak payload dosyaları ve panel biçimine çevrilmiş hali (DATASET_PATH ile seçilir)
+!data/raw/ast/
+!data/raw/astronaut_health_ast.json
 data/processed/*
 !data/processed/.gitkeep
 data/docs/*
