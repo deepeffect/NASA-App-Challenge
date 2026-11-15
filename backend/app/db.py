@@ -14,7 +14,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import get_settings
 
-_engine: Engine | None = None
+_engines: dict[str, Engine] = {}
 
 
 def _sqlite_pragmas(dbapi_conn, _record) -> None:  # noqa: ANN001
@@ -26,29 +26,35 @@ def _sqlite_pragmas(dbapi_conn, _record) -> None:  # noqa: ANN001
     cur.close()
 
 
-def get_engine() -> Engine:
-    global _engine
-    if _engine is None:
-        url = get_settings().database_url_resolved
+def engine_for(url: str) -> Engine:
+    """URL başına tek engine (gemi ve Dünya DB'leri testte aynı süreçte açılabilir)."""
+    eng = _engines.get(url)
+    if eng is None:
         connect_args: dict = {}
         if url.startswith("sqlite"):
             connect_args["check_same_thread"] = False
             path = url.split("sqlite:///", 1)[-1]
             if path and path != ":memory:" and not url.startswith("sqlite://:"):
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
-        _engine = create_engine(url, connect_args=connect_args)
+        eng = create_engine(url, connect_args=connect_args)
         if url.startswith("sqlite"):
-            event.listen(_engine, "connect", _sqlite_pragmas)
-    return _engine
+            event.listen(eng, "connect", _sqlite_pragmas)
+        _engines[url] = eng
+    return eng
 
 
-def init_db() -> None:
+def get_engine() -> Engine:
+    """Global ayarların (ortam / .env) engine'i."""
+    return engine_for(get_settings().database_url_resolved)
+
+
+def init_db(engine: Engine | None = None) -> None:
     """Tabloları oluştur (yoksa). Tablo modelleri import edilince metadata'ya kaydolur."""
     try:
         from app.models import tables  # noqa: F401
     except ImportError:  # (a) adımında tablo modülü henüz yok
         pass
-    SQLModel.metadata.create_all(get_engine())
+    SQLModel.metadata.create_all(engine or get_engine())
 
 
 def get_session() -> Iterator[Session]:
@@ -58,8 +64,7 @@ def get_session() -> Iterator[Session]:
 
 
 def reset_engine() -> None:
-    """Testler ve CLI için: ayarlar değişince engine'i yeniden kur."""
-    global _engine
-    if _engine is not None:
-        _engine.dispose()
-    _engine = None
+    """Testler ve CLI için: ayarlar değişince engine'leri yeniden kur."""
+    for eng in _engines.values():
+        eng.dispose()
+    _engines.clear()

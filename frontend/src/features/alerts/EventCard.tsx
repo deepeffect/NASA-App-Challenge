@@ -33,7 +33,7 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
 
   const onExplain = () => {
     setShowExplain((v) => !v);
-    if (!explain.data && !explain.isPending) explain.mutate({ eventId: event.event_id, body: { lang: "en", as_of: asOf } });
+    if (!explain.data && !explain.isPending) explain.mutate({ eventId: event.event_id, body: { lang: "tr", as_of: asOf } });
   };
 
   const primaryMetric = event.contributors[0]?.metric;
@@ -44,15 +44,15 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={event.severity} />
           <Tag tone={event.source === "rule" ? "slate" : "violet"}>{SOURCE_LABELS[event.source]}</Tag>
-          <Tag>Confidence: {confidenceLabel(event.score)}</Tag>
+          <Tag>Güven: {confidenceLabel(event.score)}</Tag>
           <Tag>{SYSTEM_LABELS[event.system]}</Tag>
-          {event.status === "resolved" && <Tag>Resolved</Tag>}
+          {event.status === "resolved" && <Tag>Sona erdi</Tag>}
         </div>
         <h3 className="text-xl font-semibold">{event.title}</h3>
         {event.description && <p className="text-slate-300">{event.description}</p>}
         <p className="text-sm text-slate-400">
           {fmtDate(event.window.start)} – {fmtDate(event.window.end)}
-          {event.changepoint_date && <> · change point {fmtDate(event.changepoint_date)}</>}
+          {event.changepoint_date && <> · değişim noktası {fmtDate(event.changepoint_date)}</>}
         </p>
       </header>
 
@@ -60,13 +60,13 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
 
       <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={onExplain} aria-expanded={showExplain}>
-          Why?
+          Neden?
         </Button>
         <Button
           onClick={() => feedback.mutate({ eventId: event.event_id, body: { verdict: "false_alarm" } })}
           disabled={feedback.isPending || event.feedback === "false_alarm"}
         >
-          {event.feedback === "false_alarm" ? "Marked as false alarm" : "False alarm"}
+          {event.feedback === "false_alarm" ? "Yanlış alarm olarak işaretlendi" : "Yanlış alarm"}
         </Button>
         <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-600 px-4 py-2">
           <input
@@ -76,11 +76,11 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
             disabled={share.isPending}
             onChange={(e) => share.mutate({ eventId: event.event_id, share: e.target.checked })}
           />
-          Share with ground team
+          Yer ekibiyle paylaş
         </label>
         {onShowMetric && primaryMetric && (
           <Button variant="ghost" onClick={() => onShowMetric(primaryMetric)}>
-            Show on chart
+            Grafikte göster
           </Button>
         )}
       </div>
@@ -88,7 +88,7 @@ export function EventCard({ event, onShowMetric }: { event: HealthEvent; onShowM
 
       {showExplain && (
         <div>
-          {explain.isPending && <Spinner label="Preparing explanation…" />}
+          {explain.isPending && <Spinner label="Açıklama hazırlanıyor…" />}
           {explain.isError && <ErrorBox error={explain.error} />}
           {explain.data && <ExplainPanel data={explain.data} />}
         </div>

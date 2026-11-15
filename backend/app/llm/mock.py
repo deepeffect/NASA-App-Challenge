@@ -13,23 +13,33 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from app.llm import templates
+from app.llm.lang import detect_lang
 from app.llm.types import LLMResponse, Message, StreamDelta, ToolCall, new_call_id
 from app.safety.emergency import fold_text
 
 _AID = re.compile(r"astronaut_id:\s*([A-Za-z0-9_-]+)")
 _CTX = re.compile(r"<context>\s*(.*?)\s*</context>", re.DOTALL)
+_LANG = re.compile(r"Write all text fields in (\w+)")
 
 # (anahtar kelimeler (katlanmış), tool, ek argümanlar)
 _RULES: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
-    (("how am i", "how are you", "status", "doing", "overall", "summary", "report", "today", "week"),
+    (("nasilim", "nasil gidiyor", "durumum", "genel durum", "ozet", "how am i", "how are", "overall", "summary", "report", "rapor", "today"),
      "get_health_summary", {}),
-    (("radiation", "dose", "msv"), "get_radiation_dose", {}),
-    (("sleep",), "get_metric", {"metric": "sleep_duration", "days": 14}),
-    (("heart", "pulse"), "get_metric", {"metric": "resting_hr", "days": 14}),
-    (("hrv", "variability"), "get_metric", {"metric": "hrv_rmssd", "days": 14}),
-    (("stress", "mood", "check-in", "checkin"), "get_checkins", {"days": 7}),
-    (("alarm", "alert", "warning"), "get_alerts", {}),
-    (("nasa", "document", "guideline", "procedure", "protocol", "standard", "source"), "search_docs", {}),
+    (("radyasyon", "radiation", "doz", "dose", "msv"), "get_radiation_dose", {}),
+    (("uyku", "uyu", "sleep"), "get_metric", {"metric": "sleep_duration", "days": 14}),
+    (("nabiz", "kalp", "heart", "pulse"), "get_metric", {"metric": "resting_hr", "days": 14}),
+    (("hrv", "degiskenlik", "variability"), "get_metric", {"metric": "hrv_rmssd", "days": 14}),
+    (("stres", "stress", "ruh hali", "mood", "check-in", "checkin"), "get_checkins", {"days": 7}),
+    (("uyari", "alarm", "alert"), "get_alerts", {}),
+    (("belge", "dokuman", "kaynak", "nasa", "protokol", "standart", "document", "guideline", "procedure"), "search_docs", {}),
+    # yeni veri modeli (astronaut_health) tool'ları
+    (("nasilim", "nasil gidiyor", "durumum", "genel durum", "ozet", "bugun", "how am i", "how are", "overall", "summary", "report", "rapor", "today"),
+     "get_today_summary", {}),
+    (("uyku", "uyu", "sleep"), "get_recent_readings", {"cols": ["beh_sleep_h"], "days": 7}),
+    (("nabiz", "kalp", "heart", "pulse"), "get_recent_readings", {"cols": ["cv_resting_hr_bpm"], "days": 7}),
+    (("radyasyon", "radiation"), "get_recent_readings", {"cols": ["exp_radiation_mSv_day"], "days": 7}),
+    (("yapilacak", "yapmaliyim", "ne yapayim", "todo", "to-do", "to do", "what should i do"), "get_todo", {}),
+    (("cozum", "oneri", "solution", "self-care", "self care"), "get_selfcare_solutions", {}),
 ]
 
 
@@ -70,11 +80,14 @@ class MockClient:
         if not calls and "get_health_summary" in tool_names:
             calls.append(ToolCall(new_call_id(), "get_health_summary",
                                   json.dumps({"astronaut_id": aid} if aid else {})))
+        if not calls and "get_today_summary" in tool_names:
+            calls.append(ToolCall(new_call_id(), "get_today_summary", "{}"))
         return calls
 
     def _decide(self, messages: list[Message], tools: list[dict] | None) -> LLMResponse:
         i = self._last_user_index(messages)
         question = str(messages[i]["content"]) if i >= 0 else ""
+        lang = detect_lang(question)
         after = messages[i + 1:] if i >= 0 else []
         tool_results: list[tuple[str, dict]] = []
         names: dict[str, str] = {}
@@ -90,17 +103,25 @@ class MockClient:
             tool_names = {t["function"]["name"] for t in tools}
             return LLMResponse(content="", tool_calls=self._plan(question, self._astronaut(messages), tool_names),
                                finish_reason="tool_calls", model=self.model)
-        return LLMResponse(content=templates.chat_answer(tool_results, "en", "mock"), finish_reason="stop", model=self.model)
+        return LLMResponse(content=templates.chat_answer(tool_results, lang, "mock"), finish_reason="stop", model=self.model)
 
     def _structured(self, messages: list[Message], response_format: dict) -> str:
         name = (response_format.get("json_schema") or {}).get("name", "")
         text = str(messages[-1].get("content", ""))
         m = _CTX.search(text)
         ctx = json.loads(m.group(1)) if m else {}
+        lm = _LANG.search(text)
+        lang = "en" if lm and lm.group(1).lower().startswith("english") else "tr"
         if name == "AlertExplanation":
-            return json.dumps(templates.alert_explanation(ctx), ensure_ascii=False)
+            return json.dumps(templates.alert_explanation(ctx, lang), ensure_ascii=False)
         if name == "DailyBriefing":
-            return json.dumps(templates.daily_briefing(ctx), ensure_ascii=False)
+            return json.dumps(templates.daily_briefing(ctx, lang), ensure_ascii=False)
+        if name == "CheckinTurnDraft":  # mock: scripted check-in ile aynı karar
+            from app.personal.checkin_script import assistant_turn
+
+            out = assistant_turn(ctx, lang)
+            note = out["note"]
+            return json.dumps({"reply": out["reply"], "flag": bool(note and note["flag"]), "skip": note is None}, ensure_ascii=False)
         return "{}"
 
     # ------------------------------------------------------------------ arayüz

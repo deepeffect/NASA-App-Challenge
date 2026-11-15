@@ -16,13 +16,13 @@ export function Layout() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <SatelliteIcon className="h-7 w-7 text-sky-400" />
-              <span className="text-xl font-bold tracking-tight">Astronaut Health Monitor</span>
+              <span className="text-xl font-bold tracking-tight">Astronot Sağlık İzleme</span>
             </div>
-            <nav className="flex items-center gap-1" aria-label="Main menu">
-              <NavLink to="/" end className={navCls}>
-                Crew
+            <nav className="flex items-center gap-1" aria-label="Ana menü">
+              <NavLink to="/legacy" end className={navCls}>
+                Mürettebat
               </NavLink>
-              <NavLink to="/checkin" className={navCls}>
+              <NavLink to="/legacy/checkin" className={navCls}>
                 Check-in
               </NavLink>
             </nav>

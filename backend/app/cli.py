@@ -1,5 +1,6 @@
 """Komut satırı araçları.
 
+    python -m app.cli reset                              # bu istasyonun (STATION_ROLE) DB'sini sıfırla
     python -m app.cli seed [--seed 42] [--spe-day 120]   # sentetik veriyi DB'ye yükle (DB'yi sıfırlar)
     python -m app.cli ingest data/raw/dosya.csv          # dosyayı API'siz yükle
     python -m app.cli analyze [--as-of 2026-10-20]       # ekip durumu konsolda
@@ -16,7 +17,39 @@ from pathlib import Path
 from app.config import REPO_ROOT
 
 
+def cmd_reset(args: argparse.Namespace) -> None:
+    """Seçili rolün DB'sindeki bütün tabloları silip yeniden kurar (dosya kilitliyken de çalışır)."""
+    from sqlmodel import SQLModel
+
+    from app.config import get_settings
+    from app.db import get_engine, init_db
+    from app.models import tables  # noqa: F401  (metadata'ya kayıt)
+
+    s = get_settings()
+    SQLModel.metadata.drop_all(get_engine())
+    init_db()
+    print(f"[{s.station_role}] veritabanı sıfırlandı: {s.database_url_resolved}")
+    if s.station_role == "ship" and s.data_source == "astronaut_health":
+        from app.personal.store import ensure_dataset_loaded
+
+        stats = ensure_dataset_loaded(get_engine(), s, force=True)
+        print(f"Veri seti yüklendi ({s.dataset_path.name}): {stats}")
+
+
+def _force_synthetic() -> None:
+    """Eski komutlar (seed/ingest/analyze) her zaman sentetik moddadır → DB: data/processed/health.db."""
+    import os
+
+    from app.config import get_settings
+    from app.db import reset_engine
+
+    os.environ["DATA_SOURCE"] = "synthetic"
+    get_settings.cache_clear()
+    reset_engine()
+
+
 def cmd_seed(args: argparse.Namespace) -> None:
+    _force_synthetic()
     from app.data.seed import seed_database
     from app.data.synthetic import SyntheticConfig
 
@@ -37,6 +70,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
 def cmd_ingest(args: argparse.Namespace) -> None:
     from sqlmodel import Session
 
+    _force_synthetic()
     from app.db import get_engine, init_db
     from app.ingest.pipeline import ingest_bytes
 
@@ -49,6 +83,7 @@ def cmd_ingest(args: argparse.Namespace) -> None:
 
 def cmd_analyze(args: argparse.Namespace) -> None:
     """Konsolda ekip durumu ve aktif olaylar (veri/analiz sorumlusu için hızlı kontrol)."""
+    _force_synthetic()
     from sqlmodel import Session
 
     from app.db import get_engine, init_db
@@ -78,8 +113,9 @@ def cmd_reindex(args: argparse.Namespace) -> None:
 
 
 def cmd_export_openapi(args: argparse.Namespace) -> None:
-    from app.main import app
+    from app.main import create_docs_app
 
+    app = create_docs_app()
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(app.openapi(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -89,6 +125,9 @@ def cmd_export_openapi(args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m app.cli", description="Astronaut Health Monitor CLI")
     sub = p.add_subparsers(dest="command", required=True)
+
+    z = sub.add_parser("reset", help="Bu istasyonun (STATION_ROLE) veritabanını sıfırla")
+    z.set_defaults(func=cmd_reset)
 
     s = sub.add_parser("seed", help="Sentetik veriyi üret ve DB'ye yükle (varsayılan: DB'yi sıfırlar)")
     s.add_argument("--seed", type=int, default=42)

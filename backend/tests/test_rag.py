@@ -76,7 +76,7 @@ def test_search_docs_tool_and_chat(client):
 
     from .test_contract import parse_sse
 
-    body = {"astronaut_id": "AST-02", "messages": [{"role": "user", "content": "What do the documents say about treadmill exercise?"}]}
+    body = {"astronaut_id": "AST-02", "messages": [{"role": "user", "content": "Belgelerde uyku hakkında ne var?"}]}
     with client.stream("POST", "/api/chat", json=body) as resp:
         events = parse_sse("".join(resp.iter_text()))
     assert "search_docs" in {p["name"] for n, p in events if n == "tool_call"}

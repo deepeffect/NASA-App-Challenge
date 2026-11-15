@@ -42,7 +42,7 @@ def test_threshold_uses_daily_worst_value_for_mean_metrics():
     assert e.contributors[0].value == pytest.approx(89.0)
     assert e.contributors[0].threshold_verified is False
     assert e.score == pytest.approx(0.7)  # doğrulanmamış eşik → orta güven
-    assert "below lower critical" in e.title
+    assert "alt kritik" in e.title
     assert e.status == "resolved"
 
 
@@ -67,7 +67,7 @@ def test_deviation_detects_bad_direction_only():
     assert e.severity == "critical" and e.status == "active"
     assert e.window.start > day(13), "baseline penceresi içinde değerlendirme yapılmaz"
     assert e.contributors[0].z < -3.5
-    assert "below" in e.title
+    assert "altında" in e.title
 
     better = alt_baseline(7.0, 0.3) + [8.8] * 10  # daha çok uyku: iyileşme → olay yok
     assert run([long_df("AST-T", "sleep_duration", better)], ["baseline_deviation"]).events == []
@@ -76,7 +76,7 @@ def test_deviation_detects_bad_direction_only():
 def test_deviation_both_directions():
     up = alt_baseline(36.8, 0.1) + [37.6] * 8
     (e,) = run([long_df("AST-T", "body_temp", up)], ["baseline_deviation"]).events
-    assert "above" in e.title and e.system == "immune"
+    assert "üstünde" in e.title and e.system == "immune"
 
 
 def test_deviation_severity_levels():
@@ -95,7 +95,7 @@ def test_trend_catches_rapid_worsening_that_deviation_misses():
     res = run([long_df("AST-T", "resting_hr", values)], ["baseline_deviation", "trend"])
     assert [e.detector for e in res.events] == ["rule.trend"]
     (t,) = res.events
-    assert "rising" in t.title and t.status == "active"
+    assert "artış" in t.title and t.status == "active"
 
 
 def test_trend_suppressed_while_deviation_warning():

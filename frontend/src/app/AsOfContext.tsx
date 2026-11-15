@@ -62,6 +62,6 @@ export function AsOfProvider({ children }: { children: ReactNode }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAsOf(): AsOfState {
   const v = useContext(AsOfCtx);
-  if (!v) throw new Error("useAsOf must be used inside AsOfProvider");
+  if (!v) throw new Error("useAsOf, AsOfProvider içinde kullanılmalı");
   return v;
 }

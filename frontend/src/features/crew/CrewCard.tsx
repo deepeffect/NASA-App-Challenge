@@ -16,9 +16,9 @@ export function CrewCard({ member }: { member: CrewMember }) {
   const { active_events: c } = member;
   return (
     <Link
-      to={`/astronauts/${member.id}`}
+      to={`/legacy/astronauts/${member.id}`}
       className={`block rounded-2xl border border-slate-800 bg-slate-900/80 p-5 transition-colors ${RING[member.status]}`}
-      aria-label={`Open ${member.name} details`}
+      aria-label={`${member.name} detayına git`}
     >
       <div className="min-w-0">
         <p className="truncate text-2xl font-bold" title={member.name}>{member.name}</p>
@@ -30,23 +30,23 @@ export function CrewCard({ member }: { member: CrewMember }) {
 
       <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-slate-950/60 p-2">
-          <dt className="text-sm text-slate-400">Score</dt>
+          <dt className="text-sm text-slate-400">Skor</dt>
           <dd className="text-2xl font-semibold">{fmtNum(member.score, 0)}</dd>
         </div>
         <div className="rounded-xl bg-slate-950/60 p-2">
-          <dt className="text-sm text-slate-400">Critical</dt>
+          <dt className="text-sm text-slate-400">Kritik</dt>
           <dd className={`text-2xl font-semibold ${c.critical ? "text-red-300" : ""}`}>{c.critical}</dd>
         </div>
         <div className="rounded-xl bg-slate-950/60 p-2">
-          <dt className="text-sm text-slate-400">Warning</dt>
+          <dt className="text-sm text-slate-400">Uyarı</dt>
           <dd className={`text-2xl font-semibold ${c.warning ? "text-orange-300" : ""}`}>{c.warning}</dd>
         </div>
       </dl>
 
       <p className="mt-4 text-slate-300">
         {member.attention_systems.length
-          ? `Attention: ${member.attention_systems.map((s) => SYSTEM_LABELS[s]).join(", ")}`
-          : "All systems normal"}
+          ? `Dikkat: ${member.attention_systems.map((s) => SYSTEM_LABELS[s]).join(", ")}`
+          : "Tüm sistemler normal"}
       </p>
     </Link>
   );

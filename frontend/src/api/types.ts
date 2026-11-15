@@ -4,6 +4,432 @@
  */
 
 export interface paths {
+    "/api/station": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bu istasyonun rolü ve ana ekranı */
+        get: operations["get_station_api_station_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Giriş (gemi: astronot, Dünya: EARTH) */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/hint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Giriş kartı ipucu: kimlik aralığı ve hesap sayısı */
+        get: operations["hint_api_auth_hint_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Token'ın sahibi */
+        get: operations["me_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ölçümler ve bütün self-care çözümleri */
+        get: operations["get_catalog_api_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kendi genel bakışım: 30 günlük şerit */
+        get: operations["my_overview_api_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/days/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kendi günüm (durum, to-do, ölçümler) */
+        get: operations["my_day_api_me_days__day__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/personal/{astronaut_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Genel bakış (sadece kendi kimliğiniz) */
+        get: operations["overview_api_personal__astronaut_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/personal/{astronaut_id}/days/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gün (sadece kendi kimliğiniz) */
+        get: operations["personal_day_api_personal__astronaut_id__days__day__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bugünün to-do öğesini 'yaptım' olarak işaretle (veya kaldır) */
+        post: operations["post_action_done_api_actions_done_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminal sinyali: /me açıkken düzenli aralıkla (Dünya sadece çevrimiçi / çevrimdışı ve son görülmeyi görür) */
+        post: operations["post_presence_api_me_presence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checkin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bugünün check-in durumu */
+        get: operations["get_today_api_checkin_get"];
+        put?: never;
+        /** Günlük öz bildirim (not acil belirti için taranır) */
+        post: operations["post_checkin_api_checkin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checkin/days/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bir günün check-in'i (geçmiş: salt okunur) */
+        get: operations["get_day_api_checkin_days__day__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checkin/turn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check-in cevabı → asistanın dönüşü (prototipin assistantTurn sözleşmesi) */
+        post: operations["post_turn_api_checkin_turn_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checkin/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Baştan başla (sadece paylaşılmadıysa) */
+        post: operations["post_reset_api_checkin_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/checkin/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bitmiş check-in'i Dünya ile paylaş: private / scores / full (sadece artar, geri alınamaz) */
+        post: operations["post_share_api_checkin_share_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downlink/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Yayınlanmış durumun tamamı */
+        get: operations["get_snapshot_api_downlink_snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downlink/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SSE olay akışı (since=<seq>), link.heartbeat ile */
+        get: operations["get_stream_api_downlink_stream_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 'Asistana sor': streaming sohbet (SSE), sadece kendi verinizle */
+        post: operations["post_chat_api_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/link/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gemi bağlantısı: bağlı mı, son temas, kuyruk */
+        get: operations["get_link_status_api_link_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitor/crew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bütün astronotların bugünü (Dünya görünümü) */
+        get: operations["get_crew_api_monitor_crew_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitor/astronauts/{astronaut_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Astronotun 30 günlük şeridi (Dünya) */
+        get: operations["get_overview_api_monitor_astronauts__astronaut_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitor/astronauts/{astronaut_id}/days/{day}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bir gün (Dünya görünümü + check-in) */
+        get: operations["get_day_api_monitor_astronauts__astronaut_id__days__day__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monitor/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alınan olaylar (canlı akışın geçmişi), yeniden eskiye */
+        get: operations["get_events_api_monitor_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stream/monitor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dünya ekranı için yerel SSE: yeni olaylar ve bağlantı durumu (EventSource: ?access_token=) */
+        get: operations["stream_monitor_api_stream_monitor_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -208,40 +634,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/checkin": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Günlük öz bildirim (not acil belirti için taranır) */
-        post: operations["post_checkin_api_checkin_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Streaming sohbet (SSE) */
-        post: operations["post_chat_api_chat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/emergency/check": {
         parameters: {
             query?: never;
@@ -253,7 +645,9 @@ export interface paths {
         put?: never;
         /**
          * Acil belirti taraması (kural tabanlı, LLM'siz)
-         * @description Sohbet harici bir asistan API'sine gittiğinde de acil tespit çalışsın diye ayrı uç.
+         * @description Legacy sohbet harici asistan API'sine gittiğinde de acil tespit çalışsın diye ayrı uç.
+         *
+         *     Eski sohbetle aynı davranış: olumsuzlamayı ayırt etmez (bilinçli olarak fazla tetikler).
          */
         post: operations["post_emergency_check_api_emergency_check_post"];
         delete?: never;
@@ -300,6 +694,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountRange */
+        AccountRange: {
+            /** First Id */
+            first_id: string;
+            /** Last Id */
+            last_id: string;
+            /** Count */
+            count: number;
+        };
+        /** ActionDoneRequest */
+        ActionDoneRequest: {
+            /**
+             * Code
+             * @description Bugünün to-do öğesinin self-care kodu
+             */
+            code: string;
+            /**
+             * Done
+             * @default true
+             */
+            done: boolean;
+        };
+        /** ActionDoneResponse */
+        ActionDoneResponse: {
+            /** Code */
+            code: string;
+            /** Done */
+            done: boolean;
+            day: components["schemas"]["DayView"];
+        };
         /**
          * AlertExplanation
          * @description LLM'in üretmesi gereken yapılandırılmış çıktı (json_schema).
@@ -333,6 +757,24 @@ export interface components {
             /** Events */
             events: components["schemas"]["HealthEvent"][];
         };
+        /** AreaScoreView */
+        AreaScoreView: {
+            /** Area */
+            area: string;
+            /** Label */
+            label: string;
+            /**
+             * Score
+             * @description 0–100. Dünya'da davranışsal alan paylaşılmadıysa null
+             */
+            score: number | null;
+            /** Score Text */
+            score_text: string;
+            /** Hidden */
+            hidden: boolean;
+            /** Main Concern */
+            main_concern: boolean;
+        };
         /** AstronautInfo */
         AstronautInfo: {
             /**
@@ -358,6 +800,26 @@ export interface components {
             active_events: components["schemas"]["HealthEvent"][];
             /** Last Measurement At */
             last_measurement_at?: string | null;
+        };
+        /** AuthHint */
+        AuthHint: {
+            /**
+             * Station
+             * @enum {string}
+             */
+            station: "ship" | "earth";
+            /** @description Bu istasyonda giriş yapabilen astronot hesapları (sadece gemi) */
+            astronauts: components["schemas"]["AccountRange"] | null;
+            /**
+             * Earth Id
+             * @description Dünya üssü hesabı (sadece Dünya istasyonu)
+             */
+            earth_id: string | null;
+            /**
+             * Text
+             * @description Giriş kartında gösterilecek ipucu
+             */
+            text: string;
         };
         /** Baseline */
         Baseline: {
@@ -394,9 +856,9 @@ export interface components {
             as_of: string | null;
             /**
              * Lang
-             * @constant
+             * @enum {string}
              */
-            lang: "en";
+            lang: "tr" | "en";
             briefing: components["schemas"]["DailyBriefing"];
             /**
              * Generated By
@@ -423,12 +885,70 @@ export interface components {
              */
             created_at: string;
         };
+        /** CatalogDomain */
+        CatalogDomain: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
+        /** CatalogIndicator */
+        CatalogIndicator: {
+            /** Col */
+            col: string;
+            /** Domain */
+            domain: string;
+            /** Domain Label */
+            domain_label: string;
+            /** Label */
+            label: string;
+            /** Unit */
+            unit: string;
+            /** Dec */
+            dec: number;
+            healthy: components["schemas"]["CatalogRange"];
+            warning: components["schemas"]["CatalogRange"];
+            /** Healthy Text */
+            healthy_text: string;
+            /** Action */
+            action: string;
+            /** Trig */
+            trig: number;
+            /** Private */
+            private: boolean;
+            /** Averaged */
+            averaged: boolean;
+        };
+        /** CatalogRange */
+        CatalogRange: {
+            /** Min */
+            min: number;
+            /** Max */
+            max: number | null;
+        };
         /** CatalogResponse */
         CatalogResponse: {
             /** Systems */
             systems: components["schemas"]["SystemInfo"][];
             /** Metrics */
             metrics: components["schemas"]["MetricInfo"][];
+        };
+        /** CatalogSolution */
+        CatalogSolution: {
+            /** Code */
+            code: string;
+            /** Domain */
+            domain: string;
+            /** Title */
+            title: string;
+            /** When */
+            when: string;
+            /** Steps */
+            steps: string[];
+            /** Contact Ground If */
+            contact_ground_if: string;
+            /** Basis */
+            basis: string;
         };
         /** ChatMessage */
         ChatMessage: {
@@ -442,17 +962,20 @@ export interface components {
         };
         /** ChatRequest */
         ChatRequest: {
-            /** Astronaut Id */
-            astronaut_id: string;
+            /**
+             * Astronaut Id
+             * @description Eski mod (synthetic): zorunlu. Yeni mod: boş bırakın; astronot token'dan gelir (farklıysa 403)
+             */
+            astronaut_id?: string | null;
             /** Messages */
             messages: components["schemas"]["ChatMessage"][];
             /** As Of */
             as_of?: string | null;
             /**
              * Lang
-             * @description Empty means English (the only supported language)
+             * @description Boşsa kullanıcının dilinden tahmin edilir
              */
-            lang?: "en" | null;
+            lang?: ("tr" | "en") | null;
         };
         /** CheckinListResponse */
         CheckinListResponse: {
@@ -460,6 +983,48 @@ export interface components {
             astronaut_id: string;
             /** Checkins */
             checkins: components["schemas"]["CheckinRecord"][];
+        };
+        /** CheckinMessage */
+        CheckinMessage: {
+            /**
+             * Who
+             * @enum {string}
+             */
+            who: "bot" | "me";
+            /** Text */
+            text: string;
+        };
+        /** CheckinNext */
+        CheckinNext: {
+            /** Text */
+            text: string;
+            /** Options */
+            options: string[];
+        };
+        /** CheckinNote */
+        CheckinNote: {
+            /**
+             * Topic
+             * @description Konu adı (yazıldığı dilde)
+             */
+            topic: string;
+            /**
+             * Topic Key
+             * @description sleep | mood | stress | symptoms | other
+             */
+            topic_key: string;
+            /**
+             * Text
+             * @description Astronotun cevabı (aynen)
+             */
+            text: string;
+            /** Flag */
+            flag: boolean;
+            /**
+             * Urgent
+             * @description Acil belirti → gemideki CMO bilgilendirildi (Dünya'ya gitmez)
+             */
+            urgent: boolean;
         };
         /** CheckinRecord */
         CheckinRecord: {
@@ -521,15 +1086,128 @@ export interface components {
             timestamp?: string | null;
             /**
              * Lang
-             * @default en
-             * @constant
+             * @description Boşsa Accept-Language, o da yoksa tr
              */
-            lang: "en";
+            lang?: ("tr" | "en") | null;
         };
         /** CheckinResponse */
         CheckinResponse: {
             checkin: components["schemas"]["CheckinRecord"];
             emergency?: components["schemas"]["EmergencyNotice"] | null;
+        };
+        /** CheckinShareRequest */
+        CheckinShareRequest: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "private" | "scores" | "full";
+        };
+        /** CheckinState */
+        CheckinState: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /** Day */
+            day: number;
+            /** Mission Day */
+            mission_day: number;
+            /** Is Today */
+            is_today: boolean;
+            /**
+             * Editable
+             * @description true → bugün ve bitmemiş (cevap verilebilir)
+             */
+            editable: boolean;
+            /** Started */
+            started: boolean;
+            /** Step */
+            step: number;
+            /**
+             * Options
+             * @description Hızlı cevaplar
+             */
+            options: string[];
+            /** Messages */
+            messages: components["schemas"]["CheckinMessage"][];
+            /** Notes */
+            notes: components["schemas"]["CheckinNote"][];
+            /** Done */
+            done: boolean;
+            /**
+             * Share
+             * @description Tamamlandıysa paylaşım seviyesi (varsayılan private)
+             */
+            share: ("private" | "scores" | "full") | null;
+            /**
+             * Can Reset
+             * @description 'Baştan başla': sadece paylaşım private iken
+             */
+            can_reset: boolean;
+            /** Cmo Notified */
+            cmo_notified: boolean;
+            /** @description 'Gemideki sağlık sorumlusu bilgilendirildi' */
+            cmo_notice: components["schemas"]["CmoNotice"] | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Share Options
+             * @description Sadece tamamlanmış check-in'de
+             * @default []
+             */
+            share_options: components["schemas"]["ShareOption"][];
+            /**
+             * Share Note
+             * @description Seçili seviyenin açıklaması + 'paylaşım geri alınamaz'
+             */
+            share_note?: string | null;
+            /**
+             * Share Cmo Note
+             * @description Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez
+             */
+            share_cmo_note?: string | null;
+            /**
+             * Mode
+             * @description Bu check-in'de cevapları kim üretiyor. llm: asistan modeli | scripted: hazır sorular. Tur atıldıysa SON turun modu (auto modda LLM düşerse scripted olur); atılmadıysa ayarın öngördüğü mod
+             * @default scripted
+             * @enum {string}
+             */
+            mode: "scripted" | "llm";
+            /**
+             * Mode Text
+             * @description Kartta gösterilecek satır: 'Asistan: Qwen' / 'Hazır sorular, model çevrim dışı'
+             * @default
+             */
+            mode_text: string;
+            /**
+             * Assistant Name
+             * @description mode = llm iken modelin görünen adı (ASSISTANT_NAME veya LLM_MODEL'den)
+             */
+            assistant_name?: string | null;
+        };
+        /** CheckinTurnRequest */
+        CheckinTurnRequest: {
+            /** Answer */
+            answer: string;
+        };
+        /**
+         * CheckinTurnResponse
+         * @description Prototipin assistantTurn çıktısı aynen + güncel durum (`checkin`, ek alan).
+         */
+        CheckinTurnResponse: {
+            /** Reply */
+            reply: string;
+            note: components["schemas"]["CheckinNote"] | null;
+            next: components["schemas"]["CheckinNext"] | null;
+            /** Done */
+            done: boolean;
+            checkin: components["schemas"]["CheckinState"];
+        };
+        /** CmoNotice */
+        CmoNotice: {
+            /** Title */
+            title: string;
+            /** Text */
+            text: string;
         };
         /** Contributor */
         Contributor: {
@@ -551,6 +1229,34 @@ export interface components {
              * @description Metriğin eşiği doğrulandı mı (eşiği yoksa null)
              */
             threshold_verified?: boolean | null;
+        };
+        /** CrewInfo */
+        CrewInfo: {
+            /** Id */
+            id: string;
+            /** Age */
+            age: number;
+            /** Sex */
+            sex: string;
+            /** Bmi */
+            bmi: number;
+            /** Mission */
+            mission: string;
+            /** Mission Label */
+            mission_label: string;
+            /**
+             * Profile
+             * @description Veri setindeki simülasyon deseni
+             */
+            profile: string;
+            /** Profile Label */
+            profile_label: string;
+            /** First Mission Day */
+            first_mission_day: number;
+            /** Last Mission Day */
+            last_mission_day: number;
+            /** N Days */
+            n_days: number;
         };
         /** CrewMember */
         CrewMember: {
@@ -674,6 +1380,115 @@ export interface components {
              */
             end: string;
         };
+        /** DayView */
+        DayView: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * Viewer
+             * @enum {string}
+             */
+            viewer: "astronaut" | "earth";
+            /**
+             * Day
+             * @description 1'den başlar
+             */
+            day: number;
+            /** N Days */
+            n_days: number;
+            /** Mission Day */
+            mission_day: number;
+            /**
+             * Is Today
+             * @description Son kayıt (check-in sadece bugün yapılabilir)
+             */
+            is_today: boolean;
+            /**
+             * Day Label
+             * @description '30 günün 30. günü · görev günü 155'
+             */
+            day_label: string;
+            /**
+             * Status
+             * @description Gösterilen durum = max(health_status, ground ? 1 : 0)
+             */
+            status: number;
+            /**
+             * Status Label
+             * @description Normal / Dikkat / Rahatsız
+             */
+            status_label: string;
+            /**
+             * Health Status
+             * @description Veri setindeki durum (ground hariç)
+             */
+            health_status: number;
+            /**
+             * Ground
+             * @description Yer desteği gerekli. Dünya'da sadece görünür ölçümlerden hesaplanır
+             */
+            ground: boolean;
+            /** Subtitle */
+            subtitle: string;
+            /**
+             * Score
+             * @description Kümülatif sağlık skoru (her zaman görünür)
+             */
+            score: number;
+            /** Score Text */
+            score_text: string;
+            /** Daily Score */
+            daily_score: number;
+            /**
+             * Main Concern
+             * @description none | immune | bone_muscle | cardiovascular | behavioral
+             */
+            main_concern: string;
+            /** Main Concern Label */
+            main_concern_label: string | null;
+            /** Areas */
+            areas: components["schemas"]["AreaScoreView"][];
+            /**
+             * Readings
+             * @description Katalog sırasında; grup sırası `domains`
+             */
+            readings: components["schemas"]["ReadingView"][];
+            /** Todo Title */
+            todo_title: string;
+            /**
+             * Todo
+             * @description Görünür to-do öğeleri, veri setindeki sırayla
+             */
+            todo: components["schemas"]["TodoItemView"][];
+            /**
+             * Todo Masked Count
+             * @description Dünya: tetikleyicisi sadece gizli ölçümler olan öğe sayısı
+             */
+            todo_masked_count: number;
+            /** Todo Masked Text */
+            todo_masked_text: string | null;
+            /**
+             * Calm Text
+             * @description Yapılacak bir şey yoksa
+             */
+            calm_text: string | null;
+            /** Ground Title */
+            ground_title: string | null;
+            /** Ground Text */
+            ground_text: string | null;
+            /** Readings Note */
+            readings_note: string;
+            /**
+             * Threshold Note
+             * @description Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı
+             */
+            threshold_note: string;
+            /**
+             * Share
+             * @description Bu günün check-in paylaşım seviyesi (tamamlandıysa)
+             */
+            share?: ("private" | "scores" | "full") | null;
+        };
         /** DocRef */
         DocRef: {
             /** File */
@@ -687,6 +1502,199 @@ export interface components {
             /** Score */
             score: number;
         };
+        /** DownlinkSnapshot */
+        DownlinkSnapshot: {
+            /** Epoch */
+            epoch: string;
+            /**
+             * Seq
+             * @description Bu snapshot'ın içerdiği son seq; stream since=seq ile devam eder
+             */
+            seq: number;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Simulated Light Delay Minutes */
+            simulated_light_delay_minutes: number;
+            /** Astronauts */
+            astronauts: components["schemas"]["EarthAstronaut"][];
+            /** Days */
+            days: components["schemas"]["EarthDay"][];
+            /**
+             * Presence
+             * @description Sinyal göndermiş her terminalin yayınlanmış son durumu (terminal.* olaylarından)
+             */
+            presence?: components["schemas"]["EarthPresence"][];
+        };
+        /** EarthAstronaut */
+        EarthAstronaut: {
+            /** Id */
+            id: string;
+            /** Age */
+            age: number;
+            /** Sex */
+            sex: string;
+            /** Bmi */
+            bmi: number;
+            /** Mission */
+            mission: string;
+            /** Profile */
+            profile: string;
+            /** First Mission Day */
+            first_mission_day: number;
+            /** Last Mission Day */
+            last_mission_day: number;
+            /** N Days */
+            n_days: number;
+        };
+        /** EarthCheckin */
+        EarthCheckin: {
+            /**
+             * Share
+             * @enum {string}
+             */
+            share: "private" | "scores" | "full";
+            /**
+             * Notes
+             * @description private → boş; scores → konu + flag; full → + metin
+             */
+            notes: components["schemas"]["EarthCheckinNote"][];
+        };
+        /** EarthCheckinNote */
+        EarthCheckinNote: {
+            /** Topic Key */
+            topic_key: string;
+            /** Flag */
+            flag: boolean;
+            /**
+             * Text
+             * @description Sadece `full` paylaşımda
+             */
+            text?: string | null;
+        };
+        /** EarthCheckinNoteView */
+        EarthCheckinNoteView: {
+            /** Topic */
+            topic: string;
+            /** Text */
+            text: string | null;
+            /** Flag */
+            flag: boolean;
+            /**
+             * Flag Text
+             * @description scores: 'İşaretlendi' / 'İşaret yok'; full: ''
+             */
+            flag_text: string;
+        };
+        /** EarthCheckinView */
+        EarthCheckinView: {
+            /** Share */
+            share: ("private" | "scores" | "full") | null;
+            /**
+             * Text
+             * @description 'Tamamlanmış check-in yok' / 'gizli tutuldu' / 'Astronotun paylaştığı: …'
+             */
+            text: string;
+            /** Notes */
+            notes: components["schemas"]["EarthCheckinNoteView"][];
+        };
+        /**
+         * EarthDay
+         * @description Bir günün Dünya'ya giden hali. Gizlilik filtresi GEMİDE uygulanır; bu kayıtta gizli ölçümler,
+         *     maskeli to-do kodları, paylaşılmamış davranışsal skor, check-in mesajları ve CMO bilgisi YOKTUR.
+         */
+        EarthDay: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /** Day Index */
+            day_index: number;
+            /** Mission Day */
+            mission_day: number;
+            /** N Days */
+            n_days: number;
+            /** Health Status */
+            health_status: number;
+            /**
+             * Ground
+             * @description Sadece görünür ölçümlerden
+             */
+            ground: boolean;
+            /**
+             * Status
+             * @description max(health_status, ground ? 1 : 0)
+             */
+            status: number;
+            /** Cumulative Score */
+            cumulative_score: number;
+            /** Daily Score */
+            daily_score: number;
+            /** Main Concern */
+            main_concern: string;
+            /** Behavioral Hidden */
+            behavioral_hidden: boolean;
+            /** Area Scores */
+            area_scores: {
+                [key: string]: number;
+            };
+            /** Readings */
+            readings: {
+                [key: string]: components["schemas"]["EarthReading"];
+            };
+            /** Todo */
+            todo: components["schemas"]["EarthTodo"][];
+            /** Todo Masked Count */
+            todo_masked_count: number;
+            checkin: components["schemas"]["EarthCheckin"] | null;
+        };
+        /**
+         * EarthPresence
+         * @description Terminal varlığının Dünya'ya giden hali (gizlilik filtresi gemide): sadece kimlik, çevrimiçi/çevrimdışı ve
+         *     son sinyalin zamanı. Terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) YOKTUR.
+         */
+        EarthPresence: {
+            /** Astronaut Id */
+            astronaut_id: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "online" | "offline";
+            /**
+             * Last Seen
+             * Format: date-time
+             * @description Terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen: string;
+        };
+        /** EarthReading */
+        EarthReading: {
+            /** Today */
+            today: number;
+            /**
+             * Used
+             * @description Değerlendirilen değer (3 günlük ortalama veya o günün değeri)
+             */
+            used: number;
+            /** Level */
+            level: number;
+        };
+        /** EarthTodo */
+        EarthTodo: {
+            /** Code */
+            code: string;
+            /**
+             * Triggers
+             * @description Görünür tetikleyici kolonlar; boş → veri setinin önerisi
+             */
+            triggers: string[];
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+        };
         /** EmergencyCheckRequest */
         EmergencyCheckRequest: {
             /**
@@ -694,6 +1702,11 @@ export interface components {
              * @description Kullanıcı mesajı (kural tabanlı tarama, LLM yok)
              */
             text: string;
+            /**
+             * Lang
+             * @description Boşsa Accept-Language, o da yoksa tr
+             */
+            lang?: ("tr" | "en") | null;
         };
         /** EmergencyCheckResponse */
         EmergencyCheckResponse: {
@@ -722,6 +1735,12 @@ export interface components {
             protocol: components["schemas"]["EmergencyProtocol"];
             /** Message */
             message: string;
+            /**
+             * Cmo Notified
+             * @description Yeni mod: gemide CMO bildirimi kaydedildi (Dünya'ya gitmez)
+             * @default false
+             */
+            cmo_notified: boolean;
         };
         /** EmergencyProtocol */
         EmergencyProtocol: {
@@ -743,6 +1762,11 @@ export interface components {
         ErrorResponse: {
             /** Detail */
             detail: string;
+            /**
+             * Code
+             * @description Makine tarafından okunur hata kodu (yeni uçlar), örn. unknown_id
+             */
+            code?: string | null;
         };
         /** EventCounts */
         EventCounts: {
@@ -766,10 +1790,9 @@ export interface components {
         ExplainRequest: {
             /**
              * Lang
-             * @default en
-             * @constant
+             * @description Boşsa Accept-Language, o da yoksa tr
              */
-            lang: "en";
+            lang?: ("tr" | "en") | null;
             /** As Of */
             as_of?: string | null;
             /**
@@ -1084,6 +2107,111 @@ export interface components {
              */
             checked_at: string;
         };
+        /** LinkStatus */
+        LinkStatus: {
+            /**
+             * Configured
+             * @description SHIP_URL ve EARTH_LINK_TOKEN ayarlı mı
+             */
+            configured: boolean;
+            /** Connected */
+            connected: boolean;
+            /** Ship Url */
+            ship_url: string | null;
+            /** Epoch */
+            epoch: string | null;
+            /**
+             * Last Contact
+             * @description Gemiden son olay veya heartbeat
+             */
+            last_contact: string | null;
+            /** Last Event At */
+            last_event_at: string | null;
+            /**
+             * Last Seq
+             * @description Dünya'nın işlediği son seq
+             */
+            last_seq: number;
+            /**
+             * Ship Last Seq
+             * @description Gemide yayınlanmış son seq (heartbeat)
+             */
+            ship_last_seq: number | null;
+            /**
+             * Pending On Ship
+             * @description Kuyruktaki olay: gemide gecikme nedeniyle bekleyen
+             */
+            pending_on_ship: number | null;
+            /**
+             * Behind
+             * @description Yayınlanmış ama Dünya'ya henüz ulaşmamış olay sayısı
+             */
+            behind: number | null;
+            /** Events Received */
+            events_received: number;
+            /** Snapshot At */
+            snapshot_at: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Delay Seconds */
+            delay_seconds: number | null;
+            /** Simulated Light Delay Minutes */
+            simulated_light_delay_minutes: number | null;
+            /**
+             * Ship Clock
+             * @description Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null.
+             */
+            ship_clock: string | null;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /**
+             * Id
+             * @description Astronot kimliği (A000 …) veya EARTH; büyük/küçük harf duyarsız
+             * @default
+             */
+            id: string;
+            /**
+             * Password
+             * @default
+             */
+            password: string;
+        };
+        /** LoginResponse */
+        LoginResponse: {
+            /**
+             * Token
+             * @description Authorization: Bearer <token>
+             */
+            token: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "astronaut" | "earth";
+            /**
+             * Subject
+             * @description A003 | EARTH
+             */
+            subject: string;
+            /**
+             * Astronaut Id
+             * @description Astronot girişinde kendi kimliği; token sadece bu astronota erişir
+             */
+            astronaut_id?: string | null;
+            /**
+             * Station
+             * @enum {string}
+             */
+            station: "ship" | "earth";
+            /** Home Path */
+            home_path: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /** MetricInfo */
         MetricInfo: {
             /**
@@ -1223,6 +2351,135 @@ export interface components {
             /** Total Days */
             total_days?: number | null;
         };
+        /** MonitorCrewMember */
+        MonitorCrewMember: {
+            astronaut: components["schemas"]["CrewInfo"];
+            /** Today */
+            today: number;
+            /** Mission Day */
+            mission_day: number;
+            /** Status */
+            status: number;
+            /** Status Label */
+            status_label: string;
+            /** Subtitle */
+            subtitle: string;
+            /** Score */
+            score: number;
+            /** Score Text */
+            score_text: string;
+            /** Ground */
+            ground: boolean;
+            /**
+             * Share
+             * @description Bugünün check-in'i (tamamlandıysa)
+             */
+            share: ("private" | "scores" | "full") | null;
+            /** Checkin Text */
+            checkin_text: string;
+            terminal: components["schemas"]["TerminalStatus"];
+        };
+        /** MonitorCrewResponse */
+        MonitorCrewResponse: {
+            link: components["schemas"]["LinkStatus"];
+            /** Astronauts */
+            astronauts: components["schemas"]["MonitorCrewMember"][];
+        };
+        /** MonitorDay */
+        MonitorDay: {
+            view: components["schemas"]["DayView"];
+            checkin: components["schemas"]["EarthCheckinView"];
+            /** Updated Seq */
+            updated_seq: number;
+            /** Received At */
+            received_at: string | null;
+        };
+        /**
+         * MonitorEvent
+         * @description Dünya'nın aldığı bir olay (earth.db). Gün içeriği taşımaz; ekran ilgili günü ayrıca okur.
+         */
+        MonitorEvent: {
+            /** Seq */
+            seq: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline";
+            /** Astronaut Id */
+            astronaut_id: string | null;
+            /**
+             * Day
+             * @description 1'den başlar
+             */
+            day: number | null;
+            /** Mission Day */
+            mission_day: number | null;
+            /**
+             * Ship Time
+             * Format: date-time
+             * @description Olayın gemide oluştuğu an
+             */
+            ship_time: string;
+            /**
+             * Publish Time
+             * Format: date-time
+             * @description ship_time + DOWNLINK_DELAY_SECONDS
+             */
+            publish_time: string;
+            /**
+             * Earth Received Time
+             * Format: date-time
+             * @description Dünya'nın aldığı an
+             */
+            earth_received_time: string;
+            /** Simulated Light Delay Minutes */
+            simulated_light_delay_minutes: number;
+            /**
+             * Share
+             * @description checkin.*: paylaşım seviyesi
+             */
+            share?: ("private" | "scores" | "full") | null;
+            /**
+             * Code
+             * @description action.done: self-care kodu (Dünya'da maskeliyse null)
+             */
+            code?: string | null;
+            /**
+             * Masked
+             * @description action.done: öğe Dünya'da maskeli
+             * @default false
+             */
+            masked: boolean;
+            /**
+             * Done
+             * @description action.done: işaretlendi / kaldırıldı
+             */
+            done?: boolean | null;
+            /**
+             * Last Seen
+             * @description terminal.*: terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen?: string | null;
+        };
+        /** MonitorEventsResponse */
+        MonitorEventsResponse: {
+            /**
+             * Events
+             * @description Yeniden eskiye (seq azalan)
+             */
+            events: components["schemas"]["MonitorEvent"][];
+            /**
+             * Total
+             * @description Filtreye uyan olay sayısı (limit'ten bağımsız)
+             */
+            total: number;
+            /**
+             * Last Seq
+             * @description Dünya'nın işlediği son seq
+             */
+            last_seq: number;
+        };
         /** OverallStatus */
         OverallStatus: {
             /**
@@ -1234,6 +2491,90 @@ export interface components {
             score?: number | null;
             /** Worst System */
             worst_system?: ("cardiovascular" | "musculoskeletal" | "immune" | "behavioral" | "sleep" | "radiation") | null;
+        };
+        /** PersonalCatalogResponse */
+        PersonalCatalogResponse: {
+            /**
+             * Statuses
+             * @description Durum etiketleri, indeks = seviye
+             */
+            statuses: string[];
+            /** Domains */
+            domains: components["schemas"]["CatalogDomain"][];
+            /** Areas */
+            areas: string[];
+            /** Indicators */
+            indicators: components["schemas"]["CatalogIndicator"][];
+            /** Solutions */
+            solutions: components["schemas"]["CatalogSolution"][];
+            /** Threshold Source */
+            threshold_source: string;
+            /** Verified */
+            verified: boolean;
+            /** Threshold Note */
+            threshold_note: string;
+        };
+        /** PersonalOverview */
+        PersonalOverview: {
+            astronaut: components["schemas"]["CrewInfo"];
+            /**
+             * Today
+             * @description Bugünün gün numarası (= n_days; son kayıt)
+             */
+            today: number;
+            /** N Days */
+            n_days: number;
+            /** Strip */
+            strip: components["schemas"]["StripDay"][];
+            /** Threshold Note */
+            threshold_note: string;
+        };
+        /** PresenceRequest */
+        PresenceRequest: {
+            /**
+             * Leaving
+             * @description true → terminal kapanıyor (çıkış): beklemeden çevrimdışı sayılır
+             * @default false
+             */
+            leaving: boolean;
+        };
+        /** PresenceResponse */
+        PresenceResponse: {
+            /**
+             * State
+             * @description Bu sinyalden sonra terminalin durumu
+             * @enum {string}
+             */
+            state: "online" | "offline";
+            /**
+             * Interval Seconds
+             * @description Sonraki sinyal bu kadar saniye sonra gönderilmeli (PRESENCE_HEARTBEAT_SECONDS)
+             */
+            interval_seconds: number;
+            /**
+             * Timeout Seconds
+             * @description Bu kadar saniye sinyal gelmezse terminal çevrimdışı sayılır (PRESENCE_TIMEOUT_SECONDS)
+             */
+            timeout_seconds: number;
+        };
+        /** PrincipalInfo */
+        PrincipalInfo: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "astronaut" | "earth";
+            /** Subject */
+            subject: string;
+            /** Astronaut Id */
+            astronaut_id: string | null;
+            /**
+             * Station
+             * @enum {string}
+             */
+            station: "ship" | "earth";
+            /** Read Only */
+            read_only: boolean;
         };
         /** RAGHealth */
         RAGHealth: {
@@ -1269,6 +2610,64 @@ export interface components {
             /** Source */
             source?: string | null;
         };
+        /** ReadingView */
+        ReadingView: {
+            /** Col */
+            col: string;
+            /** Domain */
+            domain: string;
+            /** Label */
+            label: string;
+            /** Unit */
+            unit: string;
+            /** Dec */
+            dec: number;
+            /**
+             * Value
+             * @description Değerlendirilen değer (3 günlük ortalama; exposure → o günün değeri). Gizliyse null
+             */
+            value: number | null;
+            /**
+             * Today
+             * @description O günün ham değeri. Gizliyse null
+             */
+            today: number | null;
+            /**
+             * Value Text
+             * @description Biçimli değer veya 'Paylaşılmadı'
+             */
+            value_text: string;
+            /**
+             * Healthy Text
+             * @description Sağlıklı aralık metni, örn. '7–9' / '7 to 9'
+             */
+            healthy_text: string;
+            /**
+             * Level
+             * @description 0 sağlıklı · 1 uyarı aralığında · 2 uyarı aralığının dışında. Gizliyse null
+             */
+            level: number | null;
+            /**
+             * Flag Text
+             * @description '' | 'Aralık dışında' | 'Çok dışında'
+             */
+            flag_text: string;
+            /**
+             * Averaged
+             * @description true → son 3 günün ortalaması, false → o günün değeri
+             */
+            averaged: boolean;
+            /**
+             * Private
+             * @description Ruh hali / stres: Dünya sadece paylaşılırsa görür
+             */
+            private: boolean;
+            /**
+             * Hidden
+             * @description Bu izleyiciden gizli (Dünya, paylaşılmadı)
+             */
+            hidden: boolean;
+        };
         /** ScorePenalty */
         ScorePenalty: {
             /** Event Id */
@@ -1284,6 +2683,25 @@ export interface components {
             severity: "info" | "warning" | "critical";
             /** Penalty */
             penalty: number;
+        };
+        /** ShareOption */
+        ShareOption: {
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "private" | "scores" | "full";
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Selected */
+            selected: boolean;
+            /**
+             * Enabled
+             * @description false → mevcut seviyeden düşük (paylaşım geri alınamaz)
+             */
+            enabled: boolean;
         };
         /** ShareRequest */
         ShareRequest: {
@@ -1301,6 +2719,71 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** StationInfo */
+        StationInfo: {
+            /**
+             * Role
+             * @description ship: gemi bilgisayarı | earth: Dünya üssü (salt okunur)
+             * @enum {string}
+             */
+            role: "ship" | "earth";
+            /** Version */
+            version: string;
+            /**
+             * Home Path
+             * @description Bu istasyonun ana ekranı: ship → /me, earth → /monitor (eski sentetik mod: /legacy)
+             */
+            home_path: string;
+            /**
+             * Read Only
+             * @description true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)
+             */
+            read_only: boolean;
+            /**
+             * Data Source
+             * @enum {string}
+             */
+            data_source: "astronaut_health" | "synthetic";
+            /**
+             * Legacy Enabled
+             * @description true → eski ekranlar (/legacy) ve eski API açık (gemi + synthetic)
+             */
+            legacy_enabled: boolean;
+        };
+        /** StripDay */
+        StripDay: {
+            /**
+             * Day
+             * @description 1'den başlar (30 günün kaçıncısı)
+             */
+            day: number;
+            /** Mission Day */
+            mission_day: number;
+            /**
+             * Status
+             * @description Gösterilen durum 0/1/2 (bu izleyiciye göre)
+             */
+            status: number;
+            /** Status Label */
+            status_label: string;
+            /**
+             * Score
+             * @description Kümülatif sağlık skoru
+             */
+            score: number;
+            /** Score Text */
+            score_text: string;
+            /**
+             * Daily Score
+             * @description O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da)
+             */
+            daily_score: number;
+            /**
+             * Label
+             * @description Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'
+             */
+            label: string;
         };
         /** SystemInfo */
         SystemInfo: {
@@ -1343,6 +2826,28 @@ export interface components {
              */
             penalties: components["schemas"]["ScorePenalty"][];
         };
+        /**
+         * TerminalStatus
+         * @description Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok).
+         */
+        TerminalStatus: {
+            /**
+             * State
+             * @description online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)
+             * @enum {string}
+             */
+            state: "online" | "offline" | "never" | "unknown";
+            /**
+             * Last Seen
+             * @description Terminalden gelen son sinyal (gemi saati)
+             */
+            last_seen: string | null;
+            /**
+             * Last Known
+             * @description Gemiden gelen son durum (bağlantı yokken de)
+             */
+            last_known: ("online" | "offline") | null;
+        };
         /** Thresholds */
         Thresholds: {
             /**
@@ -1358,6 +2863,43 @@ export interface components {
             source: string;
             warning?: components["schemas"]["ValueRange"] | null;
             critical?: components["schemas"]["ValueRange"] | null;
+        };
+        /** TodoItemView */
+        TodoItemView: {
+            /** Code */
+            code: string;
+            /** Title */
+            title: string;
+            /**
+             * Why
+             * @description Tetikleyen ölçümler; tetikleyici yoksa 'Veri setinin önerisi'
+             */
+            why: string;
+            /**
+             * Source
+             * @description dataset → veri seti önerdi, eşleşen ölçüm yok
+             * @enum {string}
+             */
+            source: "readings" | "dataset";
+            /**
+             * Triggers
+             * @description Görünür tetikleyici ölçüm kolonları
+             */
+            triggers: string[];
+            /** Steps */
+            steps: string[];
+            /** When */
+            when: string;
+            /** Contact Ground If */
+            contact_ground_if: string;
+            /** Basis */
+            basis: string;
+            /**
+             * Done
+             * @description Astronot 'yaptım' olarak işaretledi
+             * @default false
+             */
+            done: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -1480,6 +3022,162 @@ export interface components {
             message: string;
         };
         /**
+         * DownlinkPayload
+         * @description Olay yükü. Gün olayları ilgili günün filtrelenmiş güncel halini (`day`) taşır; terminal olayları
+         *     (`terminal.online` / `terminal.offline`) gün taşımaz, sadece varlığı (`presence`).
+         */
+        DownlinkPayload: {
+            /**
+             * @description Gün olayları: günün filtrelenmiş güncel hali (terminal.* olaylarında yok)
+             * @default null
+             */
+            day: components["schemas"]["EarthDay"] | null;
+            /**
+             * @description terminal.*: terminalin durumu ve son sinyali
+             * @default null
+             */
+            presence: components["schemas"]["EarthPresence"] | null;
+            /**
+             * Share
+             * @description checkin.*: paylaşım seviyesi
+             * @default null
+             */
+            share: ("private" | "scores" | "full") | null;
+            /**
+             * Code
+             * @description action.done: kod (Dünya'da maskeliyse null)
+             * @default null
+             */
+            code: string | null;
+            /**
+             * Masked
+             * @description action.done: öğe Dünya'da maskeli
+             * @default false
+             */
+            masked: boolean;
+            /**
+             * Done
+             * @description action.done: işaretlendi / kaldırıldı
+             * @default null
+             */
+            done: boolean | null;
+        };
+        /** DownlinkEvent */
+        DownlinkEvent: {
+            /**
+             * Seq
+             * @description Gemideki sıra numarası (artan, boşluksuz yayın)
+             */
+            seq: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline" | "link.heartbeat";
+            /**
+             * Epoch
+             * @description Gemi DB dönemi; değişirse Dünya baştan senkronize olur
+             */
+            epoch: string;
+            /**
+             * Astronaut Id
+             * @default null
+             */
+            astronaut_id: string | null;
+            /**
+             * Day Index
+             * @default null
+             */
+            day_index: number | null;
+            /**
+             * Ship Time
+             * Format: date-time
+             */
+            ship_time: string;
+            /**
+             * Publish Time
+             * Format: date-time
+             * @description ship_time + DOWNLINK_DELAY_SECONDS
+             */
+            publish_time: string;
+            /**
+             * Earth Received Time
+             * @description Dünya'nın aldığı an (Dünya doldurur)
+             * @default null
+             */
+            earth_received_time: string | null;
+            /**
+             * Simulated Light Delay Minutes
+             * @description Gerçek ışık gecikmesi etiketi (simülasyon, bekletmez)
+             */
+            simulated_light_delay_minutes: number;
+            payload: components["schemas"]["DownlinkPayload"];
+        };
+        /** DownlinkHeartbeat */
+        DownlinkHeartbeat: {
+            /** Epoch */
+            epoch: string;
+            /**
+             * Ship Time
+             * Format: date-time
+             */
+            ship_time: string;
+            /**
+             * Last Seq
+             * @description Yayınlanmış son seq
+             */
+            last_seq: number;
+            /**
+             * Pending
+             * @description Gecikme nedeniyle henüz yayınlanmamış olay sayısı
+             */
+            pending: number;
+            /** Delay Seconds */
+            delay_seconds: number;
+            /** Simulated Light Delay Minutes */
+            simulated_light_delay_minutes: number;
+        };
+        /** MonitorStreamEvent */
+        MonitorStreamEvent: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "event" | "link";
+            /**
+             * Type
+             * @default null
+             */
+            type: string | null;
+            /**
+             * Seq
+             * @default null
+             */
+            seq: number | null;
+            /**
+             * Astronaut Id
+             * @default null
+             */
+            astronaut_id: string | null;
+            /**
+             * Day Index
+             * @default null
+             */
+            day_index: number | null;
+            /**
+             * Ship Time
+             * @default null
+             */
+            ship_time: string | null;
+            /**
+             * Earth Received Time
+             * @default null
+             */
+            earth_received_time: string | null;
+            /** @default null */
+            link: components["schemas"]["LinkStatus"] | null;
+        };
+        /**
          * ChatEventName
          * @enum {string}
          */
@@ -1493,6 +3191,1609 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_station_api_station_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StationInfo"];
+                };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: {
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hint_api_auth_hint_get: {
+        parameters: {
+            query?: {
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthHint"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_auth_me_get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrincipalInfo"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_catalog_api_catalog_get: {
+        parameters: {
+            query?: {
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalCatalogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_overview_api_me_get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalOverview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_day_api_me_days__day__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                /** @description 1'den başlar; son gün = bugün */
+                day: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_personal__astronaut_id__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalOverview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    personal_day_api_personal__astronaut_id__days__day__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+                /** @description 1'den başlar; son gün = bugün */
+                day: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DayView"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_action_done_api_actions_done_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionDoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionDoneResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_presence_api_me_presence_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PresenceRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresenceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_today_api_checkin_get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinState"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_checkin_api_checkin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckinRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_day_api_checkin_days__day__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                /** @description 1'den başlar */
+                day: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinState"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_turn_api_checkin_turn_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckinTurnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinTurnResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_reset_api_checkin_reset_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinState"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_share_api_checkin_share_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckinShareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckinState"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_snapshot_api_downlink_snapshot_get: {
+        parameters: {
+            query?: {
+                /** @description Başlık gönderilemiyorsa EARTH_LINK_TOKEN */
+                link_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: {
+                /** @description Bearer <EARTH_LINK_TOKEN> */
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownlinkSnapshot"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_stream_api_downlink_stream_get: {
+        parameters: {
+            query?: {
+                /** @description Bu seq'ten SONRAKİ olaylar */
+                since?: number;
+                /** @description false → mevcut olayları verip kapan */
+                follow?: boolean;
+                /** @description Başlık gönderilemiyorsa EARTH_LINK_TOKEN */
+                link_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: {
+                /** @description Bearer <EARTH_LINK_TOKEN> */
+                authorization?: string | null;
+                "last-event-id"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_chat_api_chat_post: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description text/event-stream: meta, token, thinking, tool_call, tool_result, emergency, done, error */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/event-stream": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_link_status_api_link_status_get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_crew_api_monitor_crew_get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorCrewResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_overview_api_monitor_astronauts__astronaut_id__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalOverview"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_day_api_monitor_astronauts__astronaut_id__days__day__get: {
+        parameters: {
+            query?: {
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path: {
+                astronaut_id: string;
+                /** @description 1'den başlar */
+                day: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorDay"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_events_api_monitor_events_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Sadece bu astronotun olayları */
+                astronaut_id?: string | null;
+                /** @description Tekrarlanabilir: type=checkin.completed&type=checkin.shared */
+                type?: ("checkin.completed" | "checkin.shared" | "action.done" | "day.snapshot" | "terminal.online" | "terminal.offline")[] | null;
+                /** @description Sayfalama: bu seq'ten ÖNCEKİ olaylar */
+                before_seq?: number | null;
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonitorEventsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_monitor_api_stream_monitor_get: {
+        parameters: {
+            query?: {
+                /** @description false → anlık bağlantı durumunu verip kapan */
+                follow?: boolean;
+                /** @description Sadece SSE için: EventSource başlık gönderemez */
+                access_token?: string | null;
+                /** @description Cevap dili; boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_health_api_health_get: {
         parameters: {
             query?: never;
@@ -1706,7 +5007,8 @@ export interface operations {
             query?: {
                 /** @description Zaman kaydırıcısı: bu güne kadarki veriyle hesapla (YYYY-MM-DD). Boş → verideki son gün. */
                 as_of?: string | null;
-                lang?: "en";
+                /** @description Boşsa Accept-Language, o da yoksa tr */
+                lang?: ("tr" | "en") | null;
                 /** @description true → cache'i atla */
                 refresh?: boolean;
             };
@@ -1956,90 +5258,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_checkin_api_checkin_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckinRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CheckinResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_chat_api_chat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChatRequest"];
-            };
-        };
-        responses: {
-            /** @description text/event-stream. Her olay `event: <ad>` + `data: <json>` satırlarıdır. Olay adları ve payload şemaları: meta→SSEMeta, token→SSEToken, thinking→SSEThinking, tool_call→SSEToolCall, tool_result→SSEToolResult, emergency→EmergencyNotice, done→SSEDone, error→SSEError. Tarayıcıda EventSource POST desteklemez: @microsoft/fetch-event-source kullanın. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": string;
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

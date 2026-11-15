@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Backend geliştirme sunucusu + kendi auto-reload'umuz.
- *   node scripts/backend-dev.mjs [--host 127.0.0.1] [--port 8000]
+ *   node scripts/backend-dev.mjs [--host 127.0.0.1] [--port 8000] [--legacy]
+ *   --legacy → DATA_SOURCE=synthetic (eski ekranlar ve eski API, DB: data/processed/health.db)
  *
  * Neden uvicorn --reload değil: Windows'ta uvicorn reload ederken worker'a
  * os.kill(pid, CTRL_C_EVENT) gönderir; bu sinyal konsolu paylaşan TÜM süreçlere gider.
@@ -22,6 +23,7 @@ const opt = (name, def) => {
 };
 const HOST = opt("host", "127.0.0.1");
 const PORT = opt("port", "8000");
+const LEGACY = args.includes("--legacy");
 const WATCH_DIR = join(BACKEND, "app");
 const isWin = process.platform === "win32";
 const tag = "\x1b[2m[reload]\x1b[0m";
@@ -41,7 +43,7 @@ function start() {
   child = spawn(VENV_PYTHON, ["-m", "uvicorn", "app.main:app", "--host", HOST, "--port", PORT], {
     cwd: BACKEND,
     stdio: "inherit",
-    env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
+    env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1", ...(LEGACY ? { DATA_SOURCE: "synthetic" } : {}) },
   });
   child.on("exit", (code) => {
     child = null;
@@ -77,13 +79,19 @@ async function restart(file) {
   start();
 }
 
+// Art arda gelen olaylar (kaydetme, git checkout, biçimleyici) tek yeniden başlatmada birleşir
+const DEBOUNCE_MS = 500;
+// Bu klasörlerdeki değişiklikler yok sayılır (önbellek, sanal ortam, veritabanı, bağımlılıklar)
+const IGNORED = new Set(["__pycache__", ".venv", "data", "node_modules"]);
+const ignored = (file) => file.split(/[\\/]/).some((part) => IGNORED.has(part));
+
 let timer = null;
 let pending = "";
 watch(WATCH_DIR, { recursive: true }, (_event, filename) => {
-  if (!filename || !filename.endsWith(".py") || filename.includes("__pycache__")) return;
+  if (!filename || !filename.endsWith(".py") || ignored(filename)) return;
   pending = relative(BACKEND, join(WATCH_DIR, filename));
   clearTimeout(timer);
-  timer = setTimeout(() => void restart(pending), 300);
+  timer = setTimeout(() => void restart(pending), DEBOUNCE_MS);
 });
 
 for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {

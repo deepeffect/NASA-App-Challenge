@@ -124,8 +124,9 @@ export const api = {
     request<FeedbackResponse>("POST", `/api/alerts/${enc(eventId)}/feedback`, { body }),
   share: (eventId: string, shareWithGround: boolean) =>
     request<ShareResponse>("PUT", `/api/alerts/${enc(eventId)}/share`, { body: { share_with_ground: shareWithGround } }),
-  emergencyCheck: (text: string) =>
-    request<EmergencyCheckResponse>("POST", "/api/emergency/check", { body: { text } }),
+  /** Kural tabanlı acil tarama (LLM'siz) — legacy sohbet harici asistan API'sine gittiğinde. */
+  emergencyCheck: (text: string, lang?: Lang) =>
+    request<EmergencyCheckResponse>("POST", "/api/emergency/check", { body: { text, lang } }),
   checkin: (body: CheckinRequest) => request<CheckinResponse>("POST", "/api/checkin", { body }),
   ingest: (file: File, q: { adapter?: string; astronaut_id?: string } = {}) => {
     const form = new FormData();

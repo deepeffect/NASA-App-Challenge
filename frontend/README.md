@@ -3,6 +3,27 @@
 Vite + React 19 + TypeScript 5 · Tailwind 4 · Recharts 3 · TanStack Query 5 · react-router 7 ·
 `@microsoft/fetch-event-source` (POST + SSE).
 
+## İki istasyon, tek derleme
+
+Aynı derleme iki istasyonda servis edilir; her istasyon kendi ekranını açar, diğerinde "bu ekran bu
+istasyonda değil" gösterilir (`GET /api/station`):
+
+| Rota | İstasyon | Klasör | Durum |
+|---|---|---|---|
+| `/me` | gemi (astronot terminali) | `src/apps/personal/` | astronot ekranı: giriş, durum + şerit, yapılacaklar ("Yaptım"), günlük check-in + paylaşım, ayrıntılar, "Asistana sor" |
+| `/monitor` | Dünya üssü | `src/apps/monitor/` | Dünya ekranı; astronot detayı `/monitor/astronaut/:id` (ortak bileşenler, `audience="earth"`) |
+| `/legacy/*` | gemi + `DATA_SOURCE=synthetic` | `src/app/LegacyApp.tsx` + `src/features/` | eski ekranlar |
+
+- Kurallar ve görünüm için tek doğru kaynak: `reference/personal-artifact.html` (prototip).
+- İki ekranın ortak bileşenleri: `src/shared/health/` (aynı `DayView` / `StripDay` sözleşmesi; Dünya'da gizli alanlar `hidden: true`).
+  `StatusCard`, `TodoCard`, `ReadingsTable`, `ScoreChart`, `WhoRow`, `SelfCareDialog`; hepsi `audience: "astronaut" | "earth"` alır
+  ve bir `HealthRoot` içinde kullanılır (prototipin teması, açık/koyu, tek dar kolon, offline yazı tipleri). Kullanım örneği ve
+  ekranların kendi kartları için hazır sınıflar: `src/shared/health/index.ts`.
+- Yeni uçların istemcisi: `src/api/station.ts` (`stationApi.*`, `openMonitorStream`, `chat`). Dil her istekte
+  `lang` ile açıkça gider (`src/shared/i18n.tsx`, TR/EN), token sekme oturumunda saklanır.
+- Geliştirme: kökte `npm run dev:ship` (→ <http://localhost:5173/me>) ve `npm run dev:earth` (→ <http://localhost:5174/monitor>).
+- Üretim: kökte `npm run serve` arayüzü `VITE_API_BASE_URL` boş (aynı adres) derler; backend `dist/`'i kendisi servis eder.
+
 ## Kurulum
 
 ```powershell
@@ -12,7 +33,7 @@ Copy-Item .env.example .env     # bash: cp .env.example .env
 npm run dev                     # http://localhost:5173 (ağdan da erişilebilir: host=true)
 ```
 
-`.env`:
+`.env` (sadece geliştirme; `npm run serve` bunu boş derler, `dev:ship` / `dev:earth` kendileri ayarlar):
 
 ```ini
 VITE_API_BASE_URL=http://127.0.0.1:8000     # backend başka makinedeyse onun IP'si
@@ -53,9 +74,14 @@ SSE olay modelleri (`SSEToken`, `SSEToolCall`, `SSEDone`, …) de bu dosyaya ür
 ## Yapı
 
 ```
+reference/      personal-artifact.html — prototip (kurallar ve görünüm için tek doğru kaynak)
 src/
-  api/          client.ts (tipli fetch istemcisi) · sse.ts (sohbet akışı) · queries.ts (TanStack hook'ları) · types.ts (üretilen)
-  app/          App (router), Layout, AsOfContext (global as_of), TimeSlider, HealthIndicator
+  apps/
+    personal/   /me — astronot ekranı (gemi)
+    monitor/    /monitor — Dünya üssü ekranı
+  shared/       i18n (TR/EN), station (istasyon bilgisi, rol koruması), Placeholder, health/ (ortak bileşenler)
+  api/          station.ts (yeni uçlar) · client.ts (eski uçlar) · sse.ts (eski sohbet akışı) · queries.ts · types.ts (üretilen)
+  app/          App (kök router), LegacyApp (/legacy), Layout, AsOfContext (global as_of), TimeSlider, HealthIndicator
   components/
     ui/         Badges (durum/ciddiyet: renk + ikon + metin), primitives (Card, Button, QueryState), EmergencyBanner, icons, labels, format
     charts/     MetricChart (normal bandı, eşik, olay penceresi, changepoint, tahmin)
@@ -88,7 +114,7 @@ Kurallar:
 
 ## Görsel smoke testi (Playwright)
 
-Backend ve Vite açıkken (kökte `npm run dev`):
+Eski ekranları (`/legacy`) dener. Backend ve Vite açıkken (kökte `npm run dev`):
 
 ```powershell
 npx playwright install --only-shell chromium   # ilk sefer, sadece headless Chromium (~290 MB, kullanıcı dizinine)
@@ -101,7 +127,66 @@ grafiği · sohbet (mock cevap + acil durum bandı) · check-in formu · mürett
 yakalanmamış JS hataları ve 4xx/5xx istekler raporlanır; sorun varsa çıkış kodu 1.
 Örnek dedektörler ekranı için 8001 portunda geçici ikinci bir backend başlatılır (çalışan dev sunucusuna dokunmaz).
 
+Vite'a hazırlık kontrolü takılırsa ("Backend veya Vite açık değil" ama ikisi de açıksa) smoke'u backend'in
+servis ettiği derlemeye karşı çalıştırın: kökte `DATA_SOURCE=synthetic` ile `npm run serve -- ship`, sonra
+`SMOKE_WEB=http://127.0.0.1:8000 SMOKE_API=http://127.0.0.1:8000 DATA_SOURCE=synthetic npm run smoke`.
+
+### Dünya ekranı smoke testi
+
+Ön koşul yok; açık bir geliştirme sunucusu gerekmez:
+
+```powershell
+npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: screenshots/earth/
+```
+
+`scripts/smoke-earth.ts`: giriş ve genel görünüm (1440 / 1920, TR koyu, EN açık) · gemide mürettebatın ilk
+astronotu (DEMO_CREW[0]) check-in + "Sadece skorlar" → Dünya'da gecikme + 2 sn içinde, cevap metni yok · paylaşılmamış
+günde ruh hali / stres "Paylaşılmadı" (kartta ve detayın ölçümler tablosunda, "Uyku, ruh hali ve stres" alan skoru dahil)
+· gemi kapatılır (uyarı, son durum korunur) ve açılır (akış kaldığı seq'ten, boşluksuz) · astronot detayı: paylaşıma
+göre check-in paneli, iki çizgili grafik, önceki/sonraki · mürettebat kartında "Aktif" rozeti · akışta "Sadece mürettebat"
+· terminal varlığı: kartta "henüz bağlanmadı" → "çevrimiçi" (akışta olay, "Aktif" sayılmaz) → bağlantı kopunca
+"bilinmiyor (bağlantı yok)", "çevrimdışı" değil → bağlantı gelince "çevrimiçi" → sinyal kesilince "çevrimdışı · son
+görülme N sn önce". Ayrıca: detaydaki ortak bileşenlerin bütün hesaplanmış stili `.mon` dışındakiyle (yani /me'dekiyle)
+aynı olmalı ve `monitor.css`'teki her seçici `.mon` ile başlayıp ortak bileşenleri (`.ahc`) dışlamalı. Dünya ekranı
+gemiye hiç istek atmamalı.
+Test kendi kendine yeter: arayüzü derler, kendi geçici gemisini (port 8020) ve Dünya üssünü (port 8021, derlenmiş
+arayüzü de servis eder) boş, atılabilir veritabanlarıyla başlatır. Dünya gemiye test sürecindeki küçük bir TCP
+aktarıcısı (port 8022) üzerinden bağlanır: bağlantı, gemi ve terminal çalışırken koparılabilsin diye; "gemi kapanır /
+açılır" adımı da kendi geçici gemisini kullanır. `ship.db` / `earth.db`'ye, `frontend/dist`'e ve çalışan sunuculara
+(8000/8001, `npm run serve`) dokunmaz; her çalıştırmada baştan tekrarlanır (check-in süresi her seferinde ölçülür).
+Geçici sunucularda terminal süreleri kısadır (sinyal 1 sn, zaman aşımı 4 sn). Derleme ve veritabanları sistemin
+geçici klasöründe durur ve sonunda silinir; depoda ekran görüntüleri ve logları (`screenshots/earth/*-smoke*.log`)
+kalır. Port doluysa: `npm run stop -- --port 8020` (8021 için de aynı).
+
+### Astronot ekranı smoke testi
+
+Ön koşul yok; açık bir geliştirme sunucusu gerekmez:
+
+```powershell
+npm run smoke -- personal   # kökte veya frontend/ içinde; görüntüler: screenshots/personal/
+```
+
+`scripts/smoke-personal.ts`: giriş kartı (kimlik aralığı API'den, EARTH yok) · A000 ile giriş · şeritte gün seçimi
+(geçmiş gün salt okunur) · "Yaptım" · bugünün check-in'i sonuna kadar · "Sadece skorlar" ile paylaşım → geminin
+downlink akışındaki `checkin.shared` olayında ruh hali / stres skoru var, cevap metni yok · ayrıntılar ve öz bakım
+penceresi · "Asistana sor" (mock) + acil belirti kutusu (sohbet downlink'e girmez) · check-in'de acil belirti →
+"Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış · hesap değiştirme
+(önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz: cevaplar bilerek geciktirilir) · oturum
+biterse (401) giriş kartına dönüş · terminal varlığı: girişte downlink'e `terminal.online` (yük sadece kimlik, durum,
+son görülme), sayfa açıkken çevrimdışı olmaz, "Çıkış" → beklemeden, sekme kapanınca zaman aşımıyla `terminal.offline`;
+gizlilik notundaki terminal satırı (TR/EN). Geçici gemide terminal süreleri kısadır (sinyal 1 sn, zaman aşımı 4 sn).
+Ana durumlar 390 ve
+1440 px'te, açık ve koyu temada kaydedilir. Ortak bileşenlerin ölçüleri prototipin CSS değerleriyle karşılaştırılır
+(başka bir stil dosyası `/me`'ye sızarsa yakalanır).
+Test kendi kendine yeter: arayüzü derler ve kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı);
+backend hem API'yi hem derlenmiş arayüzü servis eder — gerçek kurulumdaki (`npm run serve`) gibi. `ship.db`'ye,
+`frontend/dist`'e ve çalışan sunuculara dokunmaz; her çalıştırmada baştan tekrarlanabilir. Derleme ve veritabanı
+depoda değil sistemin geçici klasöründe durur (depo klasörünü izleyen OneDrive / Google Drive gibi bir eşitleme
+istemcisi SQLite dosyalarına takılmasın diye); sonunda geçici backend'le birlikte silinir. Depoda sadece ekran
+görüntüleri ve geçici geminin logu (`screenshots/personal/ship-smoke*.log`) kalır.
+Port doluysa `npm run stop -- --port 8010` ya da `SMOKE_PERSONAL_PORT`.
+
 ## URL'de zaman
 
-Seçili gün URL'de tutulur: `/astronauts/AST-02?as_of=2026-10-22`. Link paylaşılabilir; geri/ileri çalışır;
+Seçili gün URL'de tutulur: `/legacy/astronauts/AST-02?as_of=2026-10-22`. Link paylaşılabilir; geri/ileri çalışır;
 sayfalar arası gezinmede gün korunur. "Canlıya dön" parametreyi kaldırır.

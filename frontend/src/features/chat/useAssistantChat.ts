@@ -8,7 +8,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import { api, type EmergencyNotice } from "../../api/client";
+import { currentLang } from "../../shared/i18n";
 import { type AssistantSelection, assistantApi, type DailyReportResponse, reportQuery, type Sources } from "../assistant/api";
+import { tx } from "../assistant/texts";
 
 export interface AssistantTurn {
   role: "user" | "assistant";
@@ -17,7 +19,7 @@ export interface AssistantTurn {
   error?: string;
 }
 
-const REPORT_INTENT = /\bdaily\s+report\b/i;
+const REPORT_INTENT = /\bdaily\s+report\b|g[üu]nl[üu]k\s+rapor/i;
 
 export function useAssistantChat(sel: AssistantSelection) {
   const qc = useQueryClient();
@@ -37,7 +39,7 @@ export function useAssistantChat(sel: AssistantSelection) {
 
       // Kural tabanlı acil tarama: asistan cevabını beklemez, asistan kapalıyken de çalışır
       api
-        .emergencyCheck(message)
+        .emergencyCheck(message, currentLang())
         .then((r) => {
           if (r.notice) setEmergency(r.notice);
         })
@@ -53,7 +55,7 @@ export function useAssistantChat(sel: AssistantSelection) {
           const content = r.answer ?? r.report ?? "";
           reply = content
             ? { role: "assistant", content, sources: r.sources }
-            : { role: "assistant", content: "", error: "The assistant returned an empty answer." };
+            : { role: "assistant", content: "", error: tx("emptyAnswer") };
         }
         if (!ctrl.signal.aborted) setTurns((t) => [...t, reply]);
       } catch (e) {
@@ -75,7 +77,7 @@ export function useAssistantChat(sel: AssistantSelection) {
     ctrlRef.current.abort();
     ctrlRef.current = null;
     setPending(false);
-    setTurns((t) => [...t, { role: "assistant", content: "", error: "Stopped." }]);
+    setTurns((t) => [...t, { role: "assistant", content: "", error: tx("stopped") }]);
   }, []);
 
   const reset = useCallback(() => {

@@ -1,5 +1,5 @@
 /**
- * Sohbet paneli → asistan API'si (bkz. useAssistantChat). Cevaptaki [D1]/[K1] etiketleri kaynak rozetidir.
+ * Legacy sohbet paneli → asistan API'si (bkz. useAssistantChat). Cevaptaki [D1]/[K1] etiketleri kaynak rozetidir.
  * Acil belirti bandı bizim backend'in kural tabanlı taramasından gelir (LLM'den bağımsız).
  */
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -8,11 +8,14 @@ import { EmergencyBanner } from "../../components/ui/EmergencyBanner";
 import { SendIcon, StopIcon } from "../../components/ui/icons";
 import { Button, Card } from "../../components/ui/primitives";
 import { type AssistantSelection, AssistantDataTag, SelectionPending, SourceList, SourceText, Waiting } from "../assistant";
+import { useAssistantTexts } from "../assistant/texts";
 import { useAssistantChat } from "./useAssistantChat";
 
+// Asistan API'si İngilizce çalışır; öneri soruları bu yüzden İngilizce
 const SUGGESTIONS = ["What is my daily report?", "How is my sleep?", "Why is my heart rate high?"];
 
 export function ChatPanel({ sel }: { sel: AssistantSelection }) {
+  const t = useAssistantTexts();
   const chat = useAssistantChat(sel);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
@@ -30,13 +33,13 @@ export function ChatPanel({ sel }: { sel: AssistantSelection }) {
 
   return (
     <Card
-      title="Health assistant"
+      title={t("chatTitle")}
       actions={
         <div className="flex items-center gap-2">
           <AssistantDataTag />
           {chat.turns.length > 0 && (
             <Button variant="ghost" onClick={chat.reset} className="text-sm">
-              Clear
+              {t("clear")}
             </Button>
           )}
         </div>
@@ -46,10 +49,12 @@ export function ChatPanel({ sel }: { sel: AssistantSelection }) {
         {chat.emergency && <EmergencyBanner notice={chat.emergency} onDismiss={chat.dismissEmergency} />}
 
         <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1" aria-live="polite">
-          {!sel.ready && <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />}
+          {!sel.ready && (
+            <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />
+          )}
           {sel.ready && chat.turns.length === 0 && !chat.pending && (
             <div className="space-y-2">
-              <p className="text-slate-400">Ask about your health data. The assistant does not diagnose; it provides decision support.</p>
+              <p className="text-slate-400">{t("chatIntro")}</p>
               <div className="flex flex-wrap gap-2">
                 {SUGGESTIONS.map((s) => (
                   <Button key={s} variant="secondary" className="text-sm" onClick={() => void chat.send(s)}>
@@ -59,26 +64,30 @@ export function ChatPanel({ sel }: { sel: AssistantSelection }) {
               </div>
             </div>
           )}
-          {chat.turns.map((t, i) =>
-            t.role === "user" ? (
+          {chat.turns.map((turn, i) =>
+            turn.role === "user" ? (
               <div key={i} className="ml-8 whitespace-pre-wrap rounded-2xl bg-sky-900/40 px-4 py-2">
-                {t.content}
+                {turn.content}
               </div>
             ) : (
               <div key={i} className="mr-4 space-y-2">
-                {t.content && (
+                {turn.content && (
                   <div className="space-y-2 rounded-2xl bg-slate-800/70 px-4 py-2">
-                    <SourceText text={t.content} sources={t.sources} />
-                    <SourceList text={t.content} sources={t.sources} />
+                    <SourceText text={turn.content} sources={turn.sources} />
+                    <SourceList text={turn.content} sources={turn.sources} />
                   </div>
                 )}
-                {t.error && <p className="text-sm text-red-300">Error: {t.error}</p>}
+                {turn.error && (
+                  <p className="text-sm text-red-300">
+                    {t("error")}: {turn.error}
+                  </p>
+                )}
               </div>
             ),
           )}
           {chat.pending && (
             <div className="mr-4 rounded-2xl bg-slate-800/40 px-4 py-3">
-              <Waiting label="Assistant is thinking…" />
+              <Waiting label={t("thinking")} />
             </div>
           )}
           <div ref={endRef} />
@@ -86,22 +95,22 @@ export function ChatPanel({ sel }: { sel: AssistantSelection }) {
 
         <form onSubmit={submit} className="flex gap-2">
           <label htmlFor="chat-input" className="sr-only">
-            Message
+            {t("messageLabel")}
           </label>
           <input
             id="chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message…"
+            placeholder={t("placeholder")}
             className="min-h-11 flex-1 rounded-xl border border-slate-600 bg-slate-950 px-3"
             disabled={chat.pending || !sel.ready}
           />
           {chat.pending ? (
-            <Button variant="danger" onClick={chat.stop} aria-label="Stop">
+            <Button variant="danger" onClick={chat.stop} aria-label={t("stop")}>
               <StopIcon />
             </Button>
           ) : (
-            <Button variant="primary" type="submit" aria-label="Send" disabled={!input.trim() || !sel.ready}>
+            <Button variant="primary" type="submit" aria-label={t("send")} disabled={!input.trim() || !sel.ready}>
               <SendIcon />
             </Button>
           )}

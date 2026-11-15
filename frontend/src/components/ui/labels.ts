@@ -2,49 +2,49 @@
 import type { EventSource, HealthSystem, Severity, StatusColor } from "../../api/client";
 
 export const SYSTEM_LABELS: Record<HealthSystem, string> = {
-  cardiovascular: "Cardiovascular",
-  musculoskeletal: "Musculoskeletal",
-  immune: "Immune",
-  behavioral: "Behavioral health",
-  sleep: "Sleep",
-  radiation: "Radiation",
+  cardiovascular: "Kardiyovasküler",
+  musculoskeletal: "Kas-iskelet",
+  immune: "Bağışıklık",
+  behavioral: "Davranışsal sağlık",
+  sleep: "Uyku",
+  radiation: "Radyasyon",
 };
 
 export const STATUS_LABELS: Record<StatusColor, string> = {
   green: "Normal",
-  yellow: "Attention",
-  red: "Critical",
-  unknown: "No data",
+  yellow: "Dikkat",
+  red: "Kritik",
+  unknown: "Veri yok",
 };
 
 export const SEVERITY_LABELS: Record<Severity, string> = {
-  critical: "Critical",
-  warning: "Warning",
-  info: "Info",
+  critical: "Kritik",
+  warning: "Uyarı",
+  info: "Bilgi",
 };
 
-/** source → "Rule / Model detection / Forecast" */
+/** source → "Kural / Model tespiti / Tahmin" */
 export const SOURCE_LABELS: Record<EventSource, string> = {
-  rule: "Rule",
-  anomaly: "Model detection",
-  changepoint: "Model detection",
-  forecast: "Forecast",
+  rule: "Kural",
+  anomaly: "Model tespiti",
+  changepoint: "Model tespiti",
+  forecast: "Tahmin",
 };
 
-/** score → güven etiketi (<0.5 low · 0.5–0.75 medium · >0.75 high) */
-export function confidenceLabel(score: number): "low" | "medium" | "high" {
-  if (score < 0.5) return "low";
-  if (score <= 0.75) return "medium";
-  return "high";
+/** score → güven etiketi (<0,5 düşük · 0,5–0,75 orta · >0,75 yüksek) */
+export function confidenceLabel(score: number): "düşük" | "orta" | "yüksek" {
+  if (score < 0.5) return "düşük";
+  if (score <= 0.75) return "orta";
+  return "yüksek";
 }
 
 export const TOOL_LABELS: Record<string, string> = {
-  get_metric: "Metric data",
-  get_health_summary: "Health summary",
-  get_alerts: "Alerts",
-  get_radiation_dose: "Radiation dose",
-  get_checkins: "Check-ins",
-  search_docs: "Document search",
+  get_metric: "Metrik verisi",
+  get_health_summary: "Sağlık özeti",
+  get_alerts: "Uyarılar",
+  get_radiation_dose: "Radyasyon dozu",
+  get_checkins: "Check-in'ler",
+  search_docs: "Belge araması",
 };
 
 export const SEVERITY_COLORS: Record<Severity, string> = {

@@ -29,11 +29,11 @@ export function MetricPanel({
 
   return (
     <Card
-      title="Metric chart"
+      title="Metrik grafiği"
       actions={
         <div className="flex flex-wrap gap-2">
           <select
-            aria-label="Select metric"
+            aria-label="Metrik seç"
             value={metric}
             onChange={(e) => onMetricChange(e.target.value)}
             className="min-h-11 rounded-xl border border-slate-600 bg-slate-800 px-3"
@@ -52,14 +52,14 @@ export function MetricPanel({
             ))}
           </select>
           <select
-            aria-label="Day range"
+            aria-label="Gün aralığı"
             value={days}
             onChange={(e) => onDaysChange(Number(e.target.value))}
             className="min-h-11 rounded-xl border border-slate-600 bg-slate-800 px-3"
           >
             {DAY_OPTIONS.map((d) => (
               <option key={d} value={d}>
-                Last {d} days
+                Son {d} gün
               </option>
             ))}
           </select>
@@ -68,14 +68,14 @@ export function MetricPanel({
     >
       {latest && latest.value != null && (
         <p className="mb-3 text-lg">
-          Latest: <strong>{fmtValue(latest.value, latest.unit, 2)}</strong>
+          Son değer: <strong>{fmtValue(latest.value, latest.unit, 2)}</strong>
           {latest.baseline_mean != null && (
-            <span className="text-slate-400"> · personal normal {fmtValue(latest.baseline_mean, latest.unit, 2)}</span>
+            <span className="text-slate-400"> · kişisel normal {fmtValue(latest.baseline_mean, latest.unit, 2)}</span>
           )}
-          {latest.z7 != null && <span className="text-slate-400"> · 7-day z {fmtNum(latest.z7, 1)}</span>}
+          {latest.z7 != null && <span className="text-slate-400"> · 7 gün z {fmtNum(latest.z7, 1)}</span>}
         </p>
       )}
-      <QueryState query={series} loadingLabel="Loading series…">
+      <QueryState query={series} loadingLabel="Seri yükleniyor…">
         {(data) => <MetricChart series={data} />}
       </QueryState>
     </Card>

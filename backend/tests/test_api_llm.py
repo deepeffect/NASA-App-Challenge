@@ -8,6 +8,7 @@ from app.llm.types import LLMUnavailable
 from app.models.schemas import BriefingResponse, ExplainResponse
 from app.services import llm_service
 
+from .conftest import SYNTH
 from .llm.fakes import ScriptedClient
 from .test_contract import parse_sse
 
@@ -32,7 +33,7 @@ def broken_llm(monkeypatch):
 # --------------------------------------------------------------------------- explain
 def test_explain_mock_end_to_end_and_cache(client, critical_event):
     eid = critical_event["event_id"]
-    r = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "en", "refresh": True}).json())
+    r = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "tr", "refresh": True}).json())
     assert r.generated_by == "mock" and r.cached is False
     assert r.explanation.escalate_to_ground is True, "critical → yer ekibine bildir (deterministik)"
     assert r.explanation.recommended_actions and r.explanation.likely_factors
@@ -40,14 +41,10 @@ def test_explain_mock_end_to_end_and_cache(client, critical_event):
     assert r.ungrounded_numbers == [], "şablon sadece bağlamdaki sayıları kullanır"
     factors = r.explanation.likely_factors
     assert len(factors) == len(set(factors)), "aynı metrik için sapma + trend olayı tekrar etken üretmemeli"
-    assert "alert" in r.explanation.summary.lower()
-    again = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={}).json())
+    again = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "tr"}).json())
     assert again.cached is True and again.explanation == r.explanation
-
-
-def test_turkish_lang_is_rejected(client, critical_event):
-    r = client.post(f"/api/alerts/{critical_event['event_id']}/explain", json={"lang": "tr"})
-    assert r.status_code == 422, "tek desteklenen dil İngilizce"
+    en = ExplainResponse.model_validate(client.post(f"/api/alerts/{eid}/explain", json={"lang": "en"}).json())
+    assert en.cached is False and "alert" in en.explanation.summary.lower()
 
 
 def test_explain_falls_back_to_template_on_invalid_output(client, critical_event, broken_llm):
@@ -81,7 +78,7 @@ def test_explain_valid_llm_output_with_ungrounded_number(client, critical_event,
 def test_briefing_mock(client):
     b = BriefingResponse.model_validate(client.get("/api/astronauts/AST-02/briefing", params={"refresh": True}).json())
     assert b.generated_by == "mock" and b.briefing.escalate_to_ground is True
-    assert b.briefing.concerns and b.briefing.summary.startswith("Mission day 180")
+    assert b.briefing.concerns and b.briefing.summary.startswith(f"Görev günü {SYNTH.days}")
     assert all(e.severity == "info" for e in b.info_events)
     assert b.ungrounded_numbers == []
     ok = BriefingResponse.model_validate(client.get("/api/astronauts/AST-01/briefing", params={"lang": "en"}).json())
@@ -104,7 +101,7 @@ def _chat(client, text, aid="AST-02", **extra):
 
 
 def test_chat_mock_uses_real_tools_and_is_grounded(client):
-    events = _chat(client, "How has my sleep been lately?")
+    events = _chat(client, "Son günlerde uykum nasıl?")
     names = [n for n, _ in events]
     assert names[0] == "meta" and names[-1] == "done"
     calls = [p for n, p in events if n == "tool_call"]
@@ -115,7 +112,7 @@ def test_chat_mock_uses_real_tools_and_is_grounded(client):
     assert done["finish_reason"] == "stop" and done["tool_calls"] >= 1 and not done["degraded"]
     assert done["ungrounded_numbers"] == []
     text = "".join(p["text"] for n, p in events if n == "token")
-    assert "Sleep duration" in text and text.strip() == done["message"]
+    assert "Uyku süresi" in text and text.strip() == done["message"]
 
 
 def test_chat_english(client):
@@ -124,7 +121,7 @@ def test_chat_english(client):
 
 
 def test_chat_multiple_tools(client):
-    events = _chat(client, "How am I today? What about my radiation dose?")
+    events = _chat(client, "Bugün nasılım? Radyasyon dozum ne durumda?")
     called = {p["name"] for n, p in events if n == "tool_call"}
     assert called == {"get_health_summary", "get_radiation_dose"}
     assert events[-1][1]["ungrounded_numbers"] == []
@@ -132,20 +129,20 @@ def test_chat_multiple_tools(client):
 
 def test_chat_emergency_comes_first_even_if_llm_down(client, broken_llm):
     broken_llm([LLMUnavailable("connection refused")])
-    events = _chat(client, "I feel pressure in my chest and shortness of breath")
+    events = _chat(client, "Göğsümde baskı var ve nefes darlığı çekiyorum")
     names = [n for n, _ in events]
     assert names[:2] == ["meta", "emergency"]
     assert set(events[1][1]["matched_symptoms"]) == {"chest_pain", "breathing"}
     assert "error" in names and dict(events)["error"]["code"] == "llm_unavailable"
     done = events[-1][1]
     assert done["degraded"] is True and done["finish_reason"] == "llm_unavailable"
-    assert "Possible emergency" in done["message"] and "offline" in done["message"]
+    assert "Olası acil belirti" in done["message"] and "çevrim dışı" in done["message"]
 
 
 def test_chat_system_prompt_rules(client, broken_llm):
-    fake = broken_llm(["Hello."])
-    _chat(client, "hi", as_of="2026-10-10")
+    fake = broken_llm(["Merhaba."])
+    _chat(client, "selam", as_of="2026-10-10")
     system = fake.requests[0]["messages"][0]["content"]
-    for rule in ("do not diagnose", "Numbers come only from tools", "uncertainty", "emergency protocol", "Always reply in English"):
+    for rule in ("do not diagnose", "Numbers come only from tools", "uncertainty", "emergency protocol", "user's language"):
         assert rule.lower() in system.lower(), rule
     assert "AST-02" in system and "2026-10-10" in system and "mission day 145" in system

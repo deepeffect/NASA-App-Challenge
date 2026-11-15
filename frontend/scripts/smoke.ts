@@ -3,6 +3,11 @@
  *
  * Ön koşul: backend (127.0.0.1:8000) ve Vite (localhost:5173) açık → kökte `npm run dev`.
  * Çalıştır:  npm run smoke   (kökte veya frontend/ içinde)
+ * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts (ön koşul yok:
+ * arayüzü derler, kendi geçici gemi ve Dünya backend'lerini başlatır; argümansız çalıştırınca :8000 yeni mimarideyse
+ * o seçilir).
+ * Astronot ekranı (/me) için: `npm run smoke -- personal` → scripts/smoke-personal.ts (ön koşul yok: arayüzü
+ * derler ve kendi geçici gemi backend'ini başlatır; geliştirme veritabanına ve çalışan sunuculara dokunmaz).
  *
  * Ekranları sırayla açar, tam sayfa ekran görüntülerini frontend/screenshots/ altına yazar ve
  * konsol hatalarını, yakalanmamış JS hatalarını, başarısız/4xx-5xx istekleri raporlar.
@@ -122,33 +127,33 @@ const screens: Screen[] = [
   {
     name: "1. Mürettebat ekranı",
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/`);
-      await page.getByRole("heading", { name: "Crew" }).waitFor();
-      await page.getByRole("link", { name: /^Open .* details$/ }).nth(3).waitFor();
+      await page.goto(`${WEB}/legacy`);
+      await page.getByRole("heading", { name: "Mürettebat" }).waitFor();
+      await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
       await settle(page);
-      await expectText(page, issues, "Critical", "AST-02 kırmızı durum metni");
+      await expectText(page, issues, "Kritik", "AST-02 kırmızı durum metni");
       await shot("01-crew.png");
     },
   },
   {
     name: "2. AST-02 detayı — 150. gün (yeşil)",
     run: async ({ page, issues, shot, dates }) => {
-      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d150}`);
-      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
+      await page.goto(`${WEB}/legacy/astronauts/AST-02?as_of=${dates.d150}`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
-      await expectText(page, issues, /Mission day 150\b/, "başlıkta görev günü 150");
-      await expectText(page, issues, "No active alerts", "olay listesi boş");
+      await expectText(page, issues, /Görev günü 150\b/, "başlıkta görev günü 150");
+      await expectText(page, issues, "Aktif uyarı yok", "olay listesi boş");
       await shot("02-ast02-day150.png");
     },
   },
   {
     name: "3. AST-02 detayı — 157. gün (kırmızı), olay kartı açık",
     run: async ({ page, issues, shot, dates }) => {
-      await page.goto(`${WEB}/astronauts/AST-02?as_of=${dates.d157}`);
-      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
+      await page.goto(`${WEB}/legacy/astronauts/AST-02?as_of=${dates.d157}`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
-      await page.getByRole("button", { name: "Why?" }).first().click();
-      await expectText(page, issues, "Possible factors", "açıklama paneli");
+      await page.getByRole("button", { name: "Neden?" }).first().click();
+      await expectText(page, issues, "Olası etkenler", "açıklama paneli");
       await settle(page);
       await shot("03-ast02-day157.png");
       await shot("03b-event-card.png", "article");
@@ -158,14 +163,14 @@ const screens: Screen[] = [
     name: "4. Metrik grafiği — örnek dedektörler açık",
     ml: true,
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/astronauts/AST-02`);
-      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
-      await page.getByLabel("Select metric").selectOption("sleep_duration");
-      await page.getByLabel("Day range").selectOption("60");
+      await page.goto(`${WEB}/legacy/astronauts/AST-02`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
+      await page.getByLabel("Metrik seç").selectOption("sleep_duration");
+      await page.getByLabel("Gün aralığı").selectOption("60");
       await settle(page);
       const panel = page.locator("#metric-panel");
       await panel.scrollIntoViewIfNeeded();
-      for (const [txt, what] of [["Personal normal", "baseline bandı"], ["Change point", "changepoint"], ["Forecast", "forecast"]]) {
+      for (const [txt, what] of [["Kişisel normal", "baseline bandı"], ["Değişim noktası", "changepoint"], ["Tahmin", "forecast"]]) {
         if (!(await panel.getByText(txt).count())) issues.push({ kind: "check", text: `grafikte katman yok: ${what}` });
       }
       await shot("04-metric-chart.png", "#metric-panel");
@@ -176,34 +181,36 @@ const screens: Screen[] = [
     // Sohbet harici asistan API'sine gider (VITE_ASSISTANT_API_URL); yerel model 10–30 sn sürebilir.
     name: "5. Sohbet paneli (asistan API)",
     run: async ({ page, issues, shot }) => {
-      await page.goto(`${WEB}/astronauts/AST-02`);
-      await page.getByRole("heading", { name: "Astronaut 2" }).waitFor();
+      await page.goto(`${WEB}/legacy/astronauts/AST-02`);
+      await page.getByRole("heading", { name: "Astronot 2" }).waitFor();
       await settle(page);
       const input = page.locator("#chat-input");
+      // Önce asistan seçimi (POST /select) bitmeli; sonra giriş kutusu açılır
+      await page.locator("#chat-input:enabled").waitFor({ timeout: ASSISTANT_TIMEOUT });
       await input.fill("How is my sleep?");
       await input.press("Enter");
       await page.locator("#chat-input:enabled").waitFor({ timeout: ASSISTANT_TIMEOUT });
-      const chatErr = page.locator("section", { has: page.getByRole("heading", { name: "Health assistant" }) }).getByText(/^Error:/);
+      const chatErr = page.locator("section", { has: page.getByRole("heading", { name: "Sağlık asistanı" }) }).getByText(/^Hata:/);
       if (await chatErr.count()) issues.push({ kind: "check", text: `asistan cevabı yok: ${await chatErr.first().innerText()}` });
-      const chat = page.locator("section", { has: page.getByRole("heading", { name: "Health assistant" }) });
+      const chat = page.locator("section", { has: page.getByRole("heading", { name: "Sağlık asistanı" }) });
       await chat.scrollIntoViewIfNeeded();
-      await shot("05-chat.png", 'section:has(h2:text("Health assistant"))');
-      await input.fill("I feel pressure in my chest and shortness of breath");
+      await shot("05-chat.png", 'section:has(h2:text("Sağlık asistanı"))');
+      await input.fill("Göğsümde baskı var, nefes darlığı çekiyorum");
       await input.press("Enter");
-      await expectText(page, issues, /EMERGENCY:/, "acil durum bandı");
+      await expectText(page, issues, /ACİL:/, "acil durum bandı (kural tabanlı, asistanı beklemez)");
       await page.locator("#chat-input:enabled").waitFor({ timeout: ASSISTANT_TIMEOUT });
-      await shot("05b-chat-emergency.png", 'section:has(h2:text("Health assistant"))');
+      await shot("05b-chat-emergency.png", 'section:has(h2:text("Sağlık asistanı"))');
     },
   },
   {
     name: "6. Check-in formu",
     run: async ({ page, shot }) => {
-      await page.goto(`${WEB}/checkin/AST-01`);
-      await page.getByRole("heading", { name: "Daily check-in" }).waitFor();
+      await page.goto(`${WEB}/legacy/checkin/AST-01`);
+      await page.getByRole("heading", { name: "Günlük check-in" }).waitFor();
       await settle(page);
-      await page.getByRole("group", { name: "Your mood" }).getByText("4", { exact: true }).click();
-      await page.getByRole("group", { name: "Your stress level" }).getByText("2", { exact: true }).click();
-      await page.locator("#note").fill("We stayed on the experiment plan today, a bit tired.");
+      await page.getByRole("group", { name: "Ruh halin" }).getByText("4", { exact: true }).click();
+      await page.getByRole("group", { name: "Stres düzeyin" }).getByText("2", { exact: true }).click();
+      await page.locator("#note").fill("Bugün deney planına uyduk, biraz yorgunum.");
       await shot("06-checkin.png");
     },
   },
@@ -211,8 +218,8 @@ const screens: Screen[] = [
     name: "7. Mürettebat — telefon genişliği (390 px)",
     viewport: { width: 390, height: 844 },
     run: async ({ page, shot }) => {
-      await page.goto(`${WEB}/`);
-      await page.getByRole("link", { name: /^Open .* details$/ }).nth(3).waitFor();
+      await page.goto(`${WEB}/legacy`);
+      await page.getByRole("link", { name: /detayına git/ }).nth(3).waitFor();
       await settle(page);
       await shot("07-crew-mobile.png");
     },
@@ -220,7 +227,25 @@ const screens: Screen[] = [
 ];
 
 // ----------------------------------------------------------------------------- ana akış
+/**
+ * `npm run smoke -- earth` → Dünya ekranı; `-- personal` → astronot ekranı (/me); `-- legacy` → eski ekranlar.
+ * Argümansız: :8000 eski moddaysa legacy, yeni mimarideyse earth.
+ */
+async function pickSuite(): Promise<"legacy" | "earth" | "personal"> {
+  const arg = (process.argv[2] ?? process.env.SMOKE_SUITE ?? "").toLowerCase();
+  if (arg === "earth" || arg === "legacy" || arg === "personal") return arg;
+  try {
+    const st = (await (await fetch(`${API}/api/station`, { signal: AbortSignal.timeout(3000) })).json()) as { legacy_enabled?: boolean };
+    return st.legacy_enabled === false ? "earth" : "legacy";
+  } catch {
+    return "legacy";
+  }
+}
+
 async function main(): Promise<number> {
+  const suite = await pickSuite();
+  if (suite === "earth") return (await import("./smoke-earth.ts")).runEarthSmoke();
+  if (suite === "personal") return (await import("./smoke-personal.ts")).runPersonalSmoke();
   if (!(await reachable(`${API}/api/health`)) || !(await reachable(WEB))) {
     console.error(`${c.red}Backend (${API}) veya Vite (${WEB}) açık değil. Önce kökte: npm run dev${c.off}`);
     return 2;

@@ -35,7 +35,7 @@ export function TimeSlider() {
       <label htmlFor="as-of" className="flex items-center gap-2 whitespace-nowrap text-slate-300">
         <ClockIcon />
         <span>
-          Mission day <strong className="text-slate-100">{shownDay}</strong> / {total} · {fmtDate(shownDate)}
+          Görev günü <strong className="text-slate-100">{shownDay}</strong> / {total} · {fmtDate(shownDate)}
         </span>
       </label>
       <input
@@ -46,13 +46,13 @@ export function TimeSlider() {
         value={shownDay}
         onChange={(e) => setDraft(Number(e.target.value))}
         className="h-2 min-w-48 flex-1 cursor-pointer"
-        aria-valuetext={`Mission day ${shownDay}, ${fmtDate(shownDate)}`}
+        aria-valuetext={`Görev günü ${shownDay}, ${fmtDate(shownDate)}`}
       />
       {live ? (
-        <span className="rounded-full border border-emerald-600/70 px-3 py-1 text-sm text-emerald-300">● Live</span>
+        <span className="rounded-full border border-emerald-600/70 px-3 py-1 text-sm text-emerald-300">● Canlı</span>
       ) : (
         <Button variant="secondary" onClick={() => { setDraft(null); setAsOf(null); }}>
-          Back to live
+          Canlıya dön
         </Button>
       )}
     </div>

@@ -28,6 +28,7 @@ from app.config import get_settings
 from app.llm import templates
 from app.llm.agent import Agent
 from app.llm.client import LLMClient, get_llm_client
+from app.llm.lang import detect_lang
 from app.llm.prompts import prompt
 from app.llm.structured import generate_structured
 from app.llm.tools import ToolContext, ToolRegistry
@@ -52,7 +53,7 @@ from app.safety.grounding import find_ungrounded_numbers
 from app.services.data import checkins as list_checkins
 from app.services.data import get_data_service
 
-LANG_NAME = {"en": "English"}
+LANG_NAME = {"tr": "Turkish", "en": "English"}
 # Bağlam/şablon mantığı değişince artır → eski LLM cache kayıtları kullanılmaz
 CACHE_VERSION = 2
 HISTORY_LIMIT = 12
@@ -136,7 +137,7 @@ def build_explain_context(session: Session, event: HealthEvent, as_of: date | No
                 if np.isfinite(v):
                     recent.append({"date": str(d.date()), "value": _r(v, nd)})
         metrics[c.metric] = {
-            "display_name": m.label(), "display_name_en": m.label(), "unit": m.unit, "decimals": m.decimals,
+            "display_name": m.label("tr"), "display_name_en": m.label("en"), "unit": m.unit, "decimals": m.decimals,
             "bad_direction": m.bad_direction, "normal_range": m.normal_range.model_dump() if m.normal_range else None,
             "thresholds": m.thresholds.model_dump() if m.thresholds else None, "threshold_verified": m.threshold_verified,
             "personal_baseline": ({"mean": _r(sf.baseline.mean, nd), "std": _r(sf.baseline.std, nd + 1),
@@ -156,11 +157,11 @@ def build_explain_context(session: Session, event: HealthEvent, as_of: date | No
     for r in related:  # şablon ve model ilgili metriklerin okunur adlarına ihtiyaç duyar
         m = cat.get(r["metric"])
         if m:
-            metrics.setdefault(r["metric"], {"display_name": m.label(), "display_name_en": m.label(),
+            metrics.setdefault(r["metric"], {"display_name": m.label("tr"), "display_name_en": m.label("en"),
                                              "unit": m.unit, "decimals": m.decimals, "related_only": True})
     notes = [c.note for c in list_checkins(session, event.astronaut_id, 5, as_of).checkins if c.note][:3]
     system = next((s for s in a.systems if s.system == event.system), None)
-    docs = _search_docs(" ".join([event.title, *[cat.metrics[m].label() for m in own_metrics if m in cat.metrics]]))
+    docs = _search_docs(" ".join([event.title, *[cat.metrics[m].label("en") for m in own_metrics if m in cat.metrics]]))
     ctx = {
         "astronaut": a.info.model_dump(),
         "as_of": str(res.as_of),
@@ -220,7 +221,7 @@ def build_briefing_context(session: Session, aid: str, as_of: date | None) -> tu
         sf, m = a.features.get(metric), cat.get(metric)
         last = sf.last_valid() if sf else None
         if m and last is not None:
-            out_of_normal.append({"metric": metric, "display_name": m.label(), "display_name_en": m.label(),
+            out_of_normal.append({"metric": metric, "display_name": m.label("tr"), "display_name_en": m.label("en"),
                                   "unit": m.unit, "rolling_7d_mean": _r(last["roll7"], m.decimals + 1),
                                   "personal_baseline": _r(sf.baseline.mean, m.decimals + 1) if sf.baseline else None})
     brief = lambda e: {"event_id": e.event_id, "severity": e.severity, "system": e.system, "title": e.title,  # noqa: E731
@@ -248,7 +249,7 @@ async def briefing(session: Session, aid: str, as_of: date | None, lang: str, re
         resp = BriefingResponse.model_validate(hit)
         return resp.model_copy(update={"cached": True, "info_events": info_events})
 
-    messages = [{"role": "user", "content": prompt("briefing", lang_name=LANG_NAME.get(lang, "English"),
+    messages = [{"role": "user", "content": prompt("briefing", lang_name=LANG_NAME.get(lang, "Turkish"),
                                                    context_json=json.dumps(ctx, ensure_ascii=False, indent=1))}]
     value: DailyBriefing | None = None
     model_name = None
@@ -296,7 +297,7 @@ async def chat_stream(session: Session, req: ChatRequest) -> AsyncIterator[tuple
     s = get_settings()
     client = get_client()
     last = req.messages[-1].content
-    lang = req.lang or "en"
+    lang = req.lang or detect_lang(last)
     res = get_data_service().analysis(session, req.as_of)
     yield "meta", SSEMeta(request_id=uuid.uuid4().hex[:12], provider=client.provider, model=client.model,
                           tool_mode=("native" if getattr(client, "native_tools", True) and s.llm_tool_mode != "prompt" else "prompt"),

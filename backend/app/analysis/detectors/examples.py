@@ -73,13 +73,13 @@ class ExampleChangepointDetector:
                 system=m.system,
                 severity="warning",
                 score=round(min(0.95, best_stat / 15), 3),
-                title=f"{m.label()}: persistent level shift (example detector)",
+                title=f"{m.label()}: kalıcı seviye değişimi (örnek dedektör)",
                 window=DateWindow(start=cp, end=ctx.as_of),
                 contributors=[contributor(sf, m, after, z)],
                 changepoint_date=cp,
                 status="active",
                 detector=self.name,
-                description=f"Change point on {cp:%Y-%m-%d}; mean since then is z = {fmt(z, 1)} from baseline.",
+                description=f"Değişim noktası {cp:%d.%m.%Y}; sonrasındaki ortalama baseline'dan z = {fmt(z, 1)} uzakta.",
             ))
         return out
 
@@ -129,12 +129,12 @@ class ExampleForecastDetector:
                 system=m.system,
                 severity="warning",
                 score=0.55,
-                title=f"{m.label()}: may keep worsening over the next {self.HORIZON} days (example forecast)",
+                title=f"{m.label()}: önümüzdeki {self.HORIZON} günde kötüleşme sürebilir (örnek tahmin)",
                 window=DateWindow(start=y.index[0].date(), end=ctx.as_of),
                 contributors=[contributor(sf, m, pts[-1].value, z_end)],
                 forecast=Forecast(metric=metric, method="linear", horizon_days=self.HORIZON, points=pts),
                 status="active",
                 detector=self.name,
-                description=f"If the linear trend of the last {self.FIT_DAYS} days continues, forecast z on day {self.HORIZON} = {fmt(z_end, 1)}.",
+                description=f"Son {self.FIT_DAYS} günün doğrusal eğilimi sürerse {self.HORIZON}. gün tahmini z = {fmt(z_end, 1)}.",
             ))
         return out

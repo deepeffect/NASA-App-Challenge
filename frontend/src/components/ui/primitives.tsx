@@ -48,7 +48,7 @@ export function Button({
   );
 }
 
-export function Spinner({ label = "Loading…" }: { label?: string }) {
+export function Spinner({ label = "Yükleniyor…" }: { label?: string }) {
   return (
     <div className="flex items-center gap-3 text-slate-400" role="status" data-spinner="">
       <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-sky-400" />
@@ -63,10 +63,10 @@ export function ErrorBox({ error }: { error: unknown }) {
       ? `${error.status}: ${error.message}`
       : error instanceof Error
         ? error.message
-        : "Unknown error";
+        : "Bilinmeyen hata";
   return (
     <div role="alert" className="rounded-xl border border-red-500/60 bg-red-950/50 p-4 text-red-200">
-      Could not load data — {msg}
+      Veri alınamadı — {msg}
     </div>
   );
 }

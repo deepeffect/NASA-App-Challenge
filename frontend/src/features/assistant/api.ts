@@ -8,6 +8,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { tx } from "./texts";
+
 export const ASSISTANT_BASE: string = (import.meta.env.VITE_ASSISTANT_API_URL ?? "http://192.168.1.12:8000").replace(
   /\/+$/,
   "",
@@ -88,14 +90,14 @@ async function call<T>(
     const data: unknown = await res.json().catch(() => null);
     if (!res.ok) {
       const detail = data && typeof data === "object" && "detail" in data ? String((data as { detail: unknown }).detail) : "";
-      throw new AssistantError(`Assistant API error ${res.status}${detail ? `: ${detail}` : ""}`);
+      throw new AssistantError(`${tx("apiError", { status: res.status })}${detail ? `: ${detail}` : ""}`);
     }
     return data as T;
   } catch (e) {
     if (e instanceof AssistantError) throw e;
     if (opts.signal?.aborted) throw e; // kullanıcı durdurdu
-    if (ctrl.signal.aborted) throw new AssistantError(`The assistant did not answer within ${Math.round(timeoutMs / 1000)} s.`);
-    throw new AssistantError(`Assistant API unreachable (${ASSISTANT_BASE}).`);
+    if (ctrl.signal.aborted) throw new AssistantError(tx("timeout", { s: Math.round(timeoutMs / 1000) }));
+    throw new AssistantError(tx("unreachable", { url: ASSISTANT_BASE }));
   } finally {
     clearTimeout(timer);
     opts.signal?.removeEventListener("abort", onAbort);
@@ -169,7 +171,7 @@ export function useAssistantSelection(astronautId: string, day: number | null | 
   if (!hasData) {
     return {
       ...base, key: want, ready: false, status: "no_data",
-      message: `The assistant has no data for ${astronautId}${day != null ? ` on mission day ${day}` : ""}.`,
+      message: tx("noData", { id: astronautId, day: day != null ? tx("dayPart", { day }) : "" }),
     };
   }
   if (done?.key !== want) return { ...base, key: want, ready: false, status: "syncing" };

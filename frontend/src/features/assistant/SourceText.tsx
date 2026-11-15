@@ -8,6 +8,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { SourceRef, Sources } from "./api";
+import { tx, useAssistantTexts } from "./texts";
 
 const TAG = /\[([DK]\d+)\]/g;
 const SRC_PREFIX = "#src:";
@@ -15,12 +16,13 @@ const SRC_PREFIX = "#src:";
 function sourceTitle(s: SourceRef): string {
   if (s.type === "data") {
     const val = s.value !== undefined && s.value !== null ? `${s.value}${s.unit ? ` ${s.unit}` : ""}` : "";
-    return [s.label, val, s.status ? `status ${s.status}` : ""].filter(Boolean).join(" · ");
+    return [s.label, val, s.status ? tx("status", { s: s.status }) : ""].filter(Boolean).join(" · ");
   }
   return `${s.label}${s.text ? ` — ${s.text}` : ""}`;
 }
 
 export function SourceBadge({ tag, source }: { tag: string; source?: SourceRef }) {
+  const t = useAssistantTexts();
   if (!source) return <span className="text-slate-500">[{tag}]</span>;
   const isData = source.type === "data";
   return (
@@ -31,7 +33,7 @@ export function SourceBadge({ tag, source }: { tag: string; source?: SourceRef }
       }`}
     >
       <span aria-hidden="true">{isData ? "📊" : "📄"}</span>
-      <span className="sr-only">{isData ? "Data source:" : "Document source:"}</span>
+      <span className="sr-only">{isData ? t("srData") : t("srDoc")}</span>
       {source.label}
     </span>
   );
@@ -86,12 +88,13 @@ export function SourceText({ text, sources }: { text: string; sources?: Sources 
 
 /** Metinde geçen kaynakların açılır listesi (belge alıntısının tamamını okumak için). */
 export function SourceList({ text, sources }: { text: string; sources?: Sources }) {
+  const t = useAssistantTexts();
   if (!sources) return null;
   const used = [...new Set([...text.matchAll(TAG)].map((m) => m[1]))].filter((t) => sources[t]);
   if (used.length === 0) return null;
   return (
     <details className="text-sm text-slate-400">
-      <summary className="cursor-pointer select-none">Sources ({used.length})</summary>
+      <summary className="cursor-pointer select-none">{t("sources", { n: used.length })}</summary>
       <ul className="mt-2 space-y-2">
         {used.map((t) => (
           <li key={t} className="flex flex-col gap-1">

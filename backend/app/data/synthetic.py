@@ -25,26 +25,26 @@ import numpy as np
 import pandas as pd
 
 ASTRONAUTS: list[tuple[str, str, str]] = [
-    ("AST-01", "Astronaut 1", "Commander"),
-    ("AST-02", "Astronaut 2", "Flight engineer"),
-    ("AST-03", "Astronaut 3", "Crew medical officer (CMO)"),
-    ("AST-04", "Astronaut 4", "Mission specialist"),
+    ("AST-01", "Astronot 1", "Komutan"),
+    ("AST-02", "Astronot 2", "Uçuş mühendisi"),
+    ("AST-03", "Astronot 3", "Mürettebat sağlık sorumlusu (CMO)"),
+    ("AST-04", "Astronot 4", "Görev uzmanı"),
 ]
 
 NORMAL_NOTES = [
-    "Productive day.",
-    "We stayed on the experiment plan.",
-    "A bit tired but fine.",
-    "Exercise went well.",
-    "Messaged with family, good spirits.",
-    "Sleep was a little broken because of noise.",
+    "Verimli bir gündü.",
+    "Deney planına uyduk.",
+    "Biraz yorgunum ama iyiyim.",
+    "Egzersiz iyi geçti.",
+    "Aileyle mesajlaştım, moralim iyi.",
+    "Gürültü yüzünden uykum biraz bölündü.",
 ]
 SCENARIO_NOTES = [
-    "Can't fall asleep, too much on my mind.",
-    "Woke up several times during the night.",
-    "Workload went up a lot, I can't keep up.",
-    "Feeling tense.",
-    "Having trouble focusing.",
+    "Uyuyamıyorum, kafam çok dolu.",
+    "Gece birkaç kez uyandım.",
+    "İş yükü çok arttı, yetişemiyorum.",
+    "Kendimi gergin hissediyorum.",
+    "Odaklanmakta zorlanıyorum.",
 ]
 
 # metrik → (ölçüm saati, birim, kaynak)
@@ -109,7 +109,7 @@ def generate(cfg: SyntheticConfig | None = None) -> SyntheticData:
     astronauts: list[dict] = []
 
     for i in range(cfg.n_astronauts):
-        aid, name, role = ASTRONAUTS[i] if i < len(ASTRONAUTS) else (f"AST-{i + 1:02d}", f"Astronaut {i + 1}", "Mission specialist")
+        aid, name, role = ASTRONAUTS[i] if i < len(ASTRONAUTS) else (f"AST-{i + 1:02d}", f"Astronot {i + 1}", "Görev uzmanı")
         astronauts.append({"id": aid, "name": name, "role": role})
         sc = aid == cfg.scenario_astronaut
 

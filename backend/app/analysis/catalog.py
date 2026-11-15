@@ -53,14 +53,14 @@ class MetricDef(BaseModel):
         t = self.thresholds
         return bool(t and (t.warning or t.critical))
 
-    def label(self, lang: str = "en") -> str:
-        return self.display_name.get("en") or self.name
+    def label(self, lang: str = "tr") -> str:
+        return self.display_name.get(lang) or self.display_name.get("tr") or self.name
 
     def to_info(self) -> MetricInfo:
         return MetricInfo(
             name=self.name,
-            display_name=self.label(),
-            display_name_en=self.label(),
+            display_name=self.label("tr"),
+            display_name_en=self.label("en"),
             unit=self.unit,
             system=self.system,
             frequency=self.frequency,
@@ -98,14 +98,14 @@ class Catalog(BaseModel):
     def metrics_for_system(self, system: str) -> list[MetricDef]:
         return [m for m in self.metrics.values() if m.system == system]
 
-    def system_label(self, system: str, lang: str = "en") -> str:
-        return self.systems.get(system, {}).get("en", system)
+    def system_label(self, system: str, lang: str = "tr") -> str:
+        return self.systems.get(system, {}).get(lang, system)
 
     def system_infos(self) -> list[SystemInfo]:
         return [
             SystemInfo(
                 id=sid,  # type: ignore[arg-type]
-                display_name=labels.get("en", sid),
+                display_name=labels.get("tr", sid),
                 display_name_en=labels.get("en", sid),
                 metrics=[m.name for m in self.metrics_for_system(sid)],
             )

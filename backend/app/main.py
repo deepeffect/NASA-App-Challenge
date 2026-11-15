@@ -4,6 +4,9 @@
 Dokümantasyon:                 http://localhost:8000/docs
 """
 
+import asyncio
+import contextlib
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,10 +14,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app import __version__
-from app.api import router as api_router
-from app.config import get_settings
-from app.db import init_db
+from app.api import router as legacy_router
+from app.api.assistant import router as assistant_router
+from app.api.auth import router as auth_router
+from app.api.checkin import router as checkin_router
+from app.api.downlink import router as downlink_router
+from app.api.monitor import router as monitor_router
+from app.api.personal import public_router as catalog_router
+from app.api.personal import router as personal_router
+from app.api.station import router as station_router
+from app.config import Settings, get_settings
+from app.db import engine_for, init_db
 from app.models.schemas import SSE_MODELS
+from app.errors import ApiError, api_error_handler, http_error_handler, validation_error_handler
+from app.i18n import lang_middleware
+from app.station import earth_read_only_middleware
 
 DESCRIPTION = """
 Astronot sağlık izleme sistemi — tamamen offline/gemide çalışır.
@@ -24,13 +38,42 @@ anomali, skor ve uyarıları üretir; LLM sadece yorumlar. Kural tabanlı uyarı
 kapalıyken de çalışır.
 
 Zaman kaydırıcısı: çoğu GET endpoint'i `as_of=YYYY-MM-DD` alır.
+
+**İstasyonlar:** aynı kod iki rolde çalışır (`STATION_ROLE`). `ship` (gemi) bütün veriyi tutar ve
+astronot ekranını (`/me`) servis eder; `earth` (Dünya üssü) gemiden downlink ile gelen paylaşılabilir
+veriyi tutar, `/monitor` ekranını servis eder ve salt okunurdur.
 """
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
-    init_db()
+async def lifespan(app: FastAPI):
+    settings: Settings = app.state.settings
+    init_db(app.state.engine)
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        from app.personal.store import ensure_dataset_loaded
+
+        ensure_dataset_loaded(app.state.engine, settings)
+    task: asyncio.Task | None = None
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        from app.downlink.presence import sweep_forever
+
+        # Terminal varlığı: sinyali kesilen terminaller → terminal.offline
+        task = asyncio.create_task(sweep_forever(app.state.engine, settings), name="terminal-presence")
+    if settings.station_role == "earth":
+        from app.downlink.broadcast import Broadcaster
+        from app.downlink.receiver import Receiver
+
+        app.state.broadcaster = Broadcaster()
+        if settings.ship_url and settings.earth_link_token:
+            app.state.receiver = Receiver(app.state.engine, settings, app.state.broadcaster)
+            task = asyncio.create_task(app.state.receiver.run_forever(), name="downlink-receiver")
+        else:
+            logging.getLogger(__name__).warning("Dünya üssü: SHIP_URL veya EARTH_LINK_TOKEN yok, downlink alıcısı çalışmıyor")
     yield
+    if task is not None:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await task
 
 
 def _custom_openapi(app: FastAPI):
@@ -41,7 +84,10 @@ def _custom_openapi(app: FastAPI):
             return app.openapi_schema
         schema = get_openapi(title=app.title, version=app.version, description=app.description, routes=app.routes)
         comps = schema.setdefault("components", {}).setdefault("schemas", {})
-        for model in SSE_MODELS.values():
+        from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, MonitorStreamEvent
+
+        # SSE ile akan ama route şemasında görünmeyen modeller (frontend tip üretimi için)
+        for model in [*SSE_MODELS.values(), DownlinkEvent, DownlinkHeartbeat, MonitorStreamEvent]:
             js = model.model_json_schema(ref_template="#/components/schemas/{model}", mode="serialization")
             for name, sub in js.pop("$defs", {}).items():
                 comps.setdefault(name, sub)
@@ -53,14 +99,21 @@ def _custom_openapi(app: FastAPI):
     return openapi
 
 
-def create_app() -> FastAPI:
-    settings = get_settings()
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Rolüne göre uygulama. `settings` verilmezse ortamdan okunur (testte iki rol aynı süreçte kurulur)."""
+    settings = settings or get_settings()
     app = FastAPI(
         title="Astronaut Health Monitor API",
         version=__version__,
         description=DESCRIPTION,
         lifespan=lifespan,
     )
+    app.state.settings = settings
+    app.state.engine = engine_for(settings.database_url_resolved)
+    if settings.station_role == "earth":
+        # CORS'tan önce eklenir → CORS en dışta kalır, 403 cevabı da CORS başlığı taşır
+        app.middleware("http")(earth_read_only_middleware)
+    app.middleware("http")(lang_middleware)  # istek dili (?lang= > Accept-Language > tr)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -68,7 +121,48 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(api_router, prefix="/api")
+    app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+    if not settings.legacy_enabled:  # eski ekranlar FastAPI'nin varsayılan hata biçimini bekler
+        from fastapi.exceptions import RequestValidationError
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
+        app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
+    app.include_router(station_router, prefix="/api")
+    app.include_router(auth_router, prefix="/api")
+    app.include_router(catalog_router, prefix="/api")
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        app.include_router(personal_router, prefix="/api")
+        app.include_router(checkin_router, prefix="/api")
+        app.include_router(downlink_router, prefix="/api")
+        app.include_router(assistant_router, prefix="/api")
+    if settings.station_role == "earth":
+        app.include_router(monitor_router, prefix="/api")
+    if settings.legacy_enabled:
+        # Eski ekranların API'si ve eski analiz motoru: sadece gemi + DATA_SOURCE=synthetic
+        app.include_router(legacy_router, prefix="/api")
+    from app.web import mount_frontend
+
+    mount_frontend(app, settings)  # en sonda: /api önceliklidir
+    app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
+    return app
+
+
+def create_docs_app() -> FastAPI:
+    """Dokümantasyon için: iki istasyonun ve eski modun BÜTÜN uçları tek şemada (docs/openapi.json).
+
+    Çalışma zamanında her istasyon bunların sadece kendi rolüne ait olanlarını açar (API.md).
+    Eski /api/chat yerine aynı yoldaki yeni sohbet belgelenir (ChatRequest ikisini de kapsar).
+    """
+    from fastapi import APIRouter
+
+    app = FastAPI(title="Astronaut Health Monitor API", version=__version__, description=DESCRIPTION)
+    for r in (station_router, auth_router, catalog_router, personal_router, checkin_router, downlink_router,
+              assistant_router, monitor_router):
+        app.include_router(r, prefix="/api")
+    legacy = APIRouter()
+    legacy.routes.extend(r for r in legacy_router.routes if getattr(r, "path", "") != "/chat")
+    app.include_router(legacy, prefix="/api")
     app.openapi = _custom_openapi(app)  # type: ignore[method-assign]
     return app
 

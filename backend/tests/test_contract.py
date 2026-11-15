@@ -90,7 +90,7 @@ def test_alerts_filters_and_actions(client):
         return
     ev = all_.events[0]
     assert client.get(f"/api/alerts/{ev.event_id}").status_code == 200
-    r = client.post(f"/api/alerts/{ev.event_id}/explain", json={"lang": "en"})
+    r = client.post(f"/api/alerts/{ev.event_id}/explain", json={"lang": "tr"})
     assert r.status_code == 200
     ExplainResponse.model_validate(r.json())
     r = client.post(f"/api/alerts/{ev.event_id}/feedback", json={"verdict": "false_alarm"})
@@ -102,19 +102,19 @@ def test_alerts_filters_and_actions(client):
 
 def test_briefing(client):
     aid = client.get("/api/crew").json()["astronauts"][1]["id"]
-    r = client.get(f"/api/astronauts/{aid}/briefing", params={"lang": "en"})
+    r = client.get(f"/api/astronauts/{aid}/briefing", params={"lang": "tr"})
     assert r.status_code == 200
     BriefingResponse.model_validate(r.json())
 
 
 def test_checkin_and_emergency(client):
     aid = client.get("/api/crew").json()["astronauts"][0]["id"]
-    body = {"astronaut_id": aid, "mood": 4, "stress": 2, "sleep_quality": 4, "note": "Feeling fine", "share_with_ground": True}
+    body = {"astronaut_id": aid, "mood": 4, "stress": 2, "sleep_quality": 4, "note": "İyiyim", "share_with_ground": True}
     r = client.post("/api/checkin", json=body)
     assert r.status_code == 201
     assert CheckinResponse.model_validate(r.json()).emergency is None
 
-    body["note"] = "Had CHEST PAIN since this morning"
+    body["note"] = "Sabahtan beri GÖĞÜS AĞRISI var"
     em = CheckinResponse.model_validate(client.post("/api/checkin", json=body).json()).emergency
     assert em is not None and "chest_pain" in em.matched_symptoms
 
@@ -125,7 +125,7 @@ def test_checkin_and_emergency(client):
 
 def test_chat_sse(client):
     aid = client.get("/api/crew").json()["astronauts"][1]["id"]
-    body = {"astronaut_id": aid, "messages": [{"role": "user", "content": "How am I today?"}]}
+    body = {"astronaut_id": aid, "messages": [{"role": "user", "content": "Bugün nasılım?"}]}
     with client.stream("POST", "/api/chat", json=body) as r:
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("text/event-stream")

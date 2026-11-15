@@ -97,7 +97,7 @@ def normalize_frame(
                 reject(sel, "unit_mismatch", "unit")
             else:
                 df.loc[sel, "value"] = converted
-                warnings.append(f"{metric}: converted {int(sel.sum())} rows {src_unit} → {target}")
+                warnings.append(f"{metric}: {int(sel.sum())} satır {src_unit} → {target} dönüştürüldü")
         units = units.mask(m_mask, target)
     df["unit"] = units
 
@@ -108,7 +108,7 @@ def normalize_frame(
     rejected = int(reason.notna().sum())
     valid = df[reason.isna()][LONG_COLUMNS].copy()
     for name, count in unknown_counts.items():
-        warnings.append(f"Skipped unknown metric: {name} ({count} rows)")
+        warnings.append(f"Bilinmeyen metrik atlandı: {name} ({count} satır)")
     return valid, errors, {str(k): int(v) for k, v in unknown_counts.items()}, warnings, rejected
 
 
@@ -126,18 +126,18 @@ def ingest_bytes(
     if adapter_name:
         adapter = ADAPTERS.get(adapter_name)
         if adapter is None:
-            raise IngestError(f"Unknown adapter: {adapter_name}. Options: {', '.join(ADAPTERS)}")
+            raise IngestError(f"Bilinmeyen adaptör: {adapter_name}. Seçenekler: {', '.join(ADAPTERS)}")
     else:
         adapter = detect_adapter(filename, decode(content[:4096]), ctx)
         if adapter is None:
             raise IngestError(
-                "Unrecognized file format. Expected long CSV (metric,value columns), wide CSV (metric columns) "
-                "or a JSON list of records; or force one with ?adapter=."
+                "Dosya formatı tanınmadı. Long CSV (metric,value kolonları), wide CSV (metrik kolonları) "
+                "veya JSON kayıt listesi bekleniyor; ya da ?adapter= ile zorlayın."
             )
     try:
         raw = adapter.parse(content, ctx)
     except Exception as e:  # noqa: BLE001
-        raise IngestError(f"{adapter.name} could not read the file: {e}") from e
+        raise IngestError(f"{adapter.name} dosyayı okuyamadı: {e}") from e
 
     valid, errors, unknown, warnings, rejected = normalize_frame(raw, catalog, default_astronaut, ctx.default_source)
 
@@ -146,7 +146,7 @@ def ingest_bytes(
     session.flush()
     created = ensure_astronauts(session, valid["astronaut_id"].unique())
     if created:
-        warnings.append(f"Created new astronaut record(s): {', '.join(created)}")
+        warnings.append(f"Yeni astronot kaydı oluşturuldu: {', '.join(created)}")
     inserted = insert_measurements(session, valid, batch.id)
     duplicates = len(valid) - inserted
 

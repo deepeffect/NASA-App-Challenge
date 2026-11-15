@@ -74,11 +74,11 @@ class SystemPatternDetector:
                 system=system,  # type: ignore[arg-type]
                 severity=sev,
                 score=round(float(np.mean([x.score for x in members])), 3),
-                title=f"{ctx.catalog.system_label(system)}: {len(contribs)} metrics worsening at the same time",
+                title=f"{ctx.catalog.system_label(system)}: {len(contribs)} göstergede eşzamanlı olumsuz değişim",
                 window=DateWindow(start=start, end=ctx.as_of),
                 contributors=contribs,
                 status="active",
                 detector=self.name,
-                description="Metrics worsening in the same period: " + ", ".join(labels) + ".",
+                description="Aynı dönemde kötüleşen göstergeler: " + ", ".join(labels) + ".",
             ))
         return out

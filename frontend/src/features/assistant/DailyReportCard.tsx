@@ -2,25 +2,27 @@
 import { Button, Card, ErrorBox } from "../../components/ui/primitives";
 import { type AssistantSelection, useDailyReport, useRegenerateReport } from "./api";
 import { SourceList, SourceText } from "./SourceText";
+import { useAssistantTexts } from "./texts";
 import { SelectionPending, Waiting } from "./Waiting";
 
 export function DailyReportCard({ sel }: { sel: AssistantSelection }) {
+  const t = useAssistantTexts();
   const q = useDailyReport(sel);
   const regen = useRegenerateReport(sel);
   const busy = !sel.ready || q.isFetching || regen.isPending;
   return (
     <Card
-      title="Daily report"
+      title={t("reportTitle")}
       actions={
         <Button variant="ghost" className="text-sm" onClick={() => regen.mutate()} disabled={busy}>
-          Regenerate
+          {t("regenerate")}
         </Button>
       }
     >
       {!sel.ready ? (
         <SelectionPending status={sel.status} message={sel.message} astronautId={sel.astronautId} day={sel.day} />
       ) : q.isPending || regen.isPending ? (
-        <Waiting label="Preparing report…" />
+        <Waiting label={t("preparingReport")} />
       ) : q.isError ? (
         <ErrorBox error={q.error} />
       ) : (

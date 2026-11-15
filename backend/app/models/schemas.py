@@ -30,7 +30,7 @@ EventSource = Literal["rule", "anomaly", "changepoint", "forecast"]
 StatusColor = Literal["green", "yellow", "red", "unknown"]
 EventStatus = Literal["active", "resolved"]
 Verdict = Literal["false_alarm", "useful"]
-Lang = Literal["en"]
+Lang = Literal["tr", "en"]
 GeneratedBy = Literal["llm", "mock", "template_fallback"]
 Direction = Literal["up", "down", "both"]
 Frequency = Literal["hourly", "daily", "weekly", "event"]
@@ -39,6 +39,7 @@ MetricState = Literal["normal", "watch", "alert", "no_data"]
 
 class ErrorResponse(BaseModel):
     detail: str
+    code: str | None = Field(None, description="Makine tarafından okunur hata kodu (yeni uçlar), örn. unknown_id")
 
 
 class DateWindow(BaseModel):
@@ -329,6 +330,7 @@ class EmergencyNotice(BaseModel):
     matched_terms: list[str]
     protocol: EmergencyProtocol
     message: str
+    cmo_notified: bool = Field(False, description="Yeni mod: gemide CMO bildirimi kaydedildi (Dünya'ya gitmez)")
 
 
 class CheckinRequest(BaseModel):
@@ -339,7 +341,7 @@ class CheckinRequest(BaseModel):
     note: str | None = Field(None, max_length=2000)
     share_with_ground: bool = False
     timestamp: dt.datetime | None = Field(None, description="Boşsa sunucu zamanı (UTC)")
-    lang: Lang = "en"
+    lang: Lang | None = Field(None, description="Boşsa Accept-Language, o da yoksa tr")
 
 
 class CheckinRecord(BaseModel):
@@ -374,7 +376,7 @@ class AlertListResponse(BaseModel):
 
 
 class ExplainRequest(BaseModel):
-    lang: Lang = "en"
+    lang: Lang | None = Field(None, description="Boşsa Accept-Language, o da yoksa tr")
     as_of: dt.date | None = None
     refresh: bool = Field(False, description="true → cache'i atla, yeniden üret")
 
@@ -471,20 +473,23 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    astronaut_id: str
+    astronaut_id: str | None = Field(
+        None, description="Eski mod (synthetic): zorunlu. Yeni mod: boş bırakın; astronot token'dan gelir (farklıysa 403)"
+    )
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
     as_of: dt.date | None = None
-    lang: Lang | None = Field(None, description="Empty means English (the only supported language)")
+    lang: Lang | None = Field(None, description="Boşsa kullanıcının dilinden tahmin edilir")
 
     @model_validator(mode="after")
     def _last_is_user(self) -> "ChatRequest":
         if self.messages[-1].role != "user":
-            raise ValueError("the last message must have role 'user'")
+            raise ValueError("son mesaj 'user' rolünde olmalı")
         return self
 
 
 class EmergencyCheckRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000, description="Kullanıcı mesajı (kural tabanlı tarama, LLM yok)")
+    lang: Lang | None = Field(None, description="Boşsa Accept-Language, o da yoksa tr")
 
 
 class EmergencyCheckResponse(BaseModel):
@@ -594,3 +599,584 @@ class GroundReport(BaseModel):
     period: DateWindow | None
     crew: list[GroundReportMember]
     note: str
+
+
+# #############################################################################
+# YENİ MİMARİ: GEMİ / DÜNYA İSTASYONLARI (feat/foundation)
+# Kurallar için tek doğru kaynak: frontend/reference/personal-artifact.html
+# #############################################################################
+StationRole = Literal["ship", "earth"]
+
+
+# =============================================================================
+# /api/station
+# =============================================================================
+class StationInfo(BaseModel):
+    role: StationRole = Field(description="ship: gemi bilgisayarı | earth: Dünya üssü (salt okunur)")
+    version: str
+    home_path: str = Field(description="Bu istasyonun ana ekranı: ship → /me, earth → /monitor (eski sentetik mod: /legacy)")
+    read_only: bool = Field(description="true → bu istasyonda yazma (POST/PUT/DELETE) 403 döner (Dünya)")
+    data_source: Literal["astronaut_health", "synthetic"]
+    legacy_enabled: bool = Field(description="true → eski ekranlar (/legacy) ve eski API açık (gemi + synthetic)")
+
+
+# =============================================================================
+# Kişisel sağlık görünümü (gemi /api/me/*, Dünya /api/monitor/*)
+# =============================================================================
+Viewer = Literal["astronaut", "earth"]
+ShareLevel = Literal["private", "scores", "full"]
+
+
+class ReadingView(BaseModel):
+    col: str
+    domain: str
+    label: str
+    unit: str
+    dec: int
+    value: float | None = Field(description="Değerlendirilen değer (3 günlük ortalama; exposure → o günün değeri). Gizliyse null")
+    today: float | None = Field(description="O günün ham değeri. Gizliyse null")
+    value_text: str = Field(description="Biçimli değer veya 'Paylaşılmadı'")
+    healthy_text: str = Field(description="Sağlıklı aralık metni, örn. '7–9' / '7 to 9'")
+    level: int | None = Field(description="0 sağlıklı · 1 uyarı aralığında · 2 uyarı aralığının dışında. Gizliyse null")
+    flag_text: str = Field(description="'' | 'Aralık dışında' | 'Çok dışında'")
+    averaged: bool = Field(description="true → son 3 günün ortalaması, false → o günün değeri")
+    private: bool = Field(description="Ruh hali / stres: Dünya sadece paylaşılırsa görür")
+    hidden: bool = Field(description="Bu izleyiciden gizli (Dünya, paylaşılmadı)")
+
+
+class AreaScoreView(BaseModel):
+    area: str
+    label: str
+    score: float | None = Field(description="0–100. Dünya'da davranışsal alan paylaşılmadıysa null")
+    score_text: str
+    hidden: bool
+    main_concern: bool
+
+
+class TodoItemView(BaseModel):
+    code: str
+    title: str
+    why: str = Field(description="Tetikleyen ölçümler; tetikleyici yoksa 'Veri setinin önerisi'")
+    source: Literal["readings", "dataset"] = Field(description="dataset → veri seti önerdi, eşleşen ölçüm yok")
+    triggers: list[str] = Field(description="Görünür tetikleyici ölçüm kolonları")
+    steps: list[str]
+    when: str
+    contact_ground_if: str
+    basis: str
+    done: bool = Field(False, description="Astronot 'yaptım' olarak işaretledi")
+
+
+class StripDay(BaseModel):
+    day: int = Field(description="1'den başlar (30 günün kaçıncısı)")
+    mission_day: int
+    status: int = Field(description="Gösterilen durum 0/1/2 (bu izleyiciye göre)")
+    status_label: str
+    score: float = Field(description="Kümülatif sağlık skoru")
+    score_text: str
+    daily_score: float = Field(
+        description="O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: "
+        "genel skor her zaman görünür (Dünya'da da)"
+    )
+    label: str = Field(description="Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'")
+
+
+class DayView(BaseModel):
+    astronaut_id: str
+    viewer: Viewer
+    day: int = Field(description="1'den başlar")
+    n_days: int
+    mission_day: int
+    is_today: bool = Field(description="Son kayıt (check-in sadece bugün yapılabilir)")
+    day_label: str = Field(description="'30 günün 30. günü · görev günü 155'")
+    status: int = Field(description="Gösterilen durum = max(health_status, ground ? 1 : 0)")
+    status_label: str = Field(description="Normal / Dikkat / Rahatsız")
+    health_status: int = Field(description="Veri setindeki durum (ground hariç)")
+    ground: bool = Field(description="Yer desteği gerekli. Dünya'da sadece görünür ölçümlerden hesaplanır")
+    subtitle: str
+    score: float = Field(description="Kümülatif sağlık skoru (her zaman görünür)")
+    score_text: str
+    daily_score: float
+    main_concern: str = Field(description="none | immune | bone_muscle | cardiovascular | behavioral")
+    main_concern_label: str | None
+    areas: list[AreaScoreView]
+    readings: list[ReadingView] = Field(description="Katalog sırasında; grup sırası `domains`")
+    todo_title: str
+    todo: list[TodoItemView] = Field(description="Görünür to-do öğeleri, veri setindeki sırayla")
+    todo_masked_count: int = Field(description="Dünya: tetikleyicisi sadece gizli ölçümler olan öğe sayısı")
+    todo_masked_text: str | None
+    calm_text: str | None = Field(description="Yapılacak bir şey yoksa")
+    ground_title: str | None
+    ground_text: str | None
+    readings_note: str
+    threshold_note: str = Field(description="Tek dipnot: aralıklar simüle veri setinden, doğrulanmadı")
+    share: ShareLevel | None = Field(None, description="Bu günün check-in paylaşım seviyesi (tamamlandıysa)")
+
+
+# =============================================================================
+# /api/auth
+# =============================================================================
+PrincipalKind = Literal["astronaut", "earth"]
+
+
+class LoginRequest(BaseModel):
+    id: str = Field("", max_length=64, description="Astronot kimliği (A000 …) veya EARTH; büyük/küçük harf duyarsız")
+    password: str = Field("", max_length=256)
+
+
+class LoginResponse(BaseModel):
+    token: str = Field(description="Authorization: Bearer <token>")
+    kind: PrincipalKind
+    subject: str = Field(description="A003 | EARTH")
+    astronaut_id: str | None = Field(None, description="Astronot girişinde kendi kimliği; token sadece bu astronota erişir")
+    station: StationRole
+    home_path: str
+    expires_at: dt.datetime
+
+
+class AccountRange(BaseModel):
+    first_id: str
+    last_id: str
+    count: int
+
+
+class AuthHint(BaseModel):
+    station: StationRole
+    astronauts: AccountRange | None = Field(description="Bu istasyonda giriş yapabilen astronot hesapları (sadece gemi)")
+    earth_id: str | None = Field(description="Dünya üssü hesabı (sadece Dünya istasyonu)")
+    text: str = Field(description="Giriş kartında gösterilecek ipucu")
+
+
+class PrincipalInfo(BaseModel):
+    kind: PrincipalKind
+    subject: str
+    astronaut_id: str | None
+    station: StationRole
+    read_only: bool
+
+
+# =============================================================================
+# /api/me, /api/personal/{id} (gemi) ve /api/catalog
+# =============================================================================
+class CrewInfo(BaseModel):
+    id: str
+    age: int
+    sex: str
+    bmi: float
+    mission: str
+    mission_label: str
+    profile: str = Field(description="Veri setindeki simülasyon deseni")
+    profile_label: str
+    first_mission_day: int
+    last_mission_day: int
+    n_days: int
+
+
+class PersonalOverview(BaseModel):
+    astronaut: CrewInfo
+    today: int = Field(description="Bugünün gün numarası (= n_days; son kayıt)")
+    n_days: int
+    strip: list[StripDay]
+    threshold_note: str
+
+
+class CatalogRange(BaseModel):
+    min: float
+    max: float | None
+
+
+class CatalogIndicator(BaseModel):
+    col: str
+    domain: str
+    domain_label: str
+    label: str
+    unit: str
+    dec: int
+    healthy: CatalogRange
+    warning: CatalogRange
+    healthy_text: str
+    action: str
+    trig: int
+    private: bool
+    averaged: bool
+
+
+class CatalogSolution(BaseModel):
+    code: str
+    domain: str
+    title: str
+    when: str
+    steps: list[str]
+    contact_ground_if: str
+    basis: str
+
+
+class CatalogDomain(BaseModel):
+    id: str
+    label: str
+
+
+class PersonalCatalogResponse(BaseModel):
+    statuses: list[str] = Field(description="Durum etiketleri, indeks = seviye")
+    domains: list[CatalogDomain]
+    areas: list[str]
+    indicators: list[CatalogIndicator]
+    solutions: list[CatalogSolution]
+    threshold_source: str
+    verified: bool
+    threshold_note: str
+
+
+# =============================================================================
+# /api/checkin (gemi) — prototipin assistantTurn sözleşmesi
+# =============================================================================
+CheckinMode = Literal["scripted", "llm", "auto"]
+
+
+class CheckinMessage(BaseModel):
+    who: Literal["bot", "me"]
+    text: str
+
+
+class CheckinNote(BaseModel):
+    topic: str = Field(description="Konu adı (yazıldığı dilde)")
+    topic_key: str = Field(description="sleep | mood | stress | symptoms | other")
+    text: str = Field(description="Astronotun cevabı (aynen)")
+    flag: bool
+    urgent: bool = Field(description="Acil belirti → gemideki CMO bilgilendirildi (Dünya'ya gitmez)")
+
+
+class CheckinNext(BaseModel):
+    text: str
+    options: list[str]
+
+
+class CmoNotice(BaseModel):
+    title: str
+    text: str
+
+
+class CheckinState(BaseModel):
+    astronaut_id: str
+    day: int
+    mission_day: int
+    is_today: bool
+    editable: bool = Field(description="true → bugün ve bitmemiş (cevap verilebilir)")
+    started: bool
+    step: int
+    options: list[str] = Field(description="Hızlı cevaplar")
+    messages: list[CheckinMessage]
+    notes: list[CheckinNote]
+    done: bool
+    share: ShareLevel | None = Field(description="Tamamlandıysa paylaşım seviyesi (varsayılan private)")
+    can_reset: bool = Field(description="'Baştan başla': sadece paylaşım private iken")
+    cmo_notified: bool
+    cmo_notice: CmoNotice | None = Field(description="'Gemideki sağlık sorumlusu bilgilendirildi'")
+    completed_at: dt.datetime | None = None
+    share_options: list["ShareOption"] = Field([], description="Sadece tamamlanmış check-in'de")
+    share_note: str | None = Field(None, description="Seçili seviyenin açıklaması + 'paylaşım geri alınamaz'")
+    share_cmo_note: str | None = Field(None, description="Acil durumda CMO'ya bildirim (kayıt gizli olsa da), Dünya'ya gitmez")
+    mode: Literal["scripted", "llm"] = Field(
+        "scripted",
+        description="Bu check-in'de cevapları kim üretiyor. llm: asistan modeli | scripted: hazır sorular. "
+        "Tur atıldıysa SON turun modu (auto modda LLM düşerse scripted olur); atılmadıysa ayarın öngördüğü mod",
+    )
+    mode_text: str = Field("", description="Kartta gösterilecek satır: 'Asistan: Qwen' / 'Hazır sorular, model çevrim dışı'")
+    assistant_name: str | None = Field(None, description="mode = llm iken modelin görünen adı (ASSISTANT_NAME veya LLM_MODEL'den)")
+
+
+class CheckinTurnRequest(BaseModel):
+    answer: str = Field(max_length=2000)
+
+
+class CheckinTurnResponse(BaseModel):
+    """Prototipin assistantTurn çıktısı aynen + güncel durum (`checkin`, ek alan)."""
+
+    reply: str
+    note: CheckinNote | None
+    next: CheckinNext | None
+    done: bool
+    checkin: CheckinState
+
+
+# =============================================================================
+# Paylaşım ve Dünya'ya giden (gizlilik filtresinden geçmiş) kayıtlar
+# =============================================================================
+class ShareOption(BaseModel):
+    level: ShareLevel
+    label: str
+    description: str
+    selected: bool
+    enabled: bool = Field(description="false → mevcut seviyeden düşük (paylaşım geri alınamaz)")
+
+
+class CheckinShareRequest(BaseModel):
+    level: ShareLevel
+
+
+class EarthReading(BaseModel):
+    today: float
+    used: float = Field(description="Değerlendirilen değer (3 günlük ortalama veya o günün değeri)")
+    level: int
+
+
+class EarthTodo(BaseModel):
+    code: str
+    triggers: list[str] = Field(description="Görünür tetikleyici kolonlar; boş → veri setinin önerisi")
+    done: bool = False
+
+
+class EarthCheckinNote(BaseModel):
+    topic_key: str
+    flag: bool
+    text: str | None = Field(None, description="Sadece `full` paylaşımda")
+
+
+class EarthCheckin(BaseModel):
+    share: ShareLevel
+    notes: list[EarthCheckinNote] = Field(description="private → boş; scores → konu + flag; full → + metin")
+
+
+class EarthAstronaut(BaseModel):
+    id: str
+    age: int
+    sex: str
+    bmi: float
+    mission: str
+    profile: str
+    first_mission_day: int
+    last_mission_day: int
+    n_days: int
+
+
+class EarthDay(BaseModel):
+    """Bir günün Dünya'ya giden hali. Gizlilik filtresi GEMİDE uygulanır; bu kayıtta gizli ölçümler,
+    maskeli to-do kodları, paylaşılmamış davranışsal skor, check-in mesajları ve CMO bilgisi YOKTUR."""
+
+    astronaut_id: str
+    day_index: int
+    mission_day: int
+    n_days: int
+    health_status: int
+    ground: bool = Field(description="Sadece görünür ölçümlerden")
+    status: int = Field(description="max(health_status, ground ? 1 : 0)")
+    cumulative_score: float
+    daily_score: float
+    main_concern: str
+    behavioral_hidden: bool
+    area_scores: dict[str, float]
+    readings: dict[str, EarthReading]
+    todo: list[EarthTodo]
+    todo_masked_count: int
+    checkin: EarthCheckin | None
+
+
+class EarthCheckinNoteView(BaseModel):
+    topic: str
+    text: str | None
+    flag: bool
+    flag_text: str = Field(description="scores: 'İşaretlendi' / 'İşaret yok'; full: ''")
+
+
+class EarthCheckinView(BaseModel):
+    share: ShareLevel | None
+    text: str = Field(description="'Tamamlanmış check-in yok' / 'gizli tutuldu' / 'Astronotun paylaştığı: …'")
+    notes: list[EarthCheckinNoteView]
+
+
+CheckinState.model_rebuild()
+
+
+# =============================================================================
+# /api/actions (gemi): to-do öğesini işaretle
+# =============================================================================
+class ActionDoneRequest(BaseModel):
+    code: str = Field(description="Bugünün to-do öğesinin self-care kodu")
+    done: bool = True
+
+
+class ActionDoneResponse(BaseModel):
+    code: str
+    done: bool
+    day: DayView
+
+
+# =============================================================================
+# /api/me/presence (gemi): astronot terminalinin varlık sinyali
+# =============================================================================
+TerminalState = Literal["online", "offline"]
+
+
+class PresenceRequest(BaseModel):
+    leaving: bool = Field(False, description="true → terminal kapanıyor (çıkış): beklemeden çevrimdışı sayılır")
+
+
+class PresenceResponse(BaseModel):
+    state: TerminalState = Field(description="Bu sinyalden sonra terminalin durumu")
+    interval_seconds: float = Field(description="Sonraki sinyal bu kadar saniye sonra gönderilmeli (PRESENCE_HEARTBEAT_SECONDS)")
+    timeout_seconds: float = Field(description="Bu kadar saniye sinyal gelmezse terminal çevrimdışı sayılır (PRESENCE_TIMEOUT_SECONDS)")
+
+
+class EarthPresence(BaseModel):
+    """Terminal varlığının Dünya'ya giden hali (gizlilik filtresi gemide): sadece kimlik, çevrimiçi/çevrimdışı ve
+    son sinyalin zamanı. Terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) YOKTUR."""
+
+    astronaut_id: str
+    state: TerminalState
+    last_seen: dt.datetime = Field(description="Terminalden gelen son sinyal (gemi saati)")
+
+
+# =============================================================================
+# /api/downlink (gemi → Dünya; EARTH_LINK_TOKEN ile korunur)
+# =============================================================================
+DownlinkEventType = Literal[
+    "checkin.completed", "checkin.shared", "action.done", "day.snapshot", "terminal.online", "terminal.offline", "link.heartbeat"
+]
+
+
+class DownlinkPayload(BaseModel):
+    """Olay yükü. Gün olayları ilgili günün filtrelenmiş güncel halini (`day`) taşır; terminal olayları
+    (`terminal.online` / `terminal.offline`) gün taşımaz, sadece varlığı (`presence`)."""
+
+    day: EarthDay | None = Field(None, description="Gün olayları: günün filtrelenmiş güncel hali (terminal.* olaylarında yok)")
+    presence: EarthPresence | None = Field(None, description="terminal.*: terminalin durumu ve son sinyali")
+    share: ShareLevel | None = Field(None, description="checkin.*: paylaşım seviyesi")
+    code: str | None = Field(None, description="action.done: kod (Dünya'da maskeliyse null)")
+    masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
+    done: bool | None = Field(None, description="action.done: işaretlendi / kaldırıldı")
+
+
+class DownlinkEvent(BaseModel):
+    seq: int = Field(description="Gemideki sıra numarası (artan, boşluksuz yayın)")
+    type: DownlinkEventType
+    epoch: str = Field(description="Gemi DB dönemi; değişirse Dünya baştan senkronize olur")
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    ship_time: dt.datetime
+    publish_time: dt.datetime = Field(description="ship_time + DOWNLINK_DELAY_SECONDS")
+    earth_received_time: dt.datetime | None = Field(None, description="Dünya'nın aldığı an (Dünya doldurur)")
+    simulated_light_delay_minutes: float = Field(description="Gerçek ışık gecikmesi etiketi (simülasyon, bekletmez)")
+    payload: DownlinkPayload
+
+
+class DownlinkHeartbeat(BaseModel):
+    epoch: str
+    ship_time: dt.datetime
+    last_seq: int = Field(description="Yayınlanmış son seq")
+    pending: int = Field(description="Gecikme nedeniyle henüz yayınlanmamış olay sayısı")
+    delay_seconds: float
+    simulated_light_delay_minutes: float
+
+
+class DownlinkSnapshot(BaseModel):
+    epoch: str
+    seq: int = Field(description="Bu snapshot'ın içerdiği son seq; stream since=seq ile devam eder")
+    generated_at: dt.datetime
+    simulated_light_delay_minutes: float
+    astronauts: list[EarthAstronaut]
+    days: list[EarthDay]
+    presence: list[EarthPresence] = Field(
+        default_factory=list, description="Sinyal göndermiş her terminalin yayınlanmış son durumu (terminal.* olaylarından)"
+    )
+
+
+# =============================================================================
+# Dünya üssü: /api/link/status, /api/monitor/*, /api/stream/monitor
+# =============================================================================
+class LinkStatus(BaseModel):
+    configured: bool = Field(description="SHIP_URL ve EARTH_LINK_TOKEN ayarlı mı")
+    connected: bool
+    ship_url: str | None
+    epoch: str | None
+    last_contact: dt.datetime | None = Field(description="Gemiden son olay veya heartbeat")
+    last_event_at: dt.datetime | None
+    last_seq: int = Field(description="Dünya'nın işlediği son seq")
+    ship_last_seq: int | None = Field(description="Gemide yayınlanmış son seq (heartbeat)")
+    pending_on_ship: int | None = Field(description="Kuyruktaki olay: gemide gecikme nedeniyle bekleyen")
+    behind: int | None = Field(description="Yayınlanmış ama Dünya'ya henüz ulaşmamış olay sayısı")
+    events_received: int
+    snapshot_at: dt.datetime | None
+    last_error: str | None
+    delay_seconds: float | None
+    simulated_light_delay_minutes: float | None
+    ship_clock: dt.datetime | None = Field(
+        description="Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. "
+        "Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri "
+        "kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null."
+    )
+
+
+class TerminalStatus(BaseModel):
+    """Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok)."""
+
+    state: Literal["online", "offline", "never", "unknown"] = Field(
+        description="online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · "
+        "unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)"
+    )
+    last_seen: dt.datetime | None = Field(description="Terminalden gelen son sinyal (gemi saati)")
+    last_known: TerminalState | None = Field(description="Gemiden gelen son durum (bağlantı yokken de)")
+
+
+class MonitorCrewMember(BaseModel):
+    astronaut: CrewInfo
+    today: int
+    mission_day: int
+    status: int
+    status_label: str
+    subtitle: str
+    score: float
+    score_text: str
+    ground: bool
+    share: ShareLevel | None = Field(description="Bugünün check-in'i (tamamlandıysa)")
+    checkin_text: str
+    terminal: TerminalStatus
+
+
+class MonitorCrewResponse(BaseModel):
+    link: LinkStatus
+    astronauts: list[MonitorCrewMember]
+
+
+class MonitorDay(BaseModel):
+    view: DayView
+    checkin: EarthCheckinView
+    updated_seq: int
+    received_at: dt.datetime | None
+
+
+MonitorEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot", "terminal.online", "terminal.offline"]
+
+
+class MonitorEvent(BaseModel):
+    """Dünya'nın aldığı bir olay (earth.db). Gün içeriği taşımaz; ekran ilgili günü ayrıca okur."""
+
+    seq: int
+    type: MonitorEventType
+    astronaut_id: str | None
+    day: int | None = Field(description="1'den başlar")
+    mission_day: int | None
+    ship_time: dt.datetime = Field(description="Olayın gemide oluştuğu an")
+    publish_time: dt.datetime = Field(description="ship_time + DOWNLINK_DELAY_SECONDS")
+    earth_received_time: dt.datetime = Field(description="Dünya'nın aldığı an")
+    simulated_light_delay_minutes: float
+    share: ShareLevel | None = Field(None, description="checkin.*: paylaşım seviyesi")
+    code: str | None = Field(None, description="action.done: self-care kodu (Dünya'da maskeliyse null)")
+    masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
+    done: bool | None = Field(None, description="action.done: işaretlendi / kaldırıldı")
+    last_seen: dt.datetime | None = Field(None, description="terminal.*: terminalden gelen son sinyal (gemi saati)")
+
+
+class MonitorEventsResponse(BaseModel):
+    events: list[MonitorEvent] = Field(description="Yeniden eskiye (seq azalan)")
+    total: int = Field(description="Filtreye uyan olay sayısı (limit'ten bağımsız)")
+    last_seq: int = Field(description="Dünya'nın işlediği son seq")
+
+
+class MonitorStreamEvent(BaseModel):
+    kind: Literal["event", "link"]
+    type: str | None = None
+    seq: int | None = None
+    astronaut_id: str | None = None
+    day_index: int | None = None
+    ship_time: dt.datetime | None = None
+    earth_received_time: dt.datetime | None = None
+    link: LinkStatus | None = None

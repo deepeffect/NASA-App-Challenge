@@ -4,11 +4,10 @@
 # Sohbet mesajları ve check-in notları bu listeyle taranır. Eşleşme olursa
 # LLM'e gitmeden ÖNCE `emergency` olayı üretilir; LLM kapalıyken de çalışır.
 #
-# Eşleştirme: büyük/küçük harf ve aksan duyarsız alt-dize araması
-# ("CHEST PAIN" = "chest pain"). Olumsuzlamaları ("no chest pain") ayırt etmez:
-# güvenlik için bilinçli olarak fazla tetiklemeyi tercih eder.
-# Kullanıcıya görünen metinler İngilizcedir (proje dili). Apostrof yazılmayan
-# varyantlar ("cant breathe") ayrıca listelenir.
+# Eşleştirme: büyük/küçük harf ve Türkçe karakter duyarsız alt-dize araması
+# ("gogus agrisi" = "Göğüs ağrısı"). Eski ekranlarda olumsuzlamaları ("ağrım yok") ayırt etmez
+# (bilinçli olarak fazla tetikler). Yeni "Asistana sor" sohbeti basit olumsuzlamayı ayırt eder
+# ("göğüs ağrım yok", "no chest pain" tetiklemez). Sonuç: gemide CMO kaydı; Dünya'ya gönderilmez.
 #
 # ⚠ PROTOKOL METNİ PLACEHOLDER'DIR.
 # TODO: Mürettebat tıbbi acil durum prosedürleri ve uçuş cerrahı ile doğrula.
@@ -17,77 +16,88 @@
 protocol:
   id: EMERGENCY-PLACEHOLDER-01
   verified: false
-  title: "Possible emergency — start the medical emergency protocol"
+  title:
+    tr: "Olası acil durum — tıbbi acil protokolü başlatın"
+    en: "Possible emergency — start the medical emergency protocol"
   steps:
-    - "Call the crew medical officer (CMO) immediately; do not leave the person alone."
-    - "Open the onboard medical emergency checklist and follow its steps."
-    - "Send an emergency notice to the ground team (flight surgeon); account for the communication delay."
-    - "Record the symptoms and their timing."
+    tr:
+      - "Mürettebat sağlık sorumlusunu (CMO) hemen çağırın; kişiyi yalnız bırakmayın."
+      - "Gemideki tıbbi acil durum kontrol listesini açın ve adımları uygulayın."
+      - "Gerekirse Dünya ile iletişime geçme kararını CMO verir."
+      - "Belirtileri ve zamanlarını kaydedin."
+    en:
+      - "Call the crew medical officer (CMO) immediately; do not leave the person alone."
+      - "Open the onboard medical emergency checklist and follow its steps."
+      - "If needed, the CMO decides whether to contact Earth."
+      - "Record the symptoms and their timing."
   contacts:
-    - "Crew medical officer (CMO)"
-    - "Ground team: flight surgeon"
+    - "Mürettebat sağlık sorumlusu (CMO)"
+    - "Yer ekibi: uçuş cerrahı (CMO'nun kararıyla)"
 
 symptoms:
   chest_pain:
-    label: Chest pain
+    label: {tr: Göğüs ağrısı, en: Chest pain}
     terms:
+      - göğüs ağrısı
+      - göğsüm ağrıyor
+      - göğsümde ağrı
+      - göğsüm sıkışıyor
+      - göğsümde baskı
       - chest pain
-      - chest hurts
-      - pain in my chest
       - chest tightness
-      - tight chest
       - chest pressure
-      - pressure in my chest
   altered_consciousness:
-    label: Altered consciousness
+    label: {tr: Bilinç değişikliği, en: Altered consciousness}
     terms:
+      - bilinç kaybı
+      - bilincini kaybetti
+      - bayıldım
+      - bayıldı
+      - bayılacak gibi
+      - kendimden geçtim
+      - nerede olduğumu bilmiyorum
       - passed out
       - fainted
-      - fainting
-      - about to faint
-      - blacked out
       - lost consciousness
       - unconscious
       - confused and disoriented
-      - don't know where i am
-      - dont know where i am
   breathing:
-    label: Breathing difficulty
+    label: {tr: Solunum güçlüğü, en: Breathing difficulty}
     terms:
+      - nefes alamıyorum
+      - nefes darlığı
+      - nefesim daralıyor
+      - boğuluyorum
       - can't breathe
-      - cant breathe
       - cannot breathe
-      - difficulty breathing
-      - trouble breathing
       - shortness of breath
       - short of breath
-      - choking
   stroke_signs:
-    label: Stroke signs
+    label: {tr: İnme belirtileri, en: Stroke signs}
     terms:
+      - yüzüm kaydı
+      - konuşamıyorum
+      - kolumu hissetmiyorum
+      - bir tarafım uyuşuk
       - face drooping
       - slurred speech
-      - can't speak
-      - cant speak
       - arm weakness
-      - numb on one side
-      - one side is numb
   severe_bleeding:
-    label: Severe bleeding
+    label: {tr: Ciddi kanama, en: Severe bleeding}
     terms:
+      - kanama durmuyor
+      - çok kan kaybediyorum
       - bleeding won't stop
-      - bleeding wont stop
       - heavy bleeding
-      - losing a lot of blood
-      - coughing up blood
   self_harm:
-    label: Self-harm risk
+    label: {tr: Kendine zarar verme riski, en: Self-harm risk}
     terms:
+      - kendimi öldürmek
+      - intihar
+      - yaşamak istemiyorum
+      - kendime zarar
       - kill myself
       - suicide
       - suicidal
       - hurt myself
-      - harm myself
-      - self-harm
       - want to die
-      - end my life
