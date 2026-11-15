@@ -57,6 +57,8 @@ export interface HealthTexts {
   unwellBelow: (v: number) => string;
   chartDay: (day: number) => string;
   tipDay: (day: number) => string;
+  /** Veri setinde skor yoksa grafiğin yerine (backend notu gelmediyse). */
+  noScores: string;
 
   // ---- kimlik satırı
   age: string;
@@ -97,6 +99,7 @@ export const HEALTH_TEXTS: Record<Lang, HealthTexts> = {
     mainConcern: "Main concern",
     notShared: "Not shared",
     chartTitle: (n) => `Health score over the ${n} days`,
+    noScores: "This dataset has no scores.",
     chartAria: (n) => `Running and single-day health score for each of the ${n} days`,
     chartAriaRunning: (n) => `Running health score for each of the ${n} days`,
     running: "Running score",
@@ -140,6 +143,7 @@ export const HEALTH_TEXTS: Record<Lang, HealthTexts> = {
     mainConcern: "Ana endişe",
     notShared: "Paylaşılmadı",
     chartTitle: (n) => `${n} günlük sağlık skoru`,
+    noScores: "Bu veri setinde skor yok.",
     chartAria: (n) => `${n} günün her biri için kümülatif ve tek günlük sağlık skoru`,
     chartAriaRunning: (n) => `${n} günün her biri için kümülatif sağlık skoru`,
     running: "Kümülatif skor",

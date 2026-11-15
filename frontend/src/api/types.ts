@@ -1212,23 +1212,32 @@ export interface components {
         CrewInfo: {
             /** Id */
             id: string;
-            /** Age */
-            age: number;
-            /** Sex */
-            sex: string;
-            /** Bmi */
-            bmi: number;
+            /**
+             * Age
+             * @description Veri setinde yoksa null
+             */
+            age: number | null;
+            /**
+             * Sex
+             * @description Veri setinde yoksa null
+             */
+            sex: string | null;
+            /**
+             * Bmi
+             * @description Veri setinde yoksa null
+             */
+            bmi: number | null;
             /** Mission */
             mission: string;
             /** Mission Label */
             mission_label: string;
             /**
              * Profile
-             * @description Veri setindeki simülasyon deseni
+             * @description Veri setindeki simülasyon deseni (yoksa null)
              */
-            profile: string;
+            profile: string | null;
             /** Profile Label */
-            profile_label: string;
+            profile_label: string | null;
             /** First Mission Day */
             first_mission_day: number;
             /** Last Mission Day */
@@ -1410,13 +1419,16 @@ export interface components {
             subtitle: string;
             /**
              * Score
-             * @description Kümülatif sağlık skoru (her zaman görünür)
+             * @description Kümülatif sağlık skoru (her zaman görünür). Skoru olmayan veri setinde null
              */
-            score: number;
-            /** Score Text */
+            score: number | null;
+            /**
+             * Score Text
+             * @description Skor yoksa boş
+             */
             score_text: string;
             /** Daily Score */
-            daily_score: number;
+            daily_score: number | null;
             /**
              * Main Concern
              * @description none | immune | bone_muscle | cardiovascular | behavioral
@@ -1466,6 +1478,21 @@ export interface components {
              * @description Bu günün check-in paylaşım seviyesi (tamamlandıysa)
              */
             share?: ("private" | "scores" | "full") | null;
+            /**
+             * Scores Note
+             * @description Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not
+             */
+            scores_note?: string | null;
+            /**
+             * Range Label
+             * @description Aralık sütununun başlığı (veri seti ezerse); null → 'Sağlıklı aralık'
+             */
+            range_label?: string | null;
+            /**
+             * Source Note
+             * @description Veri kaynağı satırı (veri seti verirse)
+             */
+            source_note?: string | null;
         };
         /** DocRef */
         DocRef: {
@@ -1511,15 +1538,15 @@ export interface components {
             /** Id */
             id: string;
             /** Age */
-            age: number;
+            age?: number | null;
             /** Sex */
-            sex: string;
+            sex?: string | null;
             /** Bmi */
-            bmi: number;
+            bmi?: number | null;
             /** Mission */
             mission: string;
             /** Profile */
-            profile: string;
+            profile?: string | null;
             /** First Mission Day */
             first_mission_day: number;
             /** Last Mission Day */
@@ -1604,10 +1631,13 @@ export interface components {
              * @description max(health_status, ground ? 1 : 0)
              */
             status: number;
-            /** Cumulative Score */
-            cumulative_score: number;
+            /**
+             * Cumulative Score
+             * @description Skoru olmayan veri setinde null
+             */
+            cumulative_score?: number | null;
             /** Daily Score */
-            daily_score: number;
+            daily_score?: number | null;
             /** Main Concern */
             main_concern: string;
             /** Behavioral Hidden */
@@ -1657,6 +1687,18 @@ export interface components {
             used: number;
             /** Level */
             level: number;
+            /**
+             * Normal
+             * @description Verideki normal metni {tr, en} (seviyesi veriden gelen veri seti)
+             */
+            normal?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Text
+             * @description Verideki yazılış, örn. '116/82'
+             */
+            text?: string | null;
         };
         /** EarthTodo */
         EarthTodo: {
@@ -2488,6 +2530,16 @@ export interface components {
             strip: components["schemas"]["StripDay"][];
             /** Threshold Note */
             threshold_note: string;
+            /**
+             * Scores Note
+             * @description Skoru olmayan veri setinde skor grafiğinin yerine gösterilen not
+             */
+            scores_note?: string | null;
+            /**
+             * Source Note
+             * @description Veri kaynağı satırı (veri seti verirse)
+             */
+            source_note?: string | null;
         };
         /** PresenceRequest */
         PresenceRequest: {
@@ -2594,12 +2646,12 @@ export interface components {
             today: number | null;
             /**
              * Value Text
-             * @description Biçimli değer veya 'Paylaşılmadı'
+             * @description Biçimli değer ('7,4' · ölçekli '3/5' · verideki yazılış '116/82') veya 'Paylaşılmadı'
              */
             value_text: string;
             /**
              * Healthy Text
-             * @description Sağlıklı aralık metni, örn. '7–9' / '7 to 9'
+             * @description Aralık sütunu: sağlıklı aralık ('7–9') ya da verideki normal metni (kişisel taban '45±2' / referans); gizli veya ölçülmemişse boş olabilir
              */
             healthy_text: string;
             /**
@@ -2627,6 +2679,12 @@ export interface components {
              * @description Bu izleyiciden gizli (Dünya, paylaşılmadı)
              */
             hidden: boolean;
+            /**
+             * Measured
+             * @description false → bu veri setinde yok: value/level null, value_text nedenini söyler ('Bu görevde ölçülmedi' / 'Bu veri dosyasında yok')
+             * @default true
+             */
+            measured: boolean;
         };
         /** ScorePenalty */
         ScorePenalty: {
@@ -2729,16 +2787,19 @@ export interface components {
             status_label: string;
             /**
              * Score
-             * @description Kümülatif sağlık skoru
+             * @description Kümülatif sağlık skoru. Skoru olmayan veri setinde null
              */
-            score: number;
-            /** Score Text */
+            score: number | null;
+            /**
+             * Score Text
+             * @description Skor yoksa boş
+             */
             score_text: string;
             /**
              * Daily Score
-             * @description O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da)
+             * @description O günün tek günlük sağlık skoru (grafiğin ikinci çizgisi). Kümülatif skorla aynı politika: genel skor her zaman görünür (Dünya'da da). Skoru olmayan veri setinde null
              */
-            daily_score: number;
+            daily_score: number | null;
             /**
              * Label
              * @description Erişilebilir etiket, örn. 'Gün 3: Dikkat, skor 74'

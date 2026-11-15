@@ -95,6 +95,8 @@ const T = {
   missionDay: { tr: "görev günü {n}", en: "mission day {n}" },
   ageSex: { tr: "{age} yaş · {sex}", en: "{age} y · {sex}" },
   cardDay: { tr: "{age} yaş · {sex} · görev günü {day}", en: "{age} y · {sex} · mission day {day}" },
+  // Veri setinde yaş / cinsiyet yoksa
+  cardDayOnly: { tr: "görev günü {day}", en: "mission day {day}" },
   groundFlag: { tr: "Yer desteği gerekli", en: "Ground support needed" },
   lastCheckin: { tr: "Son check-in", en: "Last check-in" },
   sharing: { tr: "Paylaşım", en: "Sharing" },

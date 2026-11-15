@@ -50,7 +50,10 @@ export function StatusCard({ audience, strip, selectedDay, onSelectDay, view, st
   const [tip, setTip] = useState<{ day: number; center: number } | null>(null);
   const [tipLeft, setTipLeft] = useState(0);
   const tipDay = tip ? strip.find((d) => d.day === tip.day) : undefined;
-  const tipText = tipDay ? t.stripTip(tipDay.day, tipDay.score_text, tipDay.status_label) : "";
+  // Skoru olmayan veri setinde ipucu backend etiketidir ("Gün 5: Dikkat"); çubuklar eşit boydadır.
+  const tipText = tipDay ? (tipDay.score_text ? t.stripTip(tipDay.day, tipDay.score_text, tipDay.status_label) : tipDay.label) : "";
+  const hasScores = strip.some((d) => d.score !== null);
+  const scoreText = dayView?.score_text ?? current?.score_text ?? NBSP;
   useLayoutEffect(() => {
     if (!tip || !stripRef.current || !tipRef.current) return;
     const width = stripRef.current.clientWidth;
@@ -69,7 +72,9 @@ export function StatusCard({ audience, strip, selectedDay, onSelectDay, view, st
     <section className="card status" data-audience={audience}>
       {/* Gün değişince ekran okuyucuya tek ve tam bir cümle: hangi gün, durum, alt başlık, skor. */}
       <p className="vh" aria-live="polite" aria-atomic="true">
-        {dayView ? `${dayView.day_label}. ${dayView.status_label}. ${dayView.subtitle}. ${t.healthScore} ${dayView.score_text}` : ""}
+        {dayView
+          ? `${dayView.day_label}. ${dayView.status_label}. ${dayView.subtitle}.${dayView.score_text ? ` ${t.healthScore} ${dayView.score_text}` : ""}`
+          : ""}
       </p>
       <div className="headline">
         <div>
@@ -79,10 +84,12 @@ export function StatusCard({ audience, strip, selectedDay, onSelectDay, view, st
           </div>
           <div className="state-sub">{dayView?.subtitle ?? NBSP}</div>
         </div>
-        <div className="score">
-          <b className="num">{dayView?.score_text ?? current?.score_text ?? NBSP}</b>
-          <span className="muted">{t.healthScore}</span>
-        </div>
+        {scoreText ? (
+          <div className="score">
+            <b className="num">{scoreText}</b>
+            <span className="muted">{t.healthScore}</span>
+          </div>
+        ) : null}
       </div>
       <div>
         <div className="stripwrap">
@@ -109,7 +116,7 @@ export function StatusCard({ audience, strip, selectedDay, onSelectDay, view, st
                 }}
                 onBlur={() => setTip(null)}
               >
-                <span style={{ height: grown ? `${Math.max(4, Math.min(100, d.score))}%` : 0 }} />
+                <span style={{ height: grown ? `${d.score === null ? 100 : Math.max(4, Math.min(100, d.score))}%` : 0 }} />
               </button>
             ))}
           </div>
@@ -138,7 +145,7 @@ export function StatusCard({ audience, strip, selectedDay, onSelectDay, view, st
           </button>
         </div>
         <div className="key muted" style={{ marginTop: 10 }}>
-          <span>{t.barHeight}</span>
+          {hasScores ? <span>{t.barHeight}</span> : null}
           {labels.slice(0, 3).map((label, level) => (
             <span key={level}>
               <i className={`k${level}`} />

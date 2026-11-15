@@ -95,7 +95,7 @@ export function Dashboard({ overview, catalog, onUnauthorized }: DashboardProps)
         <summary>{t("detailsTitle")}</summary>
         <div className="stack">
           <WhoRow audience="astronaut" astronaut={overview.astronaut} />
-          <ScoreChart audience="astronaut" points={overview.strip} selectedDay={day} onSelectDay={setDay} />
+          <ScoreChart audience="astronaut" points={overview.strip} selectedDay={day} onSelectDay={setDay} note={overview.scores_note} />
           {shown && catalog ? (
             <div aria-busy={!fresh}>
               <ReadingsTable audience="astronaut" view={shown} domains={catalog.domains} />

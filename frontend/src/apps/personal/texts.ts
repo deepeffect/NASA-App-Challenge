@@ -40,6 +40,11 @@ const T = {
     tr: "{count} astronotun her biri için {days} günlük simüle veri. Öz bakım adımları prototip için temsilidir, tıbbi tavsiye değildir.",
     en: "Simulated data for {count} astronauts over {days} days each. The self-care steps are illustrative for a prototype and are not medical guidance.",
   },
+  // Veri seti kendi kaynak satırını verdiğinde (PersonalOverview.source_note) onun ardından yazılır
+  footnoteCare: {
+    tr: "Öz bakım adımları prototip için temsilidir, tıbbi tavsiye değildir.",
+    en: "The self-care steps are illustrative for a prototype and are not medical guidance.",
+  },
   footnoteShort: {
     tr: "Simüle veri. Öz bakım adımları prototip için temsilidir, tıbbi tavsiye değildir.",
     en: "Simulated data. The self-care steps are illustrative for a prototype and are not medical guidance.",

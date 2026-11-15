@@ -48,15 +48,17 @@ export function Sparkline({ strip }: { strip: StripDay[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const n = strip.length;
   if (!n) return null;
-  const scores = strip.map((d) => d.score);
-  const [lo, hi] = domain(scores);
+  // Skoru olmayan veri setinde çizgi çizilmez; altındaki gün şeridi (durum şekilleri) yine gösterilir.
+  const scores = strip.map((d) => d.score).filter((v): v is number => v !== null);
+  const scored = scores.length === n;
+  const [lo, hi] = scored ? domain(scores) : [0, 100];
   const x = (k: number) => PAD.l + ((W - PAD.l - PAD.r) * k) / Math.max(1, n - 1);
   const y = (v: number) => PAD.t + (LINE_H - PAD.t - 4) * (1 - (v - lo) / (hi - lo));
   const rowY = LINE_H + 4 + ROW_H / 2;
-  const path = scores.map((v, k) => `${k ? "L" : "M"}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const path = scored ? scores.map((v, k) => `${k ? "L" : "M"}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join("") : "";
   const last = strip[n - 1];
-  const minDay = strip.reduce((m, d) => (d.score < m.score ? d : m), strip[0]);
-  const label = t("sparkLabel", { first: strip[0].score_text, last: last.score_text, min: minDay.score_text });
+  const minDay = strip.reduce((m, d) => ((d.score ?? 0) < (m.score ?? 0) ? d : m), strip[0]);
+  const label = scored ? t("sparkLabel", { first: strip[0].score_text, last: last.score_text, min: minDay.score_text }) : last.label;
 
   const pick = (clientX: number) => {
     const el = ref.current;
@@ -85,7 +87,7 @@ export function Sparkline({ strip }: { strip: StripDay[] }) {
         >
           <line x1={PAD.l} x2={W - PAD.r} y1={LINE_H} y2={LINE_H} stroke="var(--line)" />
           {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H} stroke="var(--muted)" />}
-          <path d={path} fill="none" stroke="var(--series-cum)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+          {scored && <path d={path} fill="none" stroke="var(--series-cum)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />}
           {strip.map((d, k) => {
             const cx = x(k);
             if (d.status === 2)
@@ -93,8 +95,10 @@ export function Sparkline({ strip }: { strip: StripDay[] }) {
             if (d.status === 1) return <path key={k} d={`M${cx},${rowY - 4.2}L${cx + 4},${rowY + 3}L${cx - 4},${rowY + 3}Z`} fill="var(--warn)" />;
             return <line key={k} x1={cx - 2} x2={cx + 2} y1={rowY} y2={rowY} stroke="var(--quiet)" strokeWidth={2} strokeLinecap="round" />;
           })}
-          <circle cx={x(n - 1)} cy={y(last.score)} r={4.5} fill="var(--series-cum)" stroke="var(--surface)" strokeWidth={2} />
-          {hover !== null && hover !== n - 1 && <circle cx={x(hover)} cy={y(strip[hover].score)} r={4} fill="var(--ink)" stroke="var(--surface)" strokeWidth={2} />}
+          {scored && <circle cx={x(n - 1)} cy={y(scores[n - 1])} r={4.5} fill="var(--series-cum)" stroke="var(--surface)" strokeWidth={2} />}
+          {scored && hover !== null && hover !== n - 1 && (
+            <circle cx={x(hover)} cy={y(scores[hover])} r={4} fill="var(--ink)" stroke="var(--surface)" strokeWidth={2} />
+          )}
         </svg>
       )}
       {hover !== null && W > 0 && (

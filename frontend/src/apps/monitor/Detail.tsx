@@ -148,7 +148,13 @@ export function AstronautDetail({ theme }: { theme: Theme }) {
             <summary>{t("dayDetails")}</summary>
             <div className="stack">
               <WhoRow audience="earth" astronaut={overview.astronaut} />
-              <ScoreChart audience="earth" points={overview.strip} selectedDay={day ?? overview.today} onSelectDay={setDay} />
+              <ScoreChart
+                audience="earth"
+                points={overview.strip}
+                selectedDay={day ?? overview.today}
+                onSelectDay={setDay}
+                note={overview.scores_note}
+              />
               {md && catalog.data ? <ReadingsTable audience="earth" view={md.view} domains={catalog.data.domains} /> : <p className="muted">{t("loading")}</p>}
             </div>
           </details>

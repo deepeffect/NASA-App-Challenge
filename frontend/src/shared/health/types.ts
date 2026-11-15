@@ -22,8 +22,8 @@ export type CatalogSolution = S["CatalogSolution"];
 export interface ScorePoint {
   /** 1'den başlar */
   day: number;
-  /** Kümülatif sağlık skoru (0–100) */
-  score: number;
+  /** Kümülatif sağlık skoru (0–100). Skoru olmayan veri setinde null: grafik yerine not gösterilir. */
+  score: number | null;
   /** O günün tek günlük skoru (0–100) */
   daily_score?: number | null;
 }

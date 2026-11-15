@@ -56,16 +56,19 @@ export function ReadingsTable({ audience, view, domains }: ReadingsTableProps) {
               <th scope="col" className="r">
                 {t.thValue}
               </th>
-              <th scope="col">{t.thHealthy}</th>
+              <th scope="col">{view.range_label ?? t.thHealthy}</th>
               <th scope="col">
                 <span className="vh">{t.thFlag}</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr className="grp">
-              <td colSpan={4}>{t.areaScores}</td>
-            </tr>
+            {/* Skoru olmayan veri setinde alan skoru satırları yoktur */}
+            {view.areas.length > 0 ? (
+              <tr className="grp">
+                <td colSpan={4}>{t.areaScores}</td>
+              </tr>
+            ) : null}
             {view.areas.map((a) => (
               <tr key={a.area} data-hidden={a.hidden ? "true" : undefined}>
                 <td className="name">{a.label}</td>
@@ -80,11 +83,17 @@ export function ReadingsTable({ audience, view, domains }: ReadingsTableProps) {
                   <td colSpan={4}>{g.label}</td>
                 </tr>
                 {g.rows.map((r) => (
-                  <tr key={r.col} data-col={r.col} data-hidden={r.hidden ? "true" : undefined}>
+                  <tr
+                    key={r.col}
+                    data-col={r.col}
+                    data-hidden={r.hidden ? "true" : undefined}
+                    data-measured={r.measured === false ? "false" : undefined}
+                  >
                     <td className="name">
                       {r.label} <span className="unit">{r.unit}</span>
                     </td>
-                    <td className="r num">{r.hidden ? t.notShared : r.value_text}</td>
+                    {/* Ölçülmemiş satırda değer yerine nedeni yazar ("Bu görevde ölçülmedi"); renk ve bayrak yoktur */}
+                    <td className={r.measured === false ? "r muted" : "r num"}>{r.hidden ? t.notShared : r.value_text}</td>
                     <td className="num">{r.healthy_text}</td>
                     <td className="flag">
                       {!r.hidden && (r.level === 1 || r.level === 2) ? (

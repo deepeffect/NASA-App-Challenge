@@ -28,9 +28,14 @@ export interface ScoreChartProps {
   selectedDay: number;
   /** Grafiğe tıklanınca en yakın gün seçilir. */
   onSelectDay?: (day: number) => void;
+  /** Veri setinde skor yoksa grafiğin yerine gösterilen not (`PersonalOverview.scores_note`). */
+  note?: string | null;
 }
 
-export function ScoreChart({ audience, points, selectedDay, onSelectDay }: ScoreChartProps) {
+/** Skoru olan gün: skor yoksa grafik çizilmez, bu yüzden çizim kodu `score`'u sayı olarak görür. */
+type Scored = ScorePoint & { score: number };
+
+export function ScoreChart({ audience, points: allPoints, selectedDay, onSelectDay, note }: ScoreChartProps) {
   const t = useHealthTexts();
   const wrapRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -49,6 +54,9 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
     return () => observer.disconnect();
   }, []);
 
+  // Skor veri setinde ya hep vardır ya hiç yoktur; yoksa grafik yerine not gösterilir (aşağıda).
+  const noScores = allPoints.some((p) => typeof p.score !== "number");
+  const points = (noScores ? [] : allPoints) as readonly Scored[];
   const n = points.length;
   const hasDaily = n > 0 && points.every((p) => typeof p.daily_score === "number");
   const selected = points.findIndex((p) => p.day === selectedDay);
@@ -89,6 +97,15 @@ export function ScoreChart({ audience, points, selectedDay, onSelectDay }: Score
   ];
   const marked = [selected, hover].filter((k, i, all): k is number => k !== null && k >= 0 && all.indexOf(k) === i);
   const hovered = hover !== null ? points[hover] : undefined;
+
+  if (noScores) {
+    return (
+      <div data-audience={audience} data-no-scores="true">
+        <h2>{t.chartTitle(allPoints.length)}</h2>
+        <p className="muted">{note ?? t.noScores}</p>
+      </div>
+    );
+  }
 
   return (
     <div data-audience={audience}>

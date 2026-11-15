@@ -41,7 +41,8 @@ import { TopBar } from "./TopBar";
 const newSessionClient = (app: QueryClient): QueryClient => new QueryClient({ defaultOptions: { ...app.getDefaultOptions() } });
 
 /** Çerçeve: üst bar + içerik + "tüm öz bakım çözümleri" penceresi + dipnot. Giriş kartında da girişten sonra da aynı. */
-type Frame = (who: string | null, days: number | undefined, content: ReactNode) => ReactNode;
+/** `sourceNote`: veri setinin kendi kaynak satırı (varsa genel "simüle veri" dipnotunun yerine yazılır). */
+type Frame = (who: string | null, days: number | undefined, content: ReactNode, sourceNote?: string | null) => ReactNode;
 
 export function PersonalApp(_props: { station: StationInfo }) {
   const { t, lang } = useT();
@@ -75,12 +76,18 @@ export function PersonalApp(_props: { station: StationInfo }) {
     endSession(null);
   }, [endSession]);
 
-  const frame: Frame = (who, days, content) => (
+  const frame: Frame = (who, days, content, sourceNote) => (
     <>
       <TopBar who={who} authed={session !== null} onLogout={logout} onInfo={() => setInfoOpen(true)} />
       {content}
       <SelfCareDialog audience="astronaut" open={infoOpen} onClose={() => setInfoOpen(false)} solutions={catalog.data?.solutions ?? []} />
-      <p className="muted">{count && days ? t("footnote", { count, days }) : t("footnoteShort")}</p>
+      {sourceNote ? (
+        <p className="muted" data-source-note="true">
+          {sourceNote} {t("footnoteCare")}
+        </p>
+      ) : (
+        <p className="muted">{count && days ? t("footnote", { count, days }) : t("footnoteShort")}</p>
+      )}
     </>
   );
 
@@ -154,5 +161,6 @@ function Session({ catalog, onEnd, frame }: SessionProps) {
     ) : (
       <p className="waiting">{t("loading")}</p>
     ),
+    me?.source_note,
   );
 }

@@ -94,7 +94,11 @@ function CrewCard({ member, checkin }: { member: MonitorCrewMember; checkin: Mon
             </span>
           )}
         </span>
-        <span className="ccard-meta">{t("cardDay", { age: a.age, sex: a.sex, day: member.mission_day })}</span>
+        <span className="ccard-meta">
+          {a.age !== null && a.sex !== null
+            ? t("cardDay", { age: a.age, sex: a.sex, day: member.mission_day })
+            : t("cardDayOnly", { day: member.mission_day })}
+        </span>
       </div>
       <div className="ccard-head">
         <div>
