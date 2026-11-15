@@ -3,3 +3,5 @@
 *.pdf binary
 # Veri seti her makinede aynı bayt (parmak izi aynı kalsın)
 data/raw/*.json text eol=lf
+# AST görev verisinin kaynak dosyaları da öyle (özetleri paketin SHA256SUMS kaydıyla aynı kalsın)
+data/raw/ast/*.jsonl text eol=lf

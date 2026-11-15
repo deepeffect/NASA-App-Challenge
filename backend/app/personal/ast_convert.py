@@ -131,7 +131,8 @@ def _decimals(v: float) -> int:
 
 
 def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """Kaynak dosyanın özeti, satır sonundan bağımsız (paketteki dosyalar LF'dir; git CRLF'ye çevirmiş olabilir)."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def convert(source_dir: Path, first_day: int, last_day: int, cat: PersonalCatalog | None = None) -> dict[str, Any]:
