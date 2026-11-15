@@ -8,6 +8,7 @@ from app.llm.types import LLMUnavailable
 from app.models.schemas import BriefingResponse, ExplainResponse
 from app.services import llm_service
 
+from .conftest import SYNTH
 from .llm.fakes import ScriptedClient
 from .test_contract import parse_sse
 
@@ -77,7 +78,7 @@ def test_explain_valid_llm_output_with_ungrounded_number(client, critical_event,
 def test_briefing_mock(client):
     b = BriefingResponse.model_validate(client.get("/api/astronauts/AST-02/briefing", params={"refresh": True}).json())
     assert b.generated_by == "mock" and b.briefing.escalate_to_ground is True
-    assert b.briefing.concerns and b.briefing.summary.startswith("Görev günü 180")
+    assert b.briefing.concerns and b.briefing.summary.startswith(f"Görev günü {SYNTH.days}")
     assert all(e.severity == "info" for e in b.info_events)
     assert b.ungrounded_numbers == []
     ok = BriefingResponse.model_validate(client.get("/api/astronauts/AST-01/briefing", params={"lang": "en"}).json())
