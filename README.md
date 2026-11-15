@@ -55,6 +55,7 @@ Aşağıdaki bölümler aynı adımların elle yapılışını anlatır.
 
 Aynı yerel ağda üç bilgisayar; **internet yok**, Docker/bulut/tünel yok. Aynı repo iki rolde çalışır
 (`STATION_ROLE`). Kurallar için tek doğru kaynak: [`frontend/reference/personal-artifact.html`](frontend/reference/personal-artifact.html).
+LLM (Ollama) gemi bilgisayarında ya da aynı ağdaki ayrı bir **LLM bilgisayarında** çalışır (adım 2b).
 
 ```
  Astronot terminali ──(tarayıcı)──▶  GEMİ  :8000  ──(downlink: snapshot + SSE)──▶  DÜNYA ÜSSÜ :8000
@@ -67,8 +68,10 @@ Aynı yerel ağda üç bilgisayar; **internet yok**, Docker/bulut/tünel yok. Ay
 | **Gemi** (`STATION_ROLE=ship`) | Ollama + backend (`npm run serve`) | `/me` (astronot) | `data/processed/ship.db` (veri seti ilk açılışta `data/raw/astronaut_health.json`'dan yüklenir) |
 | **Astronot terminali** | sadece tarayıcı | `http://<gemi>:8000/me` | yok |
 | **Dünya üssü** (`STATION_ROLE=earth`) | backend (`npm run serve`) | `/monitor` (EARTH / EARTH) | `data/processed/earth.db` — sadece gemiden gelen, **gemide filtrelenmiş** veri |
+| **LLM bilgisayarı** (isteğe bağlı, adım 2b) | Ollama, ağa açık (`:11434`) | yok | yok (sadece model); bu makineye yalnızca gemi bağlanır |
 
-- Paylaşılmamış veri (ruh hali, stres, check-in cevapları, CMO bildirimleri) gemi bilgisayarından hiç çıkmaz.
+- Paylaşılmamış veri (ruh hali, stres, check-in cevapları, CMO bildirimleri) gemi bilgisayarından hiç çıkmaz
+  (LLM ayrı bir makinedeyse check-in ve sohbet içeriği yalnızca ona gider, adım 2b; Dünya'ya gitmez).
 - Gemi, Dünya bağlantısı olmadan tam çalışır; bağlantı gelince Dünya kaldığı yerden devam eder.
 - Diğer rolün ekranı açılırsa arayüz "bu ekran bu istasyonda değil" gösterir.
 
@@ -109,7 +112,8 @@ DOWNLINK_DELAY_SECONDS=0
 DOWNLINK_SIMULATED_LIGHT_DELAY_MINUTES=20
 ```
 
-Ollama (bkz. "2. LLM servisi"; backend aynı makinede olduğu için `OLLAMA_HOST` değiştirmek gerekmez):
+Ollama ayrı bir bilgisayardaysa bu adımı atlayıp **2b**'ye geçin. Gemi bilgisayarının kendisinde çalışacaksa
+(bkz. "2. LLM servisi"; backend aynı makinede olduğu için `OLLAMA_HOST` değiştirmek gerekmez):
 
 ```powershell
 ollama pull qwen3:14b                    # 8 GB VRAM: qwen3:8b
@@ -128,6 +132,62 @@ New-NetFirewallRule -DisplayName "Astro Health 8000" -Direction Inbound -Protoco
 ```powershell
 npm run serve            # arayüzü derler, 0.0.0.0:8000'de başlar; ağ adreslerini yazar
 ```
+
+### 2b) LLM bilgisayarı (isteğe bağlı: Ollama ayrı bir makinede)
+
+Ollama gemi bilgisayarı yerine aynı ağdaki başka bir bilgisayarda (örn. bir Mac) çalışabilir. Bu makine geminin
+parçasıdır: ona yalnızca **gemi** bağlanır (port 11434), astronot terminali ve Dünya üssü bağlanmaz. Check-in
+cevapları ve "Asistana sor" mesajları gemi bilgisayarından bu makineye gider; Dünya'ya gitmez.
+
+**LLM bilgisayarında (macOS, Ollama uygulaması):**
+
+```bash
+ollama pull qwen2.5:7b                          # yerel ağ denemesinde kullanılan model
+launchctl setenv OLLAMA_HOST "0.0.0.0:11434"    # ağa aç (varsayılan: sadece 127.0.0.1:11434)
+launchctl setenv OLLAMA_KEEP_ALIVE "-1"         # isteğe bağlı: model bellekte kalsın (varsayılan 5 dk sonra boşalır)
+# Sonra Ollama uygulamasını menü çubuğundan tamamen kapatıp yeniden açın (ortam değişkenleri açılışta okunur).
+
+ipconfig getifaddr en0                          # bu Mac'in IP adresi (Wi-Fi; kabloluysa en1 olabilir), örn. 192.168.1.12
+ollama ps                                       # model yüklüyken: PROCESSOR 100% GPU, CONTEXT = bağlam uzunluğu
+```
+
+- `launchctl setenv` kalıcı değildir: Mac yeniden başlatılırsa komutları tekrar çalıştırıp Ollama'yı yeniden açın.
+  Ollama'yı uygulama yerine terminalden çalıştırıyorsanız: `OLLAMA_HOST=0.0.0.0:11434 ollama serve`.
+- macOS güvenlik duvarı açıksa (Sistem Ayarları → Ağ → Güvenlik Duvarı) Ollama'nın gelen bağlantılarına izin verin.
+- **Bağlam uzunluğu en az 16k olmalı.** Ollama varsayılanı VRAM'e göre seçer (24 GB'tan az: 4k, 24–48 GB: 32k) ve
+  4k yetmez: check-in turu ~1,7 bin, sohbet istekleri 1–4 bin, 30 günlük ölçüm sorulursa ~11 bin token tutar
+  (kısa kalırsa neler olduğu: "2. LLM servisi"). Ollama uygulaması → Settings → context length kaydırıcısı;
+  `ollama serve` ile çalıştırıyorsanız `OLLAMA_CONTEXT_LENGTH=16384`. Denemede 32768 ile çalıştı.
+- LLM bilgisayarı Windows ise: "2. LLM servisi → Senaryo A" (`setx OLLAMA_HOST`, firewall kuralı).
+
+**Gemi bilgisayarında** `backend/.env` (2. adımdaki LLM satırlarının yerine):
+
+```ini
+LLM_PROVIDER=openai
+# LLM bilgisayarının adresi; sonda /v1
+LLM_BASE_URL=http://192.168.1.12:11434/v1
+# LLM bilgisayarında `ollama list` ile görünen ad
+LLM_MODEL=qwen2.5:7b
+# auto: check-in'i LLM yanıtlar, ulaşılamazsa hazır sorulara düşer | scripted: hep hazır sorular | llm: sadece LLM
+CHECKIN_MODE=auto
+# /no_think anahtarı sadece Qwen3 içindir: qwen3:* dışındaki modellerde false yapın
+LLM_QWEN_SOFT_SWITCH=false
+```
+
+Kontrol (gemi bilgisayarından):
+
+```powershell
+curl http://192.168.1.12:11434/v1/models       # listede qwen2.5:7b görünmeli; cevap yoksa OLLAMA_HOST / güvenlik duvarı
+npm run serve                                  # backend/.env açılışta okunur: değiştirdiyseniz yeniden başlatın
+```
+
+`/me`'de check-in kartında **"Asistan: Qwen"** yazmalı (ad `LLM_MODEL`'den türetilir; `ASSISTANT_NAME` ile
+değiştirilebilir). Bu kurulumda `/api/health` yoktur; o uç sadece eski sentetik moddadır.
+
+**LLM'e ulaşılamazsa** sistem çalışmaya devam eder (`CHECKIN_MODE=auto`): check-in hazır sorularla sürer, kartta
+"Hazır sorular, model çevrim dışı" yazar ve 60 sn sonra LLM yeniden denenir. LLM'in cevabı geçersizse ya da veride
+olmayan bir sayı içeriyorsa da o tur hazır cevaba düşer. "Asistana sor" kural tabanlı özetle cevap verir. Durum,
+to-do ve acil belirti tespiti LLM'e hiç bağlı değildir.
 
 ### 3) Astronot terminali
 
