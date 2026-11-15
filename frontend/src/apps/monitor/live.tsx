@@ -180,10 +180,13 @@ export function useNow(intervalMs = 1000): number {
   return now;
 }
 
-/** Geminin şu anki saati (ms), `intervalMs`'te bir güncellenir. Gemi saatiyle gelen zamanlar bununla karşılaştırılır. */
+/**
+ * Geminin şu anki saati (ms). Bileşen en az `intervalMs`'te bir yeniden çizilir; değer her çizimin anıdır (veri
+ * aralığın ortasında gelirse — ör. terminal çevrimdışı oldu — "… önce" bir önceki tikten değil, o andan hesaplanır).
+ */
 export function useShipNow(intervalMs = 1000): number {
-  const now = useNow(intervalMs);
-  return now + useLive().shipOffsetMs;
+  useNow(intervalMs);
+  return Date.now() + useLive().shipOffsetMs;
 }
 
 /** Vurgu sınıfı: aynı öğeye üst üste olay gelirse animasyon yeniden başlasın diye seq'in paritesi. */
