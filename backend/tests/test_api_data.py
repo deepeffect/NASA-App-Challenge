@@ -2,10 +2,14 @@
 
 from app.models.schemas import AlertListResponse, AstronautSummary, CrewResponse, MetricSeriesResponse
 
+from .conftest import SYNTH, SYNTH_LAST_DAY
+
 
 def test_crew_end_state(client):
     crew = CrewResponse.model_validate(client.get("/api/crew").json())
-    assert crew.mission.mission_day == 180 and crew.mission.total_days == 180
+    # Görevin son günü = veri setinin son günü (bugünün tarihinden bağımsız; bkz. conftest._frozen_legacy_clock)
+    assert crew.mission.mission_day == SYNTH.days and crew.mission.total_days == SYNTH.days
+    assert crew.mission.as_of == SYNTH_LAST_DAY
     status = {a.id: a.status for a in crew.astronauts}
     assert status == {"AST-01": "green", "AST-02": "red", "AST-03": "green", "AST-04": "green"}
     a2 = next(a for a in crew.astronauts if a.id == "AST-02")
@@ -83,7 +87,7 @@ def test_feedback_share_and_ground_report(client):
     a2 = next(m for m in g["crew"] if m["astronaut"]["id"] == "AST-02")
     assert eid in {e["event_id"] for e in a2["shared_events"]}
     assert all(c["share_with_ground"] for m in g["crew"] for c in m["shared_checkins"])
-    assert g["period"]["end"] == "2026-11-14"
+    assert g["period"]["end"] == SYNTH_LAST_DAY.isoformat()
 
     client.put(f"/api/alerts/{eid}/share", json={"share_with_ground": False})
     assert client.post("/api/alerts/evt_000000000000/feedback", json={"verdict": "useful"}).status_code == 404

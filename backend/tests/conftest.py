@@ -1,4 +1,5 @@
 import os
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,15 @@ from app.config import Settings  # noqa: E402
 
 Settings.model_config["env_file"] = None
 
+# Eski mod (synthetic) testlerinin takvimi: veri seti sabit bir aralıktır (SyntheticConfig: başlangıç + gün sayısı).
+# Beklentiler bu aralığa GÖRE yazılır (görev günü = SYNTH.days, son gün = SYNTH_LAST_DAY), bugünün tarihine göre değil.
+from app.data.synthetic import SyntheticConfig  # noqa: E402
+
+SYNTH = SyntheticConfig()
+SYNTH_LAST_DAY = SYNTH.start + timedelta(days=SYNTH.days - 1)
+# Eski veri servisinin "şimdi"si: veri setinin son günü, akşam (o günün sentetik ölçümlerinden sonra)
+FROZEN_NOW = datetime.combine(SYNTH_LAST_DAY, time(22, 0), UTC)
+
 
 @pytest.fixture(scope="session")
 def tmp_db_url(tmp_path_factory: pytest.TempPathFactory) -> str:
@@ -38,6 +48,28 @@ def _isolated_settings(tmp_db_url: str, tmp_path_factory: pytest.TempPathFactory
     reset_engine()
     yield
     reset_engine()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _frozen_legacy_clock(_isolated_settings):
+    """Eski veri servisinin saati FROZEN_NOW'a sabitlenir (sadece testte; uygulama kodu değişmez).
+
+    Neden: `POST /api/checkin` zaman damgası verilmezse check-in'i ve ruh hali / stres / uyku ölçümlerini "şimdi"ye
+    yazar. Bu testler ortak, tohumlanmış bir veritabanını paylaşır; bugünün tarihi veri setinin son gününü geçince
+    (UTC) o ölçümler veriye yeni bir gün ekler ve analizin "son günü" kayar (görev günü 181, rapor dönemi bugün…).
+    Saat sabitlenince zaman damgasız check-in'ler hep veri setinin son gününe düşer: sonuçlar hangi gün
+    çalıştırılırsa çalıştırılsın aynıdır. Yeni mimarinin testleri (tests/station) bu servisi kullanmaz.
+    """
+    from app.services import data as data_svc
+
+    class _Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):  # noqa: ANN001, ANN206
+            return FROZEN_NOW.astimezone(tz) if tz is not None else FROZEN_NOW.replace(tzinfo=None)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(data_svc, "datetime", _Clock)
+        yield
 
 
 @pytest.fixture(scope="session")
