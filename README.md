@@ -168,6 +168,17 @@ Dünya ekranındaki bağlantı durumu (`GET /api/link/status`, giriş gerekir): 
 bekleyen olay sayısı. Gemi kapatılıp açılırsa Dünya kendiliğinden yeniden bağlanır ve eksik olayları alır.
 Gemi DB'si sıfırlanırsa (`npm run reset`) Dünya baştan senkronize olur.
 
+**Terminal varlığı:** astronot ekranı (`/me`) açıkken gemiye 30 sn'de bir sinyal gönderir; 2 dakika sinyal
+gelmezse terminal çevrimdışı sayılır, "Çıkış" beklemeden çevrimdışı yapar (gemide `PRESENCE_*` ayarları,
+`backend/.env.example`). Dünya'ya sadece durum değişimi gider (`terminal.online` / `terminal.offline`; içerik yok).
+Dünya ekranında mürettebat kartının "Terminal" satırı: çevrimiçi · çevrimdışı · son görülme 5 dk önce · henüz
+bağlanmadı · gemiyle bağlantı yoksa "bilinmiyor (bağlantı yok)" (bağlantı kopması "çevrimdışı" sayılmaz).
+
+**Bilgisayar saatleri:** yerel ağda internet olmadığı için saatler kayabilir. "Son görülme" ve "son etkinlik"
+geminin saatine göre hesaplanır (Dünya, son heartbeat'teki gemi zamanından geminin şu anki saatini tahmin eder),
+saat farkından etkilenmez. Akıştaki "yolda N sn" ise gemi ve Dünya saatini karşılaştırır: saatler farklıysa
+sapar (eksi çıkarsa 0 gösterilir). Bu süreyi demoda gösterecekseniz önce iki bilgisayarın saatini eşitleyin.
+
 Güncelleme: her bilgisayarda `git pull` → `npm run serve` (veri seti değiştiyse gemi açılışta yeniden yükler).
 
 ### Tek makinede geliştirme

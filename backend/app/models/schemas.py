@@ -992,15 +992,44 @@ class ActionDoneResponse(BaseModel):
 
 
 # =============================================================================
+# /api/me/presence (gemi): astronot terminalinin varlık sinyali
+# =============================================================================
+TerminalState = Literal["online", "offline"]
+
+
+class PresenceRequest(BaseModel):
+    leaving: bool = Field(False, description="true → terminal kapanıyor (çıkış): beklemeden çevrimdışı sayılır")
+
+
+class PresenceResponse(BaseModel):
+    state: TerminalState = Field(description="Bu sinyalden sonra terminalin durumu")
+    interval_seconds: float = Field(description="Sonraki sinyal bu kadar saniye sonra gönderilmeli (PRESENCE_HEARTBEAT_SECONDS)")
+    timeout_seconds: float = Field(description="Bu kadar saniye sinyal gelmezse terminal çevrimdışı sayılır (PRESENCE_TIMEOUT_SECONDS)")
+
+
+class EarthPresence(BaseModel):
+    """Terminal varlığının Dünya'ya giden hali (gizlilik filtresi gemide): sadece kimlik, çevrimiçi/çevrimdışı ve
+    son sinyalin zamanı. Terminalde ne yapıldığı (sayfa, check-in, sohbet, yazılan metin) YOKTUR."""
+
+    astronaut_id: str
+    state: TerminalState
+    last_seen: dt.datetime = Field(description="Terminalden gelen son sinyal (gemi saati)")
+
+
+# =============================================================================
 # /api/downlink (gemi → Dünya; EARTH_LINK_TOKEN ile korunur)
 # =============================================================================
-DownlinkEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot", "link.heartbeat"]
+DownlinkEventType = Literal[
+    "checkin.completed", "checkin.shared", "action.done", "day.snapshot", "terminal.online", "terminal.offline", "link.heartbeat"
+]
 
 
 class DownlinkPayload(BaseModel):
-    """Olay yükü: her olay ilgili günün filtrelenmiş güncel halini (`day`) taşır."""
+    """Olay yükü. Gün olayları ilgili günün filtrelenmiş güncel halini (`day`) taşır; terminal olayları
+    (`terminal.online` / `terminal.offline`) gün taşımaz, sadece varlığı (`presence`)."""
 
-    day: EarthDay
+    day: EarthDay | None = Field(None, description="Gün olayları: günün filtrelenmiş güncel hali (terminal.* olaylarında yok)")
+    presence: EarthPresence | None = Field(None, description="terminal.*: terminalin durumu ve son sinyali")
     share: ShareLevel | None = Field(None, description="checkin.*: paylaşım seviyesi")
     code: str | None = Field(None, description="action.done: kod (Dünya'da maskeliyse null)")
     masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
@@ -1036,6 +1065,9 @@ class DownlinkSnapshot(BaseModel):
     simulated_light_delay_minutes: float
     astronauts: list[EarthAstronaut]
     days: list[EarthDay]
+    presence: list[EarthPresence] = Field(
+        default_factory=list, description="Sinyal göndermiş her terminalin yayınlanmış son durumu (terminal.* olaylarından)"
+    )
 
 
 # =============================================================================
@@ -1057,6 +1089,22 @@ class LinkStatus(BaseModel):
     last_error: str | None
     delay_seconds: float | None
     simulated_light_delay_minutes: float | None
+    ship_clock: dt.datetime | None = Field(
+        description="Geminin şu anki saati (tahmin): son heartbeat'teki gemi zamanı + o andan beri geçen süre. "
+        "Gemi saatiyle gelen zamanlar ('son görülme', 'son etkinlik') buna göre hesaplanır; bilgisayar saatleri "
+        "kaysa da doğru kalır. Gemiden hiç haber alınmadıysa null."
+    )
+
+
+class TerminalStatus(BaseModel):
+    """Astronot terminalinin Dünya'dan görünen durumu (sadece varlık; içerik yok)."""
+
+    state: Literal["online", "offline", "never", "unknown"] = Field(
+        description="online / offline: gemiden gelen son durum · never: bu terminalden hiç sinyal gelmedi · "
+        "unknown: gemiyle bağlantı yok (son durum güncel olmayabilir; 'offline' DEĞİLDİR)"
+    )
+    last_seen: dt.datetime | None = Field(description="Terminalden gelen son sinyal (gemi saati)")
+    last_known: TerminalState | None = Field(description="Gemiden gelen son durum (bağlantı yokken de)")
 
 
 class MonitorCrewMember(BaseModel):
@@ -1071,6 +1119,7 @@ class MonitorCrewMember(BaseModel):
     ground: bool
     share: ShareLevel | None = Field(description="Bugünün check-in'i (tamamlandıysa)")
     checkin_text: str
+    terminal: TerminalStatus
 
 
 class MonitorCrewResponse(BaseModel):
@@ -1085,7 +1134,7 @@ class MonitorDay(BaseModel):
     received_at: dt.datetime | None
 
 
-MonitorEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot"]
+MonitorEventType = Literal["checkin.completed", "checkin.shared", "action.done", "day.snapshot", "terminal.online", "terminal.offline"]
 
 
 class MonitorEvent(BaseModel):
@@ -1104,6 +1153,7 @@ class MonitorEvent(BaseModel):
     code: str | None = Field(None, description="action.done: self-care kodu (Dünya'da maskeliyse null)")
     masked: bool = Field(False, description="action.done: öğe Dünya'da maskeli")
     done: bool | None = Field(None, description="action.done: işaretlendi / kaldırıldı")
+    last_seen: dt.datetime | None = Field(None, description="terminal.*: terminalden gelen son sinyal (gemi saati)")
 
 
 class MonitorEventsResponse(BaseModel):

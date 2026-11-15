@@ -27,6 +27,8 @@ export type CheckinState = S["CheckinState"];
 export type CheckinTurnResponse = S["CheckinTurnResponse"];
 export type ShareLevel = S["CheckinShareRequest"]["level"];
 export type ActionDoneResponse = S["ActionDoneResponse"];
+export type PresenceResponse = S["PresenceResponse"];
+export type TerminalStatus = S["TerminalStatus"];
 export type PersonalCatalog = S["PersonalCatalogResponse"];
 export type MonitorCrewResponse = S["MonitorCrewResponse"];
 export type MonitorDay = S["MonitorDay"];
@@ -115,6 +117,8 @@ export const stationApi = {
   share: (level: ShareLevel) => call<CheckinState>("POST", "/api/checkin/share", { level }),
   resetCheckin: () => call<CheckinState>("POST", "/api/checkin/reset"),
   actionDone: (code: string, done = true) => call<ActionDoneResponse>("POST", "/api/actions/done", { code, done }),
+  /** Terminal sinyali (ekran açıkken düzenli aralıkla); `leaving` → çıkış: terminal beklemeden çevrimdışı. */
+  presence: (leaving = false) => call<PresenceResponse>("POST", "/api/me/presence", leaving ? { leaving: true } : undefined),
 
   // ---- Dünya üssü
   crew: () => call<MonitorCrewResponse>("GET", "/api/monitor/crew"),

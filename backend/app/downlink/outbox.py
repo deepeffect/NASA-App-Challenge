@@ -5,7 +5,9 @@
 - DOWNLINK_DELAY_SECONDS: olay `publish_at = ship_time + gecikme` anında yayınlanır. Yayın hep bir ön
   ektir: henüz yayınlanmamış ilk olaydan sonraki hiçbir olay gönderilmez (sıra atlanmaz).
 - Snapshot sadece YAYINLANMIŞ durumu verir: bir gün için son yayınlanmış olayın günü, yoksa veri
-  setinden temel gün (check-in/aksiyon yok). Böylece gecikme snapshot'la delinmez.
+  setinden temel gün (check-in/aksiyon yok). Böylece gecikme snapshot'la delinmez. Terminal varlığı da
+  aynı kuralla: her astronot için son yayınlanmış terminal.* olayı.
+- Terminal olayları (`emit_presence_event`) gün taşımaz; yük sadece privacy.earth_presence çıktısıdır.
 - Dönem (epoch): gemi DB'sine özgü rastgele kimlik; DB sıfırlanınca veya veri seti yeniden
   yüklenince değişir → Dünya baştan senkronize olur.
 """
@@ -19,15 +21,16 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.config import Settings
-from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, DownlinkPayload, DownlinkSnapshot, EarthDay
-from app.models.tables import ActionDone, OutboxEvent, as_utc
+from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, DownlinkPayload, DownlinkSnapshot, EarthDay, EarthPresence
+from app.models.tables import ActionDone, OutboxEvent, TerminalPresence, as_utc
 from app.models.tables import utcnow as _utcnow
 from app.personal.catalog import load_personal_catalog
 from app.personal.dataset import AstronautSeries
-from app.personal.privacy import earth_astronaut, earth_day
+from app.personal.privacy import earth_astronaut, earth_day, earth_presence
 from app.personal.store import kv_get, kv_set, personal_data
 
 KV_EPOCH = "downlink.epoch"
+TERMINAL_EVENTS = ("terminal.online", "terminal.offline")
 
 
 def utcnow() -> datetime:
@@ -78,6 +81,26 @@ def emit_day_event(
         astronaut_id=series.meta.id,
         day_index=day_index,
         payload=payload.model_dump(mode="json"),
+        ship_time=now,
+        publish_at=now + timedelta(seconds=settings.downlink_delay_seconds),
+    )
+    db.add(ev)
+    db.flush()
+    return ev
+
+
+def emit_presence_event(db: Session, settings: Settings, row: TerminalPresence) -> OutboxEvent:
+    """Terminal durum değişimi (commit çağırana aittir): terminal.online / terminal.offline.
+
+    Yük sadece varlıktır (kimlik, durum, son sinyal); gün, check-in veya ekranda yapılan hiçbir şey taşınmaz.
+    """
+    now = utcnow()
+    presence = earth_presence(row.astronaut_id, row.state, as_utc(row.last_seen))
+    ev = OutboxEvent(
+        type=f"terminal.{row.state}",
+        astronaut_id=row.astronaut_id,
+        day_index=None,
+        payload=DownlinkPayload(presence=presence).model_dump(mode="json"),
         ship_time=now,
         publish_at=now + timedelta(seconds=settings.downlink_delay_seconds),
     )
@@ -178,7 +201,21 @@ def snapshot(db: Session, settings: Settings) -> DownlinkSnapshot:
         simulated_light_delay_minutes=settings.downlink_simulated_light_delay_minutes,
         astronauts=[earth_astronaut(a) for a in series_by_id.values()],
         days=list(days.values()),
+        presence=published_presence(db, bound),
     )
+
+
+def published_presence(db: Session, bound: int) -> list[EarthPresence]:
+    """Her astronot için yayınlanmış (seq <= bound) son terminal.* olayının durumu."""
+    latest = db.exec(
+        select(func.max(OutboxEvent.seq))
+        .where(OutboxEvent.seq <= bound, col(OutboxEvent.type).in_(TERMINAL_EVENTS))
+        .group_by(OutboxEvent.astronaut_id)
+    ).all()
+    if not latest:
+        return []
+    rows = db.exec(select(OutboxEvent).where(col(OutboxEvent.seq).in_(latest)).order_by(col(OutboxEvent.astronaut_id))).all()
+    return [p for p in (DownlinkPayload.model_validate(ev.payload).presence for ev in rows) if p is not None]
 
 
 def rebuild_outbox(engine, settings: Settings) -> None:  # noqa: ANN001
@@ -197,4 +234,7 @@ def rebuild_outbox(engine, settings: Settings) -> None:  # noqa: ANN001
             series = series_by_id.get(aid)
             if series is not None and i < len(series.days):
                 emit_day_event(db, settings, "day.snapshot", series, i)
+        # Terminallerin bilinen durumu da yeni dönemde yeniden yayınlanır (Dünya "henüz bağlanmadı" demesin)
+        for row in db.exec(select(TerminalPresence).order_by(col(TerminalPresence.astronaut_id))).all():
+            emit_presence_event(db, settings, row)
         db.commit()

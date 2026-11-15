@@ -175,6 +175,15 @@ class ActionDone(SQLModel, table=True):
     done_at: datetime = Field(default_factory=utcnow)
 
 
+class TerminalPresence(SQLModel, table=True):
+    """Astronot terminalinin (/me) son sinyali (gemi). Dünya'ya sadece durum DEĞİŞİMİ gider (terminal.*)."""
+
+    astronaut_id: str = Field(primary_key=True)
+    state: str = Field(default="online", description="online | offline")
+    last_seen: datetime = Field(default_factory=utcnow, description="Son sinyal (gemi saati)")
+    changed_at: datetime = Field(default_factory=utcnow, description="Durumun son değiştiği an")
+
+
 # =============================================================================
 # Downlink — gemi tarafı (outbox) ve Dünya tarafı (alınan, filtrelenmiş veri)
 # =============================================================================
@@ -205,6 +214,15 @@ class EarthDayRow(SQLModel, table=True):
     data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     updated_seq: int = 0
     received_at: datetime = Field(default_factory=utcnow)
+
+
+class EarthPresenceRow(SQLModel, table=True):
+    """Dünya: astronot terminalinin gemiden gelen son durumu (EarthPresence; snapshot veya terminal.* olayı)."""
+
+    astronaut_id: str = Field(primary_key=True)
+    state: str = Field(description="online | offline")
+    last_seen: datetime = Field(description="Terminalden gelen son sinyal (gemi saati)")
+    updated_seq: int = 0
 
 
 class EarthEvent(SQLModel, table=True):

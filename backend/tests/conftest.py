@@ -12,6 +12,13 @@ os.environ["APP_ENV"] = "test"
 os.environ["DATA_SOURCE"] = "synthetic"
 os.environ["STATION_ROLE"] = "ship"
 
+# Geliştiricinin backend/.env dosyası testlere sızmasın: gerçek kurulumda orada SHIP_URL, EARTH_LINK_TOKEN,
+# STATION_ROLE=earth gibi değerler olur (yerel ağ testi) ve testlerin beklediği varsayılanları değiştirir.
+# Testler sadece kodun varsayılanlarını, yukarıdaki değişkenleri ve kendi Settings(...) argümanlarını görür.
+from app.config import Settings  # noqa: E402
+
+Settings.model_config["env_file"] = None
+
 
 @pytest.fixture(scope="session")
 def tmp_db_url(tmp_path_factory: pytest.TempPathFactory) -> str:

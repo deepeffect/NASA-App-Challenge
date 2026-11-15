@@ -54,6 +54,11 @@ async def lifespan(app: FastAPI):
 
         ensure_dataset_loaded(app.state.engine, settings)
     task: asyncio.Task | None = None
+    if settings.station_role == "ship" and settings.data_source == "astronaut_health":
+        from app.downlink.presence import sweep_forever
+
+        # Terminal varlığı: sinyali kesilen terminaller → terminal.offline
+        task = asyncio.create_task(sweep_forever(app.state.engine, settings), name="terminal-presence")
     if settings.station_role == "earth":
         from app.downlink.broadcast import Broadcaster
         from app.downlink.receiver import Receiver

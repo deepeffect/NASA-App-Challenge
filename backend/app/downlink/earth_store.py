@@ -3,6 +3,13 @@
 Tekrar ve eksik olay olmaması için: olaylar gemideki `seq` ile tutulur, `seq <= last_seq` olan olay
 yok sayılır; bağlantı koparsa alıcı `since=last_seq` ile kaldığı yerden devam eder. Gemi dönemi
 (epoch) değişirse (gemi DB'si sıfırlandı) Dünya snapshot'la baştan senkronize olur.
+
+Terminal varlığı (EarthPresenceRow): snapshot'taki `presence` ve terminal.* olaylarından; gemiden gelen son
+durumdur. "Bağlantı yok" ayrımını okuma tarafı yapar (api/monitor.py → terminal_status).
+
+Geminin saati: heartbeat (ve snapshot) gemi zamanını taşır; Dünya onu kendi aldığı anla birlikte saklar
+(`ship_time`, `ship_time_at`). Okuma tarafı "geminin şu anki saati"ni bundan tahmin eder; böylece gemi saatiyle
+gelen zamanlar iki bilgisayarın saati kaysa da doğru yorumlanır.
 """
 
 from __future__ import annotations
@@ -13,8 +20,8 @@ from typing import Any
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
-from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, DownlinkSnapshot, EarthAstronaut, EarthDay
-from app.models.tables import EarthAstronautRow, EarthDayRow, EarthEvent, as_utc, utcnow
+from app.models.schemas import DownlinkEvent, DownlinkHeartbeat, DownlinkSnapshot, EarthAstronaut, EarthDay, EarthPresence
+from app.models.tables import EarthAstronautRow, EarthDayRow, EarthEvent, EarthPresenceRow, as_utc, utcnow
 from app.personal.store import kv_get, kv_set
 
 KV_LINK = "link.state"
@@ -31,6 +38,8 @@ LINK_DEFAULTS: dict[str, Any] = {
     "last_error": None,
     "delay_seconds": None,
     "simulated_light_delay_minutes": None,
+    "ship_time": None,  # gemiden gelen son gemi zamanı (heartbeat / snapshot)
+    "ship_time_at": None,  # Dünya'nın onu aldığı an (Dünya saati)
 }
 
 
@@ -56,6 +65,7 @@ def apply_snapshot(db: Session, snap: DownlinkSnapshot) -> None:
     same_epoch = link_state(db)["epoch"] == snap.epoch
     db.exec(delete(EarthAstronautRow))  # type: ignore[call-overload]
     db.exec(delete(EarthDayRow))  # type: ignore[call-overload]
+    db.exec(delete(EarthPresenceRow))  # type: ignore[call-overload]
     if not same_epoch:
         db.exec(delete(EarthEvent))  # type: ignore[call-overload]
     now = utcnow()
@@ -63,6 +73,8 @@ def apply_snapshot(db: Session, snap: DownlinkSnapshot) -> None:
         db.add(EarthAstronautRow(id=a.id, data=a.model_dump(mode="json")))
     for d in snap.days:
         db.add(EarthDayRow(astronaut_id=d.astronaut_id, day_index=d.day_index, data=d.model_dump(mode="json"), updated_seq=0, received_at=now))
+    for pr in snap.presence:
+        _put_presence(db, pr, 0)
     update_link(
         db,
         epoch=snap.epoch,
@@ -70,6 +82,8 @@ def apply_snapshot(db: Session, snap: DownlinkSnapshot) -> None:
         snapshot_at=now,
         last_contact=now,
         simulated_light_delay_minutes=snap.simulated_light_delay_minutes,
+        ship_time=snap.generated_at,
+        ship_time_at=now,
         **({} if same_epoch else {"events_received": 0}),
     )
     db.commit()
@@ -82,13 +96,16 @@ def apply_event(db: Session, ev: DownlinkEvent) -> EarthEvent | None:
         return None
     now = utcnow()
     day = ev.payload.day
-    row = db.get(EarthDayRow, (day.astronaut_id, day.day_index))
-    if row is None:
-        row = EarthDayRow(astronaut_id=day.astronaut_id, day_index=day.day_index)
-    row.data = day.model_dump(mode="json")
-    row.updated_seq = ev.seq
-    row.received_at = now
-    db.add(row)
+    if day is not None:  # gün olayı (terminal.* olayları gün taşımaz)
+        row = db.get(EarthDayRow, (day.astronaut_id, day.day_index))
+        if row is None:
+            row = EarthDayRow(astronaut_id=day.astronaut_id, day_index=day.day_index)
+        row.data = day.model_dump(mode="json")
+        row.updated_seq = ev.seq
+        row.received_at = now
+        db.add(row)
+    if ev.payload.presence is not None:  # terminal.online / terminal.offline
+        _put_presence(db, ev.payload.presence, ev.seq)
     stored = EarthEvent(
         seq=ev.seq,
         epoch=ev.epoch,
@@ -116,10 +133,19 @@ def apply_event(db: Session, ev: DownlinkEvent) -> EarthEvent | None:
     return stored
 
 
+def _put_presence(db: Session, pr: EarthPresence, seq: int) -> None:
+    row = db.get(EarthPresenceRow, pr.astronaut_id) or EarthPresenceRow(astronaut_id=pr.astronaut_id, state=pr.state, last_seen=pr.last_seen)
+    row.state, row.last_seen, row.updated_seq = pr.state, pr.last_seen, seq
+    db.add(row)
+
+
 def apply_heartbeat(db: Session, hb: DownlinkHeartbeat) -> None:
+    now = utcnow()
     update_link(
         db,
-        last_contact=utcnow(),
+        last_contact=now,
+        ship_time=hb.ship_time,
+        ship_time_at=now,
         ship_last_seq=hb.last_seq,
         pending_on_ship=hb.pending,
         delay_seconds=hb.delay_seconds,
@@ -158,6 +184,11 @@ def today_rows(db: Session) -> dict[str, EarthDay]:
     for r in db.exec(select(EarthDayRow).order_by(col(EarthDayRow.astronaut_id), col(EarthDayRow.day_index))).all():
         out[r.astronaut_id] = EarthDay.model_validate(r.data)
     return out
+
+
+def presence_rows(db: Session) -> dict[str, EarthPresenceRow]:
+    """Astronot → terminalin gemiden gelen son durumu (hiç sinyal göndermemiş terminal yoktur)."""
+    return {r.astronaut_id: r for r in db.exec(select(EarthPresenceRow)).all()}
 
 
 def events_count(db: Session) -> int:

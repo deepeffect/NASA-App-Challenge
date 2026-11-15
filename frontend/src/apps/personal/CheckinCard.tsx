@@ -223,6 +223,10 @@ export function CheckinCard({ day }: { day: number }) {
               t("pastReadOnly")
             )}
           </p>
+          {/* Terminal varlığı (/api/me/presence): Dünya'ya giden tek şey çevrimiçi / çevrimdışı */}
+          <p className="muted" data-presence-note>
+            {t("presenceNote")}
+          </p>
         </>
       )}
     </section>

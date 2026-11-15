@@ -10,11 +10,23 @@ Kurallar (prototip + kullanıcı kararları):
   - "Uyku, ruh hali ve stres" alan skoru: check-in en az `scores` paylaşılmadıysa gönderilmez.
   - Check-in: yok / private (tamamlandı, gizli) / scores (konu + flag) / full (+ cevap metni).
     Mesajlar, `urgent` ve CMO bildirimi asla gönderilmez.
+  - Terminal varlığı: sadece kimlik, çevrimiçi / çevrimdışı ve son sinyalin zamanı. Terminalde ne yapıldığı
+    (açık sayfa, check-in, sohbet, yazılan metin) gönderilmez; sinyalin kendisi de gitmez, sadece durum değişimi.
 """
 
 from __future__ import annotations
 
-from app.models.schemas import EarthAstronaut, EarthCheckin, EarthCheckinNote, EarthDay, EarthReading, EarthTodo
+from datetime import datetime
+
+from app.models.schemas import (
+    EarthAstronaut,
+    EarthCheckin,
+    EarthCheckinNote,
+    EarthDay,
+    EarthPresence,
+    EarthReading,
+    EarthTodo,
+)
 from app.models.tables import CheckinSession
 from app.personal.catalog import PersonalCatalog
 from app.personal.dataset import AstronautSeries
@@ -79,3 +91,8 @@ def earth_day(
         todo_masked_count=ev.masked_count,
         checkin=earth_checkin(row),
     )
+
+
+def earth_presence(astronaut_id: str, state: str, last_seen: datetime) -> EarthPresence:
+    """Terminal varlığının Dünya'ya giden hali: kimlik, durum ve son sinyal zamanı — başka hiçbir şey."""
+    return EarthPresence(astronaut_id=astronaut_id, state=state, last_seen=last_seen)  # type: ignore[arg-type]

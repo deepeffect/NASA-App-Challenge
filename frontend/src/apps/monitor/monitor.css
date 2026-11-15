@@ -136,6 +136,11 @@
 .mon .ccard-foot .row:not(:where(.ahc, .ahc *)) { display: flex; justify-content: space-between; gap: 10px; }
 .mon .ccard-foot .row > span:first-child:not(:where(.ahc, .ahc *)) { color: var(--muted); }
 .mon .ccard-foot .row > span:last-child:not(:where(.ahc, .ahc *)) { text-align: right; }
+/* terminal durumu: ikon + metin (renk sadece ek; anlam metinde) */
+.mon .ccard-foot .term:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
+.mon .ccard-foot .term svg:not(:where(.ahc, .ahc *)) { width: 15px; height: 15px; flex: none; }
+.mon .ccard-foot .row[data-terminal="online"] .term:not(:where(.ahc, .ahc *)) { color: var(--accent); font-weight: 600; }
+.mon .ccard-foot .row[data-terminal="unknown"] .term:not(:where(.ahc, .ahc *)) { color: var(--muted); }
 .mon .groundtag:not(:where(.ahc, .ahc *)) { display: inline-flex; align-items: center; gap: 6px; border-left: 3px solid var(--crit); padding: 1px 0 1px 9px; font-weight: 600; font-size: 0.9em; }
 .mon .ccard.skeleton:not(:where(.ahc, .ahc *)) { min-height: 300px; justify-content: center; align-items: center; color: var(--muted); }
 

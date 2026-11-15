@@ -6,7 +6,16 @@ from fastapi import APIRouter, Path, Request
 
 from app.auth import AstronautDep, ensure_own
 from app.i18n import Lang, LangDep
-from app.models.schemas import ActionDoneRequest, ActionDoneResponse, DayView, ErrorResponse, PersonalCatalogResponse, PersonalOverview
+from app.models.schemas import (
+    ActionDoneRequest,
+    ActionDoneResponse,
+    DayView,
+    ErrorResponse,
+    PersonalCatalogResponse,
+    PersonalOverview,
+    PresenceRequest,
+    PresenceResponse,
+)
 from app.personal.dataset import AstronautSeries
 from app.personal.store import personal_data
 from app.services import personal as svc
@@ -73,3 +82,18 @@ def post_action_done(req: ActionDoneRequest, p: AstronautDep, request: Request, 
     series = own_series(request, db, p.subject, lang)
     svc.mark_action(db, station_settings(request), series, req.code, req.done, lang)
     return ActionDoneResponse(code=req.code, done=req.done, day=_day_view(request, db, p.subject, len(series.days), lang))
+
+
+@router.post(
+    "/me/presence",
+    response_model=PresenceResponse,
+    responses=ERRORS,
+    summary="Terminal sinyali: /me açıkken düzenli aralıkla (Dünya sadece çevrimiçi / çevrimdışı ve son görülmeyi görür)",
+)
+def post_presence(p: AstronautDep, request: Request, db: DBSession, req: PresenceRequest | None = None) -> PresenceResponse:
+    from app.downlink import presence
+
+    s = station_settings(request)
+    leaving = req is not None and req.leaving
+    state = presence.leave(db, s, p.subject) if leaving else presence.beat(db, s, p.subject)
+    return PresenceResponse(state=state, interval_seconds=s.presence_heartbeat_seconds, timeout_seconds=s.presence_timeout_seconds)  # type: ignore[arg-type]

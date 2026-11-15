@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     downlink_heartbeat_seconds: float = Field(5.0, gt=0)
     downlink_poll_seconds: float = Field(0.5, gt=0)
 
+    # --- Terminal varlığı (gemi) ---
+    # Astronot ekranı (/me) açıkken bu aralıkla gemiye sinyal gönderir (aralık istemciye cevapla bildirilir)
+    presence_heartbeat_seconds: float = Field(30.0, gt=0)
+    # Bu süreden uzun sinyal gelmezse terminal çevrimdışı sayılır → downlink'e terminal.offline
+    presence_timeout_seconds: float = Field(120.0, gt=0)
+    # Gemideki denetim aralığı (zaman aşımına uğrayan terminaller)
+    presence_sweep_seconds: float = Field(5.0, gt=0)
+
     # --- Check-in ---
     # scripted: prototipteki kural tabanlı akış | llm: LLM (Qwen) JSON şemalı | auto: LLM, olmazsa scripted
     checkin_mode: Literal["scripted", "llm", "auto"] = "scripted"

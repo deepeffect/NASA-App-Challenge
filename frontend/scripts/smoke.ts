@@ -3,8 +3,9 @@
  *
  * Ön koşul: backend (127.0.0.1:8000) ve Vite (localhost:5173) açık → kökte `npm run dev`.
  * Çalıştır:  npm run smoke   (kökte veya frontend/ içinde)
- * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts
- * (gemi :8000 ve Dünya :8001/:5174 açıkken; argümansız çalıştırınca :8000 yeni mimarideyse o seçilir).
+ * Dünya üssü ekranı (/monitor) için ayrı suite: `npm run smoke -- earth` → scripts/smoke-earth.ts (ön koşul yok:
+ * arayüzü derler, kendi geçici gemi ve Dünya backend'lerini başlatır; argümansız çalıştırınca :8000 yeni mimarideyse
+ * o seçilir).
  * Astronot ekranı (/me) için: `npm run smoke -- personal` → scripts/smoke-personal.ts (ön koşul yok: arayüzü
  * derler ve kendi geçici gemi backend'ini başlatır; geliştirme veritabanına ve çalışan sunuculara dokunmaz).
  *
