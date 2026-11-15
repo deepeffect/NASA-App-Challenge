@@ -2,11 +2,14 @@
 
 - Acil belirti taraması kural tabanlıdır ve LLM'den ÖNCE çalışır; basit olumsuzlama ayırt edilir
   ("göğüs ağrım yok" tetiklemez). Eşleşirse gemide CMO kaydı oluşur; Dünya'ya gönderilmez.
+- `ASSISTANT_LAYER_URL` doluysa cevap önce asistan katmanından istenir (kural motoru + [D]/[K] rozetleri);
+  ulaşılamazsa aşağıdaki LLM (Ollama) yoluna düşülür.
 - LLM'e ulaşılamazsa kural tabanlı özet (get_today_summary + şablon) döner.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from collections.abc import AsyncIterator
@@ -20,20 +23,24 @@ from app.config import Settings
 from app.i18n import Lang, t
 from app.llm import templates
 from app.llm.agent import Agent
+from app.llm.assistant_layer import LayerAnswer, ask_layer, to_record
 from app.llm.client import LLMClient
 from app.llm.personal_tools import personal_registry
 from app.llm.prompts import prompt
 from app.llm.tools import ToolContext
 from app.llm.types import LLMError
-from app.models.schemas import ChatRequest, SSEDone, SSEError, SSEMeta, SSEToken
+from app.models.schemas import ChatRequest, SourceRef, SSEDone, SSEError, SSEMeta, SSEToken
 from app.personal.catalog import load_personal_catalog
 from app.personal.dataset import AstronautSeries
 from app.safety.emergency import detect_emergency
+from app.safety.grounding import find_ungrounded_numbers
 from app.services.checkin import record_cmo
 
 HISTORY_LIMIT = 12
 LANG_NAME = {"tr": "Turkish", "en": "English"}
 _registry = personal_registry()
+_TAG = re.compile(r"\[[DK]\d+\]")
+log = logging.getLogger(__name__)
 
 
 def system_prompt(series: AstronautSeries, lang: Lang, emergency_labels: list[str]) -> str:
@@ -60,10 +67,11 @@ async def chat_stream(
     engine: Engine, settings: Settings, client: LLMClient, series: AstronautSeries, req: ChatRequest, lang: Lang
 ) -> AsyncIterator[tuple[str, BaseModel]]:
     last = req.messages[-1].content
+    use_layer = bool(settings.assistant_layer_url)
     yield "meta", SSEMeta(
         request_id=uuid.uuid4().hex[:12],
-        provider=client.provider,  # type: ignore[attr-defined]
-        model=client.model,  # type: ignore[attr-defined]
+        provider="assistant_layer" if use_layer else client.provider,  # type: ignore[attr-defined]
+        model=settings.assistant_layer_model if use_layer else client.model,  # type: ignore[attr-defined]
         tool_mode="native" if getattr(client, "native_tools", True) and settings.llm_tool_mode != "prompt" else "prompt",
         astronaut_id=series.meta.id,
         as_of=None,
@@ -79,6 +87,16 @@ async def chat_stream(
         yield "emergency", emergency
 
     history = [{"role": m.role, "content": m.content} for m in req.messages[-HISTORY_LIMIT:]]
+    if use_layer:
+        try:
+            answer = await ask_layer(settings, series, history)
+        except LLMError as e:
+            log.warning("Asistan katmanı kullanılamadı, LLM yoluna düşülüyor: %s", e)
+        else:
+            for ev in layer_events(answer, series):
+                yield ev
+            return
+
     labels = emergency.matched_labels if emergency else []
     messages = [{"role": "system", "content": system_prompt(series, lang, labels)}, *history]
     ctx = ToolContext(astronaut_id=series.meta.id, as_of=None, lang=lang, session_factory=lambda: Session(engine))
@@ -93,6 +111,22 @@ async def chat_stream(
     except Exception as e:  # noqa: BLE001
         yield "error", SSEError(code="llm_error", message=f"{type(e).__name__}: {e}")
         yield "done", SSEDone(message="", finish_reason="error", steps=0, tool_calls=0, degraded=True)
+
+
+def layer_events(answer: LayerAnswer, series: AstronautSeries) -> list[tuple[str, BaseModel]]:
+    """Katman cevabını SSE olaylarına çevirir. Sayı denetimi: sayılar kaynaklarda ya da gönderilen kayıtlarda olmalı."""
+    sources: dict[str, SourceRef] = {}
+    for key, raw in answer.sources.items():
+        try:
+            sources[key] = SourceRef.model_validate(raw)
+        except ValueError:
+            continue  # tanınmayan biçim: rozet gösterilmez, cevap yine gösterilir
+    records = [to_record(series.meta.id, d) for d in series.days]
+    ungrounded = find_ungrounded_numbers(_TAG.sub("", answer.text), [answer.sources, records])
+    events: list[tuple[str, BaseModel]] = [("token", SSEToken(text=piece)) for piece in re.findall(r"\S+\s*", answer.text)]
+    events.append(("done", SSEDone(message=answer.text, finish_reason="stop", steps=1, tool_calls=0,
+                                   ungrounded_numbers=ungrounded, sources=sources)))
+    return events
 
 
 async def offline_answer(ctx: ToolContext, lang: str, emergency_msg: str | None) -> AsyncIterator[tuple[str, BaseModel]]:

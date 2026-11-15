@@ -162,6 +162,14 @@ verilirse aynı olmalı, yoksa `403`). Olaylar eski sohbetle aynı (`meta`, `tok
 basit olumsuzlamayı ayırt eder ("göğüs ağrım yok" tetiklemez); eşleşirse gemide CMO kaydı
 (`emergency.cmo_notified: true`), Dünya'ya gitmez.
 
+**Asistan katmanı (isteğe bağlı, `ASSISTANT_LAYER_URL`).** Doluysa cevap önce LLM ekibinin API'sinden istenir
+(`POST {ASSISTANT_LAYER_URL}/chat/completions`, `model: ASSISTANT_LAYER_MODEL`, gövdede `astronaut` + bütün günlük
+`records`; durumsuz). Bu yolda tool çağrısı olmaz (`meta.provider: "assistant_layer"`); cevaptaki `[D1]` / `[K1]`
+etiketlerinin karşılıkları `done.sources` ile gelir: `{"D1": {type: "data", label, value, unit, status},
+"K1": {type: "knowledge", label, text}}` (`SourceRef`). Sayı denetimi kaynaklara ve gönderilen kayıtlara göre yapılır.
+Katmana ulaşılamazsa (bağlantı hatası, zaman aşımı, 200 dışı kod, boş cevap) yukarıdaki LLM yoluna düşülür;
+`done.sources` boş kalır. Acil belirti taraması bu yolda da kural tabanlıdır ve katmandan önce çalışır.
+
 ## Downlink (gemi → Dünya)
 
 `Authorization: Bearer <EARTH_LINK_TOKEN>` (gemide ayarlı değilse `503 downlink_disabled`).

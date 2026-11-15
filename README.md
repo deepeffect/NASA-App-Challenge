@@ -166,12 +166,22 @@ ollama ps                                       # model yüklüyken: PROCESSOR 1
 LLM_PROVIDER=openai
 # LLM bilgisayarının adresi; sonda /v1
 LLM_BASE_URL=http://192.168.1.12:11434/v1
+# Saniye; en az 180
+LLM_TIMEOUT=180
 # LLM bilgisayarında `ollama list` ile görünen ad
 LLM_MODEL=qwen2.5:7b
 # auto: check-in'i LLM yanıtlar, ulaşılamazsa hazır sorulara düşer | scripted: hep hazır sorular | llm: sadece LLM
 CHECKIN_MODE=auto
 # /no_think anahtarı sadece Qwen3 içindir: qwen3:* dışındaki modellerde false yapın
 LLM_QWEN_SOFT_SWITCH=false
+```
+
+İsteğe bağlı: LLM bilgisayarında LLM ekibinin asistan API'si de çalışıyorsa (port 8000), "Asistana sor" cevapları
+kural motoru ve `[D]` / `[K]` kaynak rozetleriyle oradan gelir; ulaşılamazsa yukarıdaki Ollama yoluna düşülür.
+Check-in her zaman Ollama yolunu kullanır.
+
+```ini
+ASSISTANT_LAYER_URL=http://192.168.1.12:8000/v1
 ```
 
 Kontrol (gemi bilgisayarından):

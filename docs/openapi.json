@@ -9480,6 +9480,82 @@
         "title": "SSEToolResult",
         "type": "object"
       },
+      "SourceRef": {
+        "description": "Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi.",
+        "properties": {
+          "type": {
+            "enum": [
+              "data",
+              "knowledge"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unit"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)",
+            "title": "Status"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Bilgi kaynağında alıntı metni",
+            "title": "Text"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "SourceRef",
+        "type": "object"
+      },
       "SSEDone": {
         "properties": {
           "message": {
@@ -9520,6 +9596,15 @@
             },
             "title": "Doc Refs",
             "type": "array"
+          },
+          "sources": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "default": {},
+            "description": "Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)",
+            "title": "Sources",
+            "type": "object"
           },
           "degraded": {
             "default": false,

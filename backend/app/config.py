@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "http://localhost:11434/v1"
     llm_model: str = "qwen3:14b"
     llm_api_key: str = "ollama"
-    llm_timeout: float = Field(120.0, gt=0)
+    llm_timeout: float = Field(180.0, gt=0)
     llm_health_timeout: float = Field(3.0, gt=0)
     llm_temperature: float = Field(0.3, ge=0, le=2)
     llm_max_tokens: int = Field(1024, ge=64)
@@ -101,6 +101,12 @@ class Settings(BaseSettings):
     llm_max_tool_steps: int = Field(5, ge=1, le=12)
     llm_extra_body: dict[str, Any] = {}
     mock_stream_delay_ms: int = Field(15, ge=0)
+
+    # --- Asistan katmanı (LLM ekibinin API'si; sadece "Asistana sor") ---
+    # Doluysa /me sohbeti önce buraya gider (kural motoru + [D]/[K] kaynak rozetleri); ulaşılamazsa LLM_* yoluna düşer.
+    assistant_layer_url: str | None = None
+    assistant_layer_model: str = "ai-gambit-health"
+    assistant_layer_timeout: float = Field(180.0, gt=0)
 
     # --- RAG ---
     rag_backend: Literal["keyword", "embedding"] = "keyword"

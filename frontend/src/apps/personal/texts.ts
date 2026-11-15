@@ -86,6 +86,12 @@ const T = {
     tr: "Asistana ulaşılamadı. Uyarılar ve check-in çalışmaya devam eder.",
     en: "Could not reach the assistant. Alerts and the check-in keep working.",
   },
+  sourcesTitle: { tr: "Kaynaklar", en: "Sources" },
+  sourceData: { tr: "Veri", en: "Data" },
+  sourceKnowledge: { tr: "Bilgi", en: "Knowledge" },
+  sourceStatusGREEN: { tr: "normal", en: "normal" },
+  sourceStatusYELLOW: { tr: "izlenmeli", en: "watch" },
+  sourceStatusRED: { tr: "dikkat", en: "attention" },
   askStopped: { tr: "Durduruldu.", en: "Stopped." },
   ungrounded: {
     tr: "Bu cevaptaki şu sayılar verilerinizle doğrulanamadı: {list}",

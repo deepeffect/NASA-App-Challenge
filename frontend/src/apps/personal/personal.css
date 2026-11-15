@@ -26,6 +26,10 @@
   .ahc .ask .cilog:empty { display: none; }
   .ahc .ask .msg { white-space: pre-wrap; }
   .ahc .ask .cirow { margin-top: 0; }
+  /* Kaynak rozetleri ([D1] / [K1]): ikon + kod; karşılığı cevabın altındaki listede yazıyla durur */
+  .ahc .ask .src { display: inline-block; padding: 0 6px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.8em; line-height: 1.5; white-space: nowrap; opacity: 0.85; }
+  .ahc .ask .srclist { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid currentColor; list-style: none; font-size: 0.9em; display: grid; gap: 4px; white-space: normal; }
+  .ahc .ask .srclist { border-top-color: color-mix(in srgb, currentColor 25%, transparent); }
   .ahc .ask .ground { margin: 0; }
   .ahc .ask .ground ol { margin: 6px 0; padding-left: 20px; list-style: decimal; }
   .ahc .ask .stack { gap: 12px; }

@@ -41,6 +41,7 @@ export type SSEThinking = S["SSEThinking"];
 export type SSEToolCall = S["SSEToolCall"];
 export type SSEToolResult = S["SSEToolResult"];
 export type SSEDone = S["SSEDone"];
+export type SourceRef = S["SourceRef"];
 export type SSEError = S["SSEError"];
 
 export type StatusColor = CrewMember["status"];

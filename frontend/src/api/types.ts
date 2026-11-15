@@ -2941,6 +2941,44 @@ export interface components {
              */
             error: string | null;
         };
+        /**
+         * SourceRef
+         * @description Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi.
+         */
+        SourceRef: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "data" | "knowledge";
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Value
+             * @default null
+             */
+            value: number | string | null;
+            /**
+             * Unit
+             * @default null
+             */
+            unit: string | null;
+            /**
+             * Status
+             * @description Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)
+             * @default null
+             */
+            status: string | null;
+            /**
+             * Text
+             * @description Bilgi kaynağında alıntı metni
+             * @default null
+             */
+            text: string | null;
+        };
         /** SSEDone */
         SSEDone: {
             /**
@@ -2967,6 +3005,14 @@ export interface components {
              * @default []
              */
             doc_refs: components["schemas"]["DocRef"][];
+            /**
+             * Sources
+             * @description Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)
+             * @default {}
+             */
+            sources: {
+                [key: string]: components["schemas"]["SourceRef"];
+            };
             /**
              * Degraded
              * @description true → LLM yok, kural tabanlı yedek cevap

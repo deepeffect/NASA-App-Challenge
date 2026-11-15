@@ -522,6 +522,17 @@ class SSEToolResult(BaseModel):
     error: str | None = None
 
 
+class SourceRef(BaseModel):
+    """Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi."""
+
+    type: Literal["data", "knowledge"]
+    label: str = ""
+    value: float | str | None = None
+    unit: str | None = None
+    status: str | None = Field(None, description="Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)")
+    text: str | None = Field(None, description="Bilgi kaynağında alıntı metni")
+
+
 class SSEDone(BaseModel):
     message: str = Field(description="Asistanın tam cevabı")
     finish_reason: Literal["stop", "max_steps", "error", "llm_unavailable"]
@@ -529,6 +540,7 @@ class SSEDone(BaseModel):
     tool_calls: int
     ungrounded_numbers: list[str] = []
     doc_refs: list[DocRef] = []
+    sources: dict[str, SourceRef] = Field({}, description="Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)")
     degraded: bool = Field(False, description="true → LLM yok, kural tabanlı yedek cevap")
 
 
