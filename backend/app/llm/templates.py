@@ -201,10 +201,25 @@ def _personal_text(name: str, d: dict[str, Any], L: str) -> str:
         return ("To do: " if en else "Yapılacaklar: ") + "; ".join(f"{t['title']} ({t['why']})" for t in d["todo"]) + "."
     if name == "get_selfcare_solutions":
         return ("Self-care solutions: " if en else "Öz bakım çözümleri: ") + ", ".join(s["title"] for s in d.get("solutions", [])) + "."
+    if name == "get_week_forecast":
+        if d.get("status") != "ok":
+            return ("No forecast is available right now." if en else "Şu an tahmin yapılamıyor.")
+        risky = [f for f in d.get("forecasts", []) if f.get("risk_next_week") in ("likely", "possible")]
+        if not risky:
+            s = ("Next-week forecast: all readings are expected to stay within your personal normal."
+                 if en else "Gelecek hafta tahmini: tüm ölçümlerin kişisel normalinde kalması bekleniyor.")
+        else:
+            items = "; ".join(
+                f"{f['reading']} {f['last_7_day_average']} → {f['forecast_next_7_day_average']} {f['unit']}".strip()
+                for f in risky[:3])
+            s = ("Next-week forecast, readings that could reach the caution level: " if en
+                 else "Gelecek hafta tahmini, uyarı seviyesine çıkabilecek ölçümler: ") + items + "."
+        return s + (" This is a projection, not a diagnosis; its reliability is low." if en
+                    else " Bu bir projeksiyondur, teşhis değildir; güvenilirliği düşüktür.")
     return ""
 
 
-PERSONAL_TOOL_NAMES = {"get_today_summary", "get_recent_readings", "get_todo", "get_selfcare_solutions"}
+PERSONAL_TOOL_NAMES = {"get_today_summary", "get_recent_readings", "get_todo", "get_selfcare_solutions", "get_week_forecast"}
 
 
 def _tool_text(name: str, d: dict[str, Any], L: str) -> str:

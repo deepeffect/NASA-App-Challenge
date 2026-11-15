@@ -158,7 +158,8 @@ mod. Bu bilgi için model yoklanmaz. Sadece gemide; Dünya'ya gitmez.
 Gövde `{"messages": [{"role": "user", "content": "…"}], "lang": "tr"}`; astronot token'dan gelir (`astronaut_id`
 verilirse aynı olmalı, yoksa `403`). Olaylar eski sohbetle aynı (`meta`, `token`, `tool_call`, `tool_result`,
 `emergency`, `done`, `error`). Tool'lar sadece giriş yapan astronotun verisine erişir: `get_today_summary`,
-`get_recent_readings`, `get_todo`, `get_selfcare_solutions`, `search_docs`. Acil belirti taraması LLM'den önce,
+`get_recent_readings`, `get_todo`, `get_selfcare_solutions`, `search_docs`, `get_week_forecast` (gelecek hafta
+tahmini, gemideki ML modeli `ai-gambit-ml`; `reliability: "low"`, ML yoksa `status: "unavailable"`). Acil belirti taraması LLM'den önce,
 basit olumsuzlamayı ayırt eder ("göğüs ağrım yok" tetiklemez); eşleşirse gemide CMO kaydı
 (`emergency.cmo_notified: true`), Dünya'ya gitmez.
 

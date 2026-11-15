@@ -16,6 +16,10 @@ dependencies = [
   "httpx>=0.27",
   "sse-starlette>=2.1",
   "python-multipart>=0.0.9",
+  # Gelecek hafta tahmin modeli (ai-gambit-ml/models/*.joblib). Model dosyası bu sürümlerle üretildi;
+  # sürüm değişirse joblib dosyası yüklenmeyebilir → sabit tutun (ayrıntı: ai-gambit-ml/README.md).
+  "scikit-learn==1.9.1",
+  "joblib==1.5.3",
 ]
 
 [project.optional-dependencies]

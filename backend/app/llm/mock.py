@@ -33,6 +33,8 @@ _RULES: list[tuple[tuple[str, ...], str, dict[str, Any]]] = [
     (("uyari", "alarm", "alert"), "get_alerts", {}),
     (("belge", "dokuman", "kaynak", "nasa", "protokol", "standart", "document", "guideline", "procedure"), "search_docs", {}),
     # yeni veri modeli (astronaut_health) tool'ları
+    (("next week", "coming days", "forecast", "will my", "get worse", "gelecek hafta", "onumuzdeki",
+      "tahmin", "kotulesecek", "olacak"), "get_week_forecast", {}),
     (("nasilim", "nasil gidiyor", "durumum", "genel durum", "ozet", "bugun", "how am i", "how are", "overall", "summary", "report", "rapor", "today"),
      "get_today_summary", {}),
     (("uyku", "uyu", "sleep"), "get_recent_readings", {"cols": ["beh_sleep_h"], "days": 7}),

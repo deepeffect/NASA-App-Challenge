@@ -21,6 +21,7 @@ from app.i18n import Lang, t
 from app.llm import templates
 from app.llm.agent import Agent
 from app.llm.client import LLMClient
+from app.llm.forecast_tool import FORECAST_TOOL, forecast_disclaimer
 from app.llm.personal_tools import personal_registry
 from app.llm.prompts import prompt
 from app.llm.tools import ToolContext
@@ -83,9 +84,18 @@ async def chat_stream(
     messages = [{"role": "system", "content": system_prompt(series, lang, labels)}, *history]
     ctx = ToolContext(astronaut_id=series.meta.id, as_of=None, lang=lang, session_factory=lambda: Session(engine))
     agent = Agent(client, _registry, settings)
+    used_forecast = False
     try:
-        async for ev in agent.run(messages, ctx):
-            yield ev
+        async for name, payload in agent.run(messages, ctx):
+            if name == "tool_call" and getattr(payload, "name", None) == FORECAST_TOOL.name:
+                used_forecast = True
+            if name == "done" and used_forecast:
+                # ML tahmini kullanıldıysa "projeksiyon, güvenilirliği düşük" uyarısı modele bırakılmaz (kural tabanlı)
+                note = forecast_disclaimer(payload.message, lang)  # type: ignore[attr-defined]
+                if note:
+                    yield "token", SSEToken(text=note)
+                    payload = payload.model_copy(update={"message": payload.message + note})  # type: ignore[attr-defined]
+            yield name, payload
     except LLMError as e:
         yield "error", SSEError(code="llm_unavailable", message=str(e))
         async for ev in offline_answer(ctx, lang, emergency.message if emergency else None):

@@ -151,5 +151,11 @@ PERSONAL_TOOLS: list[ToolSpec] = [
 ]
 
 
+# Gelecek hafta tahmini (ML, ai-gambit-ml): ayrı modülde; ML yığını yoksa tool "unavailable" döner, sohbet sürer
+from app.llm.forecast_tool import FORECAST_TOOL  # noqa: E402
+
+PERSONAL_TOOLS.append(FORECAST_TOOL)
+
+
 def personal_registry() -> ToolRegistry:
     return ToolRegistry(PERSONAL_TOOLS)

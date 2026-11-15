@@ -411,6 +411,20 @@ npm run dev                        # http://localhost:5173
 
 Ayrıntılar: [`frontend/README.md`](frontend/README.md).
 
+### Gelecek hafta tahmini (ML) — "Asistana sor"
+
+`/me`'deki "Asistana sor", "next week / gelecek hafta / önümüzdeki günler" sorularında gemideki ML modelini
+(`ai-gambit-ml`, `forecast_v2`) `get_week_forecast` tool'uyla çağırır: her ölçüm için gelecek 7 günün ortalaması,
+%80 aralığı ve uyarı seviyesine çıkma riski. Gereken paketler (`scikit-learn==1.9.1`, `joblib==1.5.3`; model dosyası
+bu sürümlerle üretildi) backend bağımlılıklarındadır, `npm run setup` kurar. Kod: `backend/app/llm/forecast_tool.py`.
+
+- **Güvenilirlik düşük:** model başka bir veri setiyle eğitildi. Bu veri setinde (astronaut_health) z-skoru yoktur;
+  kişisel baseline = ilk 14 gün. Geriye dönük ölçümde hata 0,54 z ("son hafta aynen" 0,57; kendi verisinde 0,33).
+  Cevapta "projeksiyon, teşhis değil, güvenilirliği düşük" uyarısı yoksa sistem kural tabanlı ekler.
+- ML yığını yoksa ya da hata verirse tool `status: "unavailable"` döner; sohbet ve check-in etkilenmez.
+- Tahmin gemide kalır (downlink'e yazılmaz). Testler: `pytest tests/station/test_forecast_tool.py`
+  (model referans karşılaştırması için `AI_GAMBIT_PAYLOADS=<payloads_tr_mission_iss180.jsonl>`).
+
 ### Asistan API (eski ekranlar)
 
 Eski astronot sayfasındaki (`/legacy/astronauts/:id`, sadece gemi + `DATA_SOURCE=synthetic`) **sohbet**,
