@@ -133,7 +133,7 @@ servis ettiği derlemeye karşı çalıştırın: kökte `DATA_SOURCE=synthetic`
 
 ### Dünya ekranı smoke testi
 
-Gemi (:8000) ve Dünya (:8001, web :5174) lokal açıkken (`npm run dev:ship` + `npm run dev:earth`):
+Ön koşul yok; açık bir geliştirme sunucusu gerekmez:
 
 ```powershell
 npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: screenshots/earth/
@@ -143,12 +143,20 @@ npm run smoke -- earth      # kökte veya frontend/ içinde; görüntüler: scre
 astronotu (DEMO_CREW[0]) check-in + "Sadece skorlar" → Dünya'da gecikme + 2 sn içinde, cevap metni yok · paylaşılmamış
 günde ruh hali / stres "Paylaşılmadı" (kartta ve detayın ölçümler tablosunda, "Uyku, ruh hali ve stres" alan skoru dahil)
 · gemi kapatılır (uyarı, son durum korunur) ve açılır (akış kaldığı seq'ten, boşluksuz) · astronot detayı: paylaşıma
-göre check-in paneli, iki çizgili grafik, önceki/sonraki · mürettebat kartında "Aktif" rozeti · akışta "Sadece mürettebat".
-Ayrıca: detaydaki ortak bileşenlerin bütün hesaplanmış stili `.mon` dışındakiyle (yani /me'dekiyle) aynı olmalı ve
-`monitor.css`'teki her seçici `.mon` ile başlayıp ortak bileşenleri (`.ahc`) dışlamalı. Dünya ekranı gemiye hiç istek
-atmamalı. Gemi testte smoke'un kendi sürecinde açılır, sonunda dev:ship'teki yerine döner (bu sırada dev:earth
-backend'i de bir kez yeniden başlar; izleyici yoksa gemi kapalı kalır, smoke arka planda sunucu bırakmaz). Paylaşım geri
-alınamadığı için süre ölçümünü tekrarlamak isterseniz önce `npm run reset -- ship` ve `npm run reset -- earth`.
+göre check-in paneli, iki çizgili grafik, önceki/sonraki · mürettebat kartında "Aktif" rozeti · akışta "Sadece mürettebat"
+· terminal varlığı: kartta "henüz bağlanmadı" → "çevrimiçi" (akışta olay, "Aktif" sayılmaz) → bağlantı kopunca
+"bilinmiyor (bağlantı yok)", "çevrimdışı" değil → bağlantı gelince "çevrimiçi" → sinyal kesilince "çevrimdışı · son
+görülme N sn önce". Ayrıca: detaydaki ortak bileşenlerin bütün hesaplanmış stili `.mon` dışındakiyle (yani /me'dekiyle)
+aynı olmalı ve `monitor.css`'teki her seçici `.mon` ile başlayıp ortak bileşenleri (`.ahc`) dışlamalı. Dünya ekranı
+gemiye hiç istek atmamalı.
+Test kendi kendine yeter: arayüzü derler, kendi geçici gemisini (port 8020) ve Dünya üssünü (port 8021, derlenmiş
+arayüzü de servis eder) boş, atılabilir veritabanlarıyla başlatır. Dünya gemiye test sürecindeki küçük bir TCP
+aktarıcısı (port 8022) üzerinden bağlanır: bağlantı, gemi ve terminal çalışırken koparılabilsin diye; "gemi kapanır /
+açılır" adımı da kendi geçici gemisini kullanır. `ship.db` / `earth.db`'ye, `frontend/dist`'e ve çalışan sunuculara
+(8000/8001, `npm run serve`) dokunmaz; her çalıştırmada baştan tekrarlanır (check-in süresi her seferinde ölçülür).
+Geçici sunucularda terminal süreleri kısadır (sinyal 1 sn, zaman aşımı 4 sn). Derleme ve veritabanları sistemin
+geçici klasöründe durur ve sonunda silinir; depoda ekran görüntüleri ve logları (`screenshots/earth/*-smoke*.log`)
+kalır. Port doluysa: `npm run stop -- --port 8020` (8021 için de aynı).
 
 ### Astronot ekranı smoke testi
 
@@ -164,7 +172,10 @@ downlink akışındaki `checkin.shared` olayında ruh hali / stres skoru var, ce
 penceresi · "Asistana sor" (mock) + acil belirti kutusu (sohbet downlink'e girmez) · check-in'de acil belirti →
 "Gemideki sağlık sorumlusu bilgilendirildi" kutusu (Dünya'ya gitmez) · TR → EN, yenileme, çıkış · hesap değiştirme
 (önceki astronotun oturumundan hiçbir şey sonrakinin ekranına sızmaz: cevaplar bilerek geciktirilir) · oturum
-biterse (401) giriş kartına dönüş. Ana durumlar 390 ve
+biterse (401) giriş kartına dönüş · terminal varlığı: girişte downlink'e `terminal.online` (yük sadece kimlik, durum,
+son görülme), sayfa açıkken çevrimdışı olmaz, "Çıkış" → beklemeden, sekme kapanınca zaman aşımıyla `terminal.offline`;
+gizlilik notundaki terminal satırı (TR/EN). Geçici gemide terminal süreleri kısadır (sinyal 1 sn, zaman aşımı 4 sn).
+Ana durumlar 390 ve
 1440 px'te, açık ve koyu temada kaydedilir. Ortak bileşenlerin ölçüleri prototipin CSS değerleriyle karşılaştırılır
 (başka bir stil dosyası `/me`'ye sızarsa yakalanır).
 Test kendi kendine yeter: arayüzü derler ve kendi geçici gemi backend'ini başlatır (port 8010, atılabilir veritabanı);

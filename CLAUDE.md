@@ -60,8 +60,10 @@ Ham veri → ingest/ adaptörü → ortak long format (astronaut_id, timestamp, 
 8. **Gizlilik filtresi gemide.** Dünya'ya giden her şey `app/personal/privacy.py` (`EarthDay`) üzerinden
    outbox'a yazılmadan ÖNCE filtrelenir: ruh hali / stres ve davranışsal alan skoru sadece o günün check-in'i
    en az `scores` paylaşıldıysa; maskeli to-do öğeleri sadece sayı; check-in mesajları, `urgent` ve CMO
-   bilgisi asla. Paylaşım seviyesi sadece artar. Bu kuralları gevşeten değişiklik gizlilik testlerini
-   (`tests/station/test_sharing_privacy.py`, `test_downlink.py`) kırmalı.
+   bilgisi asla. Paylaşım seviyesi sadece artar. Terminal varlığı (`terminal.online` / `terminal.offline`) sadece
+   kimlik, durum ve son görülme taşır (`privacy.earth_presence`); terminalde yapılan hiçbir şey gitmez. Bu kuralları
+   gevşeten değişiklik gizlilik testlerini (`tests/station/test_sharing_privacy.py`, `test_downlink.py`,
+   `test_presence.py`) kırmalı.
 
 ## Klasörler
 
