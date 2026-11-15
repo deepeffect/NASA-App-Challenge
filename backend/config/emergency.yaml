@@ -46,6 +46,10 @@ symptoms:
       - chest pain
       - chest tightness
       - chest pressure
+      - "chest hurts"
+      - "pain in my chest"
+      - "pressure in my chest"
+      - "tight chest"
   altered_consciousness:
     label: {tr: Bilinç değişikliği, en: Altered consciousness}
     terms:
@@ -61,6 +65,16 @@ symptoms:
       - lost consciousness
       - unconscious
       - confused and disoriented
+      - "about to faint"
+      - "blacked out"
+      - "don't know where i am"
+      - "dont know where i am"
+      - "fainting"
+      - "seizure"
+      - "nöbet geçirdim"
+      - "baygınlık"
+      - "bilincimi kaybettim"
+      - "neredeyim bilmiyorum"
   breathing:
     label: {tr: Solunum güçlüğü, en: Breathing difficulty}
     terms:
@@ -72,6 +86,14 @@ symptoms:
       - cannot breathe
       - shortness of breath
       - short of breath
+      - "cant breathe"
+      - "choking"
+      - "difficulty breathing"
+      - "trouble breathing"
+      - "can't catch my breath"
+      - "cant catch my breath"
+      - "struggling to breathe"
+      - "nefes almakta zorlanıyorum"
   stroke_signs:
     label: {tr: İnme belirtileri, en: Stroke signs}
     terms:
@@ -82,6 +104,15 @@ symptoms:
       - face drooping
       - slurred speech
       - arm weakness
+      - "can't speak"
+      - "cant speak"
+      - "numb on one side"
+      - "one side is numb"
+      - "bir tarafım uyuştu"
+      - "tarafı uyuştu"
+      - "yüzüm uyuştu"
+      - "cannot speak"
+      - "tek tarafım uyuştu"
   severe_bleeding:
     label: {tr: Ciddi kanama, en: Severe bleeding}
     terms:
@@ -89,6 +120,15 @@ symptoms:
       - çok kan kaybediyorum
       - bleeding won't stop
       - heavy bleeding
+      - "bleeding wont stop"
+      - "coughing up blood"
+      - "losing a lot of blood"
+      - "kan tükürüyorum"
+      - "kan öksürüyorum"
+      - "severe bleeding"
+      - "bleeding heavily"
+      - "şiddetli kanama"
+      - "öksürünce kan geliyor"
   self_harm:
     label: {tr: Kendine zarar verme riski, en: Self-harm risk}
     terms:
@@ -101,3 +141,10 @@ symptoms:
       - suicidal
       - hurt myself
       - want to die
+      - "end my life"
+      - "harm myself"
+      - "self-harm"
+      - "don't want to live"
+      - "dont want to live"
+      - "ölmek istiyorum"
+      - "canıma kıyacağım"

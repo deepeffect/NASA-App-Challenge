@@ -37,3 +37,18 @@ def test_emergency_check_endpoint(client):
     assert r.status_code == 200 and r.json()["notice"]
     r = client.post("/api/emergency/check", json={"text": "How is my sleep?", "lang": "en"})
     assert r.status_code == 200 and r.json()["notice"] is None
+
+
+def test_english_everyday_variants():
+    """Günlük İngilizce ifadeler de yakalanır (birleştirmede düşmüştü; asistan API'sindeki sohbet bunlara güvenir)."""
+    cases = {
+        "My chest hurts": "chest_pain",
+        "I cant breathe": "breathing",
+        "I think I'm about to faint": "altered_consciousness",
+        "one side is numb": "stroke_signs",
+        "I'm coughing up blood": "severe_bleeding",
+        "I want to end my life": "self_harm",
+    }
+    for text, sid in cases.items():
+        n = detect_emergency(text, "en")
+        assert n and sid in n.matched_symptoms, text
