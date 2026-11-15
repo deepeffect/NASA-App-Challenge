@@ -1,0 +1,818 @@
+From 32b20492944da6c379652ce7fe1cef6cf95d4096 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 15 Nov 2026 09:35:46 +0300
+Subject: [PATCH] =?UTF-8?q?Asistana=20sor:=20asistan=20katman=C4=B1=20(ASS?=
+ =?UTF-8?q?ISTANT=5FLAYER=5FURL)=20+=20kaynak=20rozetleri?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- ASSISTANT_LAYER_URL doluysa /me sohbeti önce LLM ekibinin API'sine gider
+  (model ai-gambit-health; gövdede astronaut + bütün günlük kayıtlar, durumsuz).
+  Ulaşılamazsa bugünkü LLM (Ollama) yoluna düşülür. Check-in değişmedi.
+- SSEDone.sources (SourceRef): [D1]/[K1] etiketlerinin karşılıkları; /me'de
+  rozet + kaynak listesi olarak gösterilir.
+- Sayı denetimi bu yolda kaynaklara ve gönderilen kayıtlara göre yapılır.
+- LLM_TIMEOUT varsayılanı 120 → 180.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_013ZkCgSjKi1DfamNZ8Wga3c
+---
+ README.md                                     |  10 ++
+ backend/.env.example                          |   9 +-
+ backend/app/config.py                         |   8 +-
+ backend/app/llm/assistant_layer.py            |  91 +++++++++++++
+ backend/app/models/schemas.py                 |  12 ++
+ backend/app/services/personal_chat.py         |  40 +++++-
+ backend/tests/station/test_assistant_layer.py | 128 ++++++++++++++++++
+ docs/API.md                                   |   8 ++
+ docs/openapi.json                             |  85 ++++++++++++
+ frontend/src/api/client.ts                    |   1 +
+ frontend/src/api/types.ts                     |  46 +++++++
+ frontend/src/apps/personal/AskAssistant.tsx   |  64 ++++++++-
+ frontend/src/apps/personal/personal.css       |   4 +
+ frontend/src/apps/personal/texts.ts           |   6 +
+ 14 files changed, 501 insertions(+), 11 deletions(-)
+ create mode 100644 backend/app/llm/assistant_layer.py
+ create mode 100644 backend/tests/station/test_assistant_layer.py
+
+diff --git a/README.md b/README.md
+index ba55456..3692396 100644
+--- a/README.md
++++ b/README.md
+@@ -166,6 +166,8 @@ ollama ps                                       # model yüklüyken: PROCESSOR 1
+ LLM_PROVIDER=openai
+ # LLM bilgisayarının adresi; sonda /v1
+ LLM_BASE_URL=http://192.168.1.12:11434/v1
++# Saniye; en az 180
++LLM_TIMEOUT=180
+ # LLM bilgisayarında `ollama list` ile görünen ad
+ LLM_MODEL=qwen2.5:7b
+ # auto: check-in'i LLM yanıtlar, ulaşılamazsa hazır sorulara düşer | scripted: hep hazır sorular | llm: sadece LLM
+@@ -174,6 +176,14 @@ CHECKIN_MODE=auto
+ LLM_QWEN_SOFT_SWITCH=false
+ ```
+ 
++İsteğe bağlı: LLM bilgisayarında LLM ekibinin asistan API'si de çalışıyorsa (port 8000), "Asistana sor" cevapları
++kural motoru ve `[D]` / `[K]` kaynak rozetleriyle oradan gelir; ulaşılamazsa yukarıdaki Ollama yoluna düşülür.
++Check-in her zaman Ollama yolunu kullanır.
++
++```ini
++ASSISTANT_LAYER_URL=http://192.168.1.12:8000/v1
++```
++
+ Kontrol (gemi bilgisayarından):
+ 
+ ```powershell
+diff --git a/backend/.env.example b/backend/.env.example
+index f6ad180..9251f7b 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -64,7 +64,7 @@ LLM_BASE_URL=http://localhost:11434/v1
+ LLM_MODEL=qwen3:14b
+ LLM_API_KEY=ollama
+ # Saniye. 14B model + CPU offload yavaş olabilir; ağ üzerinden bağlanırken cömert tutun.
+-LLM_TIMEOUT=120
++LLM_TIMEOUT=180
+ LLM_HEALTH_TIMEOUT=3
+ LLM_TEMPERATURE=0.3
+ LLM_MAX_TOKENS=1024
+@@ -79,6 +79,13 @@ LLM_MAX_TOOL_STEPS=5
+ LLM_EXTRA_BODY={}
+ MOCK_STREAM_DELAY_MS=15
+ 
++# --- Asistan katmanı (isteğe bağlı; sadece "Asistana sor") ---
++# LLM ekibinin API'si: kural motoru + [D]/[K] kaynak rozetleri. Doluysa /me sohbeti önce buraya gider;
++# ulaşılamazsa yukarıdaki LLM_* (Ollama) yoluna düşer. Check-in her zaman LLM_* yolunu kullanır.
++# ASSISTANT_LAYER_URL=http://192.168.1.12:8000/v1
++ASSISTANT_LAYER_MODEL=ai-gambit-health
++ASSISTANT_LAYER_TIMEOUT=180
++
+ # --- RAG ---
+ # keyword: bağımlılıksız BM25 arama | embedding: Embedder + vektör indeksi (LLM ekibi, .[rag] gerekir)
+ RAG_BACKEND=keyword
+diff --git a/backend/app/config.py b/backend/app/config.py
+index af53e82..23b55e3 100644
+--- a/backend/app/config.py
++++ b/backend/app/config.py
+@@ -91,7 +91,7 @@ class Settings(BaseSettings):
+     llm_base_url: str = "http://localhost:11434/v1"
+     llm_model: str = "qwen3:14b"
+     llm_api_key: str = "ollama"
+-    llm_timeout: float = Field(120.0, gt=0)
++    llm_timeout: float = Field(180.0, gt=0)
+     llm_health_timeout: float = Field(3.0, gt=0)
+     llm_temperature: float = Field(0.3, ge=0, le=2)
+     llm_max_tokens: int = Field(1024, ge=64)
+@@ -102,6 +102,12 @@ class Settings(BaseSettings):
+     llm_extra_body: dict[str, Any] = {}
+     mock_stream_delay_ms: int = Field(15, ge=0)
+ 
++    # --- Asistan katmanı (LLM ekibinin API'si; sadece "Asistana sor") ---
++    # Doluysa /me sohbeti önce buraya gider (kural motoru + [D]/[K] kaynak rozetleri); ulaşılamazsa LLM_* yoluna düşer.
++    assistant_layer_url: str | None = None
++    assistant_layer_model: str = "ai-gambit-health"
++    assistant_layer_timeout: float = Field(180.0, gt=0)
++
+     # --- RAG ---
+     rag_backend: Literal["keyword", "embedding"] = "keyword"
+     embedder: Literal["sentence_transformers", "ollama"] = "sentence_transformers"
+diff --git a/backend/app/llm/assistant_layer.py b/backend/app/llm/assistant_layer.py
+new file mode 100644
+index 0000000..7cccd4c
+--- /dev/null
++++ b/backend/app/llm/assistant_layer.py
+@@ -0,0 +1,91 @@
++"""Asistan katmanı (LLM ekibinin API'si): "Asistana sor" cevabını kural motoru + kaynak rozetleriyle üretir.
++
++`ASSISTANT_LAYER_URL` doluysa /me sohbeti önce buraya gider; ulaşılamazsa çağıran Ollama yoluna düşer.
++Katman durumsuzdur: astronot ve bütün günlük kayıtları her istekte gövdede gönderilir (global seçim yok).
++
++Sözleşme (LLM ekibiyle sabitlendi):
++    POST {ASSISTANT_LAYER_URL}/chat/completions
++    {"model": "ai-gambit-health", "stream": false, "messages": [...user/assistant...],
++     "astronaut": {"astronaut_id", "age", "sex", "mission"},
++     "records": [astronaut_health.json kayıtları, eskiden yeniye; son kayıt = bugün]}
++    → OpenAI biçimi + üst düzey `sources` ({"D1": {...}, "K1": {...}}) ve `intent`.
++
++Katman LLM bilgisayarında çalışır; o makine geminin parçasıdır (README → 2b), veri Dünya'ya gitmez.
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++from typing import Any
++
++import httpx
++
++from app.config import Settings
++from app.llm.types import LLMUnavailable
++from app.personal.dataset import AstronautSeries, DayData
++
++
++@dataclass
++class LayerAnswer:
++    text: str
++    sources: dict[str, dict[str, Any]] = field(default_factory=dict)
++    intent: str | None = None
++
++
++def to_record(astronaut_id: str, day: DayData) -> dict[str, Any]:
++    """Bir günü astronaut_health.json'daki kayıt biçimine geri çevirir (dataset._parse_reconstructed'ın tersi)."""
++    return {
++        "astronaut_id": astronaut_id,
++        "mission_day": day.mission_day,
++        **day.values,
++        **{f"{area}_score": score for area, score in day.area_scores.items()},
++        "daily_health_score": day.daily_score,
++        "cumulative_health_score": day.cumulative_score,
++        "health_status": day.health_status,
++        "main_concern": day.main_concern,
++        "self_care_actions": list(day.self_care),
++        "needs_ground_support": day.needs_ground_support,
++    }
++
++
++def build_body(settings: Settings, series: AstronautSeries, history: list[dict[str, str]]) -> dict[str, Any]:
++    meta = series.meta
++    return {
++        "model": settings.assistant_layer_model,
++        "stream": False,
++        "messages": [m for m in history if m["role"] in ("user", "assistant")],
++        "astronaut": {"astronaut_id": meta.id, "age": meta.age, "sex": meta.sex, "mission": meta.mission},
++        "records": [to_record(meta.id, d) for d in series.days],
++    }
++
++
++async def ask_layer(
++    settings: Settings,
++    series: AstronautSeries,
++    history: list[dict[str, str]],
++    *,
++    transport: httpx.AsyncBaseTransport | None = None,
++) -> LayerAnswer:
++    """Katmana sorar. Ulaşılamazsa, hata kodu dönerse ya da cevap boş / bozuksa `LLMUnavailable` fırlatır."""
++    base = (settings.assistant_layer_url or "").rstrip("/")
++    if not base:
++        raise LLMUnavailable("ASSISTANT_LAYER_URL ayarlı değil")
++    timeout = httpx.Timeout(settings.assistant_layer_timeout, connect=5.0)
++    try:
++        async with httpx.AsyncClient(timeout=timeout, transport=transport) as http:
++            res = await http.post(f"{base}/chat/completions", json=build_body(settings, series, history))
++    except httpx.HTTPError as e:
++        raise LLMUnavailable(f"Asistan katmanına ulaşılamadı ({base}): {type(e).__name__}") from e
++    if res.status_code != 200:
++        raise LLMUnavailable(f"Asistan katmanı {res.status_code} döndü ({base})")
++    try:
++        data = res.json()
++        text = data["choices"][0]["message"]["content"]
++    except (ValueError, KeyError, IndexError, TypeError) as e:
++        raise LLMUnavailable(f"Asistan katmanının cevabı çözülemedi: {type(e).__name__}") from e
++    if not isinstance(text, str) or not text.strip():
++        raise LLMUnavailable("Asistan katmanı boş cevap döndü")
++    raw_sources = data.get("sources")
++    sources = {str(k): v for k, v in raw_sources.items() if isinstance(v, dict)} if isinstance(raw_sources, dict) else {}
++    intent = data.get("intent")
++    return LayerAnswer(text=text.strip(), sources=sources, intent=intent if isinstance(intent, str) else None)
+diff --git a/backend/app/models/schemas.py b/backend/app/models/schemas.py
+index 0cd06a4..48c7d77 100644
+--- a/backend/app/models/schemas.py
++++ b/backend/app/models/schemas.py
+@@ -522,6 +522,17 @@ class SSEToolResult(BaseModel):
+     error: str | None = None
+ 
+ 
++class SourceRef(BaseModel):
++    """Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi."""
++
++    type: Literal["data", "knowledge"]
++    label: str = ""
++    value: float | str | None = None
++    unit: str | None = None
++    status: str | None = Field(None, description="Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)")
++    text: str | None = Field(None, description="Bilgi kaynağında alıntı metni")
++
++
+ class SSEDone(BaseModel):
+     message: str = Field(description="Asistanın tam cevabı")
+     finish_reason: Literal["stop", "max_steps", "error", "llm_unavailable"]
+@@ -529,6 +540,7 @@ class SSEDone(BaseModel):
+     tool_calls: int
+     ungrounded_numbers: list[str] = []
+     doc_refs: list[DocRef] = []
++    sources: dict[str, SourceRef] = Field({}, description="Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)")
+     degraded: bool = Field(False, description="true → LLM yok, kural tabanlı yedek cevap")
+ 
+ 
+diff --git a/backend/app/services/personal_chat.py b/backend/app/services/personal_chat.py
+index b64fdf3..b073415 100644
+--- a/backend/app/services/personal_chat.py
++++ b/backend/app/services/personal_chat.py
+@@ -2,11 +2,14 @@
+ 
+ - Acil belirti taraması kural tabanlıdır ve LLM'den ÖNCE çalışır; basit olumsuzlama ayırt edilir
+   ("göğüs ağrım yok" tetiklemez). Eşleşirse gemide CMO kaydı oluşur; Dünya'ya gönderilmez.
++- `ASSISTANT_LAYER_URL` doluysa cevap önce asistan katmanından istenir (kural motoru + [D]/[K] rozetleri);
++  ulaşılamazsa aşağıdaki LLM (Ollama) yoluna düşülür.
+ - LLM'e ulaşılamazsa kural tabanlı özet (get_today_summary + şablon) döner.
+ """
+ 
+ from __future__ import annotations
+ 
++import logging
+ import re
+ import uuid
+ from collections.abc import AsyncIterator
+@@ -20,20 +23,24 @@ from app.config import Settings
+ from app.i18n import Lang, t
+ from app.llm import templates
+ from app.llm.agent import Agent
++from app.llm.assistant_layer import LayerAnswer, ask_layer, to_record
+ from app.llm.client import LLMClient
+ from app.llm.personal_tools import personal_registry
+ from app.llm.prompts import prompt
+ from app.llm.tools import ToolContext
+ from app.llm.types import LLMError
+-from app.models.schemas import ChatRequest, SSEDone, SSEError, SSEMeta, SSEToken
++from app.models.schemas import ChatRequest, SourceRef, SSEDone, SSEError, SSEMeta, SSEToken
+ from app.personal.catalog import load_personal_catalog
+ from app.personal.dataset import AstronautSeries
+ from app.safety.emergency import detect_emergency
++from app.safety.grounding import find_ungrounded_numbers
+ from app.services.checkin import record_cmo
+ 
+ HISTORY_LIMIT = 12
+ LANG_NAME = {"tr": "Turkish", "en": "English"}
+ _registry = personal_registry()
++_TAG = re.compile(r"\[[DK]\d+\]")
++log = logging.getLogger(__name__)
+ 
+ 
+ def system_prompt(series: AstronautSeries, lang: Lang, emergency_labels: list[str]) -> str:
+@@ -60,10 +67,11 @@ async def chat_stream(
+     engine: Engine, settings: Settings, client: LLMClient, series: AstronautSeries, req: ChatRequest, lang: Lang
+ ) -> AsyncIterator[tuple[str, BaseModel]]:
+     last = req.messages[-1].content
++    use_layer = bool(settings.assistant_layer_url)
+     yield "meta", SSEMeta(
+         request_id=uuid.uuid4().hex[:12],
+-        provider=client.provider,  # type: ignore[attr-defined]
+-        model=client.model,  # type: ignore[attr-defined]
++        provider="assistant_layer" if use_layer else client.provider,  # type: ignore[attr-defined]
++        model=settings.assistant_layer_model if use_layer else client.model,  # type: ignore[attr-defined]
+         tool_mode="native" if getattr(client, "native_tools", True) and settings.llm_tool_mode != "prompt" else "prompt",
+         astronaut_id=series.meta.id,
+         as_of=None,
+@@ -79,6 +87,16 @@ async def chat_stream(
+         yield "emergency", emergency
+ 
+     history = [{"role": m.role, "content": m.content} for m in req.messages[-HISTORY_LIMIT:]]
++    if use_layer:
++        try:
++            answer = await ask_layer(settings, series, history)
++        except LLMError as e:
++            log.warning("Asistan katmanı kullanılamadı, LLM yoluna düşülüyor: %s", e)
++        else:
++            for ev in layer_events(answer, series):
++                yield ev
++            return
++
+     labels = emergency.matched_labels if emergency else []
+     messages = [{"role": "system", "content": system_prompt(series, lang, labels)}, *history]
+     ctx = ToolContext(astronaut_id=series.meta.id, as_of=None, lang=lang, session_factory=lambda: Session(engine))
+@@ -95,6 +113,22 @@ async def chat_stream(
+         yield "done", SSEDone(message="", finish_reason="error", steps=0, tool_calls=0, degraded=True)
+ 
+ 
++def layer_events(answer: LayerAnswer, series: AstronautSeries) -> list[tuple[str, BaseModel]]:
++    """Katman cevabını SSE olaylarına çevirir. Sayı denetimi: sayılar kaynaklarda ya da gönderilen kayıtlarda olmalı."""
++    sources: dict[str, SourceRef] = {}
++    for key, raw in answer.sources.items():
++        try:
++            sources[key] = SourceRef.model_validate(raw)
++        except ValueError:
++            continue  # tanınmayan biçim: rozet gösterilmez, cevap yine gösterilir
++    records = [to_record(series.meta.id, d) for d in series.days]
++    ungrounded = find_ungrounded_numbers(_TAG.sub("", answer.text), [answer.sources, records])
++    events: list[tuple[str, BaseModel]] = [("token", SSEToken(text=piece)) for piece in re.findall(r"\S+\s*", answer.text)]
++    events.append(("done", SSEDone(message=answer.text, finish_reason="stop", steps=1, tool_calls=0,
++                                   ungrounded_numbers=ungrounded, sources=sources)))
++    return events
++
++
+ async def offline_answer(ctx: ToolContext, lang: str, emergency_msg: str | None) -> AsyncIterator[tuple[str, BaseModel]]:
+     result = await anyio.to_thread.run_sync(_registry.execute, ctx, "get_today_summary", {})
+     text = templates.chat_answer([("get_today_summary", result.data)] if result.ok else [], lang, "offline")
+diff --git a/backend/tests/station/test_assistant_layer.py b/backend/tests/station/test_assistant_layer.py
+new file mode 100644
+index 0000000..0137262
+--- /dev/null
++++ b/backend/tests/station/test_assistant_layer.py
+@@ -0,0 +1,128 @@
++"""Asistan katmanı ("Asistana sor" → LLM ekibinin API'si): gövde sözleşmesi, rozet kaynakları, Ollama yoluna düşme."""
++
++import asyncio
++import json
++
++import httpx
++import pytest
++from sqlmodel import Session
++
++from app.config import Settings
++from app.llm.assistant_layer import ask_layer, build_body, to_record
++from app.llm.types import LLMUnavailable
++from app.personal.store import personal_data
++from app.services import personal_chat
++
++from .conftest import login
++from .test_assistant import chat
++
++LAYER_URL = "http://layer.test:8000/v1"
++
++
++def series_of(app, aid: str):
++    with Session(app.state.engine) as db:
++        return personal_data(app.state.engine).series(db, aid)
++
++
++def raw_records(settings: Settings, aid: str) -> list[dict]:
++    raw = json.loads(settings.dataset_path.read_text(encoding="utf-8"))
++    return sorted((r for r in raw["records"] if r["astronaut_id"] == aid), key=lambda r: r["mission_day"])
++
++
++def layer_reply(text: str, sources: dict | None = None, intent: str = "data_question") -> dict:
++    return {"id": "chatcmpl-x", "object": "chat.completion", "model": "ai-gambit-health",
++            "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
++            "intent": intent, "sources": sources or {}}
++
++
++def test_records_are_sent_exactly_as_in_dataset(ship_client, ship_app, ship_settings) -> None:
++    series = series_of(ship_app, "A003")
++    sent = [to_record("A003", d) for d in series.days]
++    assert sent == raw_records(ship_settings, "A003")  # olduğu gibi, eskiden yeniye; son kayıt = bugün
++    body = build_body(ship_settings, series, [{"role": "system", "content": "x"}, {"role": "user", "content": "hi"}])
++    assert body["model"] == "ai-gambit-health" and body["stream"] is False
++    assert body["messages"] == [{"role": "user", "content": "hi"}]  # sistem promptu gönderilmez
++    assert body["astronaut"] == {"astronaut_id": "A003", "age": series.meta.age, "sex": series.meta.sex, "mission": series.meta.mission}
++    assert len(body["records"]) == 30 and body["records"][-1]["mission_day"] == series.days[-1].mission_day
++
++
++def test_ask_layer_parses_answer_and_maps_failures(ship_client, ship_app, ship_settings) -> None:
++    series = series_of(ship_app, "A003")
++    s = ship_settings.model_copy(update={"assistant_layer_url": LAYER_URL})
++    seen: dict = {}
++
++    def ok(request: httpx.Request) -> httpx.Response:
++        seen["url"], seen["body"] = str(request.url), json.loads(request.content)
++        return httpx.Response(200, json=layer_reply("Sleep is 5.2 h [D1].", {"D1": {"type": "data", "label": "Sleep duration", "value": 5.2, "unit": "h", "status": "YELLOW"}, "bad": "x"}))
++
++    ans = asyncio.run(ask_layer(s, series, [{"role": "user", "content": "How is my sleep?"}], transport=httpx.MockTransport(ok)))
++    assert seen["url"] == f"{LAYER_URL}/chat/completions" and seen["body"]["astronaut"]["astronaut_id"] == "A003"
++    assert ans.text == "Sleep is 5.2 h [D1]." and list(ans.sources) == ["D1"] and ans.intent == "data_question"
++
++    def refuse(request: httpx.Request) -> httpx.Response:
++        raise httpx.ConnectError("refused")
++
++    for transport in (httpx.MockTransport(refuse),
++                      httpx.MockTransport(lambda r: httpx.Response(503, json={"detail": "LLM backend unreachable"})),
++                      httpx.MockTransport(lambda r: httpx.Response(200, text="not json")),
++                      httpx.MockTransport(lambda r: httpx.Response(200, json=layer_reply("  ")))):
++        with pytest.raises(LLMUnavailable):
++            asyncio.run(ask_layer(s, series, [{"role": "user", "content": "hi"}], transport=transport))
++
++
++def test_chat_uses_layer_and_returns_sources(ship_client, ship_app, ship_settings, monkeypatch) -> None:
++    today = raw_records(ship_settings, "A003")[-1]
++    sleep = today["beh_sleep_h"]
++    calls: list[dict] = []
++
++    async def fake(settings, series, history, **kw):
++        calls.append({"aid": series.meta.id, "history": history})
++        from app.llm.assistant_layer import LayerAnswer
++
++        return LayerAnswer(
++            text=f"Your sleep duration is {sleep} h [D1]. Keep a regular schedule [K1]. Invented 987.6 bpm.",
++            sources={"D1": {"type": "data", "label": "Sleep duration", "value": sleep, "unit": "h", "status": "GREEN"},
++                     "K1": {"type": "knowledge", "label": "Sleep hygiene", "text": "Regular sleep schedule helps."}},
++            intent="data_question",
++        )
++
++    monkeypatch.setattr(ship_settings, "assistant_layer_url", LAYER_URL)
++    monkeypatch.setattr(personal_chat, "ask_layer", fake)
++    evs = chat(ship_client, login(ship_client, "A003"), "How is my sleep?", lang="en")
++    assert calls and calls[0]["aid"] == "A003" and calls[0]["history"][-1] == {"role": "user", "content": "How is my sleep?"}
++    assert evs[0][0] == "meta" and evs[0][1]["provider"] == "assistant_layer" and evs[0][1]["model"] == "ai-gambit-health"
++    assert not [n for n, _ in evs if n in ("tool_call", "error")]
++    done = next(d for n, d in evs if n == "done")
++    assert done["finish_reason"] == "stop" and not done["degraded"]
++    assert "".join(d["text"] for n, d in evs if n == "token") == done["message"]
++    assert done["sources"]["D1"] == {"type": "data", "label": "Sleep duration", "value": sleep, "unit": "h", "status": "GREEN", "text": None}
++    assert done["sources"]["K1"]["type"] == "knowledge" and done["sources"]["K1"]["text"].startswith("Regular")
++    assert done["ungrounded_numbers"] == ["987.6"]  # kayıtlarda / kaynaklarda olmayan sayı işaretlenir, [D1] etiketi sayılmaz
++
++
++def test_chat_falls_back_to_llm_path_when_layer_is_down(ship_client, ship_settings, monkeypatch) -> None:
++    async def down(settings, series, history, **kw):
++        raise LLMUnavailable("Asistan katmanına ulaşılamadı")
++
++    monkeypatch.setattr(ship_settings, "assistant_layer_url", LAYER_URL)
++    monkeypatch.setattr(personal_chat, "ask_layer", down)
++    evs = chat(ship_client, login(ship_client, "A003"), "How am I today?", lang="en")
++    done = next(d for n, d in evs if n == "done")
++    assert [d["name"] for n, d in evs if n == "tool_call"] == ["get_today_summary"]  # bugünkü yol (mock LLM + tool'lar)
++    assert "day 30 of 30" in done["message"] and done["sources"] == {} and not done["degraded"]
++
++
++def test_layer_is_off_by_default_and_emergency_still_rule_based(ship_client, ship_app, ship_settings, monkeypatch) -> None:
++    assert Settings().assistant_layer_url is None
++
++    async def fake(settings, series, history, **kw):
++        from app.llm.assistant_layer import LayerAnswer
++
++        return LayerAnswer(text="Start the onboard medical emergency protocol and contact the Crew Medical Officer now.", intent="emergency")
++
++    monkeypatch.setattr(ship_settings, "assistant_layer_url", LAYER_URL)
++    monkeypatch.setattr(personal_chat, "ask_layer", fake)
++    evs = chat(ship_client, login(ship_client, "A005"), "I have chest pain and I can't breathe", lang="en")
++    names = [n for n, _ in evs]
++    assert names.index("emergency") < names.index("token")  # kural tabanlı acil kutusu katmandan ÖNCE gelir
++    assert next(d for n, d in evs if n == "emergency")["cmo_notified"] is True
+diff --git a/docs/API.md b/docs/API.md
+index 9eae9ff..16f11f0 100644
+--- a/docs/API.md
++++ b/docs/API.md
+@@ -162,6 +162,14 @@ verilirse aynı olmalı, yoksa `403`). Olaylar eski sohbetle aynı (`meta`, `tok
+ basit olumsuzlamayı ayırt eder ("göğüs ağrım yok" tetiklemez); eşleşirse gemide CMO kaydı
+ (`emergency.cmo_notified: true`), Dünya'ya gitmez.
+ 
++**Asistan katmanı (isteğe bağlı, `ASSISTANT_LAYER_URL`).** Doluysa cevap önce LLM ekibinin API'sinden istenir
++(`POST {ASSISTANT_LAYER_URL}/chat/completions`, `model: ASSISTANT_LAYER_MODEL`, gövdede `astronaut` + bütün günlük
++`records`; durumsuz). Bu yolda tool çağrısı olmaz (`meta.provider: "assistant_layer"`); cevaptaki `[D1]` / `[K1]`
++etiketlerinin karşılıkları `done.sources` ile gelir: `{"D1": {type: "data", label, value, unit, status},
++"K1": {type: "knowledge", label, text}}` (`SourceRef`). Sayı denetimi kaynaklara ve gönderilen kayıtlara göre yapılır.
++Katmana ulaşılamazsa (bağlantı hatası, zaman aşımı, 200 dışı kod, boş cevap) yukarıdaki LLM yoluna düşülür;
++`done.sources` boş kalır. Acil belirti taraması bu yolda da kural tabanlıdır ve katmandan önce çalışır.
++
+ ## Downlink (gemi → Dünya)
+ 
+ `Authorization: Bearer <EARTH_LINK_TOKEN>` (gemide ayarlı değilse `503 downlink_disabled`).
+diff --git a/docs/openapi.json b/docs/openapi.json
+index 04bca21..a829c52 100644
+--- a/docs/openapi.json
++++ b/docs/openapi.json
+@@ -9480,6 +9480,82 @@
+         "title": "SSEToolResult",
+         "type": "object"
+       },
++      "SourceRef": {
++        "description": "Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi.",
++        "properties": {
++          "type": {
++            "enum": [
++              "data",
++              "knowledge"
++            ],
++            "title": "Type",
++            "type": "string"
++          },
++          "label": {
++            "default": "",
++            "title": "Label",
++            "type": "string"
++          },
++          "value": {
++            "anyOf": [
++              {
++                "type": "number"
++              },
++              {
++                "type": "string"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "default": null,
++            "title": "Value"
++          },
++          "unit": {
++            "anyOf": [
++              {
++                "type": "string"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "default": null,
++            "title": "Unit"
++          },
++          "status": {
++            "anyOf": [
++              {
++                "type": "string"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "default": null,
++            "description": "Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)",
++            "title": "Status"
++          },
++          "text": {
++            "anyOf": [
++              {
++                "type": "string"
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "default": null,
++            "description": "Bilgi kaynağında alıntı metni",
++            "title": "Text"
++          }
++        },
++        "required": [
++          "type"
++        ],
++        "title": "SourceRef",
++        "type": "object"
++      },
+       "SSEDone": {
+         "properties": {
+           "message": {
+@@ -9521,6 +9597,15 @@
+             "title": "Doc Refs",
+             "type": "array"
+           },
++          "sources": {
++            "additionalProperties": {
++              "$ref": "#/components/schemas/SourceRef"
++            },
++            "default": {},
++            "description": "Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)",
++            "title": "Sources",
++            "type": "object"
++          },
+           "degraded": {
+             "default": false,
+             "description": "true → LLM yok, kural tabanlı yedek cevap",
+diff --git a/frontend/src/api/client.ts b/frontend/src/api/client.ts
+index cf57945..713d968 100644
+--- a/frontend/src/api/client.ts
++++ b/frontend/src/api/client.ts
+@@ -41,6 +41,7 @@ export type SSEThinking = S["SSEThinking"];
+ export type SSEToolCall = S["SSEToolCall"];
+ export type SSEToolResult = S["SSEToolResult"];
+ export type SSEDone = S["SSEDone"];
++export type SourceRef = S["SourceRef"];
+ export type SSEError = S["SSEError"];
+ 
+ export type StatusColor = CrewMember["status"];
+diff --git a/frontend/src/api/types.ts b/frontend/src/api/types.ts
+index 3a23d06..0bfbac8 100644
+--- a/frontend/src/api/types.ts
++++ b/frontend/src/api/types.ts
+@@ -2941,6 +2941,44 @@ export interface components {
+              */
+             error: string | null;
+         };
++        /**
++         * SourceRef
++         * @description Cevaptaki `[D1]` / `[K1]` etiketinin karşılığı (asistan katmanı). D = veri, K = bilgi belgesi.
++         */
++        SourceRef: {
++            /**
++             * Type
++             * @enum {string}
++             */
++            type: "data" | "knowledge";
++            /**
++             * Label
++             * @default
++             */
++            label: string;
++            /**
++             * Value
++             * @default null
++             */
++            value: number | string | null;
++            /**
++             * Unit
++             * @default null
++             */
++            unit: string | null;
++            /**
++             * Status
++             * @description Veri kaynağında durum: GREEN | YELLOW | RED (katmanın değerlendirmesi)
++             * @default null
++             */
++            status: string | null;
++            /**
++             * Text
++             * @description Bilgi kaynağında alıntı metni
++             * @default null
++             */
++            text: string | null;
++        };
+         /** SSEDone */
+         SSEDone: {
+             /**
+@@ -2967,6 +3005,14 @@ export interface components {
+              * @default []
+              */
+             doc_refs: components["schemas"]["DocRef"][];
++            /**
++             * Sources
++             * @description Cevaptaki [D1]/[K1] etiketlerinin karşılıkları (asistan katmanı; yoksa boş)
++             * @default {}
++             */
++            sources: {
++                [key: string]: components["schemas"]["SourceRef"];
++            };
+             /**
+              * Degraded
+              * @description true → LLM yok, kural tabanlı yedek cevap
+diff --git a/frontend/src/apps/personal/AskAssistant.tsx b/frontend/src/apps/personal/AskAssistant.tsx
+index d94f7f1..cf5b4c9 100644
+--- a/frontend/src/apps/personal/AskAssistant.tsx
++++ b/frontend/src/apps/personal/AskAssistant.tsx
+@@ -4,12 +4,14 @@
+  *
+  *  - Asistan sadece giriş yapan astronotun verisine bakar (backend token'dan bilir) ve teşhis koymaz.
+  *  - Sayılar modelden değil araç sonuçlarından gelir; doğrulanamayan sayı varsa backend bildirir, burada gösterilir.
++ *  - Asistan katmanı açıksa (backend `ASSISTANT_LAYER_URL`) cevaptaki `[D1]` / `[K1]` etiketleri kaynak rozetine çevrilir;
++ *    karşılıkları `done.sources` ile gelir ve cevabın altında listelenir (ikon + metin, sadece renk değil).
+  *  - Acil belirti kural tabanlıdır: modelden ÖNCE ve model kapalıyken de gelir; kutu sohbetin üstünde kalır.
+  *  - Sohbet hiçbir yere kaydedilmez ve Dünya'ya gönderilmez; çıkışta ve sayfa yenilenince silinir.
+  */
+-import { type FormEvent, useEffect, useRef, useState } from "react";
++import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
+ 
+-import type { EmergencyNotice } from "../../api/client";
++import type { EmergencyNotice, SourceRef } from "../../api/client";
+ import { StationApiError } from "../../api/station";
+ import { type ChatMessage, isUnauthorized, streamChat } from "./api";
+ import { useT } from "./texts";
+@@ -23,6 +25,32 @@ interface Turn extends ChatMessage {
+   error?: string;
+   /** Verilerle doğrulanamayan sayılar (backend'in sayı denetimi). */
+   ungrounded: string[];
++  /** `[D1]` / `[K1]` etiketlerinin karşılıkları (asistan katmanı); yoksa boş. */
++  sources: Record<string, SourceRef>;
++}
++
++const SOURCE_ICON: Record<SourceRef["type"], string> = { data: "📊", knowledge: "📄" };
++const INLINE = /(\*\*[^*\n]+\*\*|\[[DK]\d+\])/g;
++
++function sourceTitle(src: SourceRef): string {
++  if (src.type === "knowledge") return src.text ? `${src.label}: ${src.text}` : src.label;
++  const value = src.value == null ? "" : `: ${src.value}${src.unit ? ` ${src.unit}` : ""}`;
++  return `${src.label}${value}`;
++}
++
++/** Cevap metni: `**kalın**` ve karşılığı olan `[D1]` / `[K1]` etiketleri işlenir; gerisi düz metin kalır. */
++function renderAnswer(content: string, sources: Record<string, SourceRef>): ReactNode[] {
++  return content.split(INLINE).map((part, i) => {
++    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) return <b key={i}>{part.slice(2, -2)}</b>;
++    const key = /^\[([DK]\d+)\]$/.exec(part)?.[1];
++    const src = key ? sources[key] : undefined;
++    if (!key || !src) return part;
++    return (
++      <span key={i} className="src" title={sourceTitle(src)} data-source={key}>
++        {SOURCE_ICON[src.type]} {key}
++      </span>
++    );
++  });
+ }
+ 
+ export function AskAssistant({ onUnauthorized }: { onUnauthorized: (message: string) => void }) {
+@@ -48,8 +76,8 @@ export function AskAssistant({ onUnauthorized }: { onUnauthorized: (message: str
+     nextId.current += 2;
+     setTurns((all) => [
+       ...all,
+-      { id: userId, role: "user", content: question, tools: 0, settled: true, ungrounded: [] },
+-      { id: answerId, role: "assistant", content: "", tools: 0, settled: false, ungrounded: [] },
++      { id: userId, role: "user", content: question, tools: 0, settled: true, ungrounded: [], sources: {} },
++      { id: answerId, role: "assistant", content: "", tools: 0, settled: false, ungrounded: [], sources: {} },
+     ]);
+     setDraft("");
+     setStreaming(true);
+@@ -68,7 +96,8 @@ export function AskAssistant({ onUnauthorized }: { onUnauthorized: (message: str
+             if (notice.triggered) setEmergency(notice);
+           },
+           // `done.message` cevabın yetkili hali; boşsa (hata) akıştan birikeni koru.
+-          onDone: (done) => patch((x) => ({ ...x, content: done.message || x.content, ungrounded: done.ungrounded_numbers })),
++          onDone: (done) =>
++            patch((x) => ({ ...x, content: done.message || x.content, ungrounded: done.ungrounded_numbers ?? [], sources: done.sources ?? {} })),
+           onError: (e) => patch((x) => ({ ...x, error: e.message })),
+         },
+         controller.signal,
+@@ -116,7 +145,30 @@ export function AskAssistant({ onUnauthorized }: { onUnauthorized: (message: str
+               </div>
+             ) : (
+               <div key={turn.id} className="msg bot" data-settled={turn.settled ? "true" : undefined}>
+-                {turn.content || (turn.settled ? (turn.error ?? t("askFailed")) : turn.tools > 0 ? t("askLooking") : t("askWriting"))}
++                {turn.content
++                  ? renderAnswer(turn.content, turn.sources)
++                  : turn.settled
++                    ? (turn.error ?? t("askFailed"))
++                    : turn.tools > 0
++                      ? t("askLooking")
++                      : t("askWriting")}
++                {Object.keys(turn.sources).some((key) => turn.content.includes(`[${key}]`)) ? (
++                  <ul className="srclist" aria-label={t("sourcesTitle")}>
++                    {Object.entries(turn.sources)
++                      .filter(([key]) => turn.content.includes(`[${key}]`))
++                      .map(([key, src]) => (
++                        <li key={key}>
++                          <span className="src">
++                            {SOURCE_ICON[src.type]} {key}
++                          </span>{" "}
++                          <span className="muted">{src.type === "data" ? t("sourceData") : t("sourceKnowledge")}:</span> {sourceTitle(src)}
++                          {src.type === "data" && (src.status === "GREEN" || src.status === "YELLOW" || src.status === "RED") ? (
++                            <span className="muted"> · {t(`sourceStatus${src.status}`)}</span>
++                          ) : null}
++                        </li>
++                      ))}
++                  </ul>
++                ) : null}
+                 {turn.ungrounded.length > 0 ? (
+                   <>
+                     {"\n"}
+diff --git a/frontend/src/apps/personal/personal.css b/frontend/src/apps/personal/personal.css
+index ccef6cd..1249a98 100644
+--- a/frontend/src/apps/personal/personal.css
++++ b/frontend/src/apps/personal/personal.css
+@@ -26,6 +26,10 @@
+   .ahc .ask .cilog:empty { display: none; }
+   .ahc .ask .msg { white-space: pre-wrap; }
+   .ahc .ask .cirow { margin-top: 0; }
++  /* Kaynak rozetleri ([D1] / [K1]): ikon + kod; karşılığı cevabın altındaki listede yazıyla durur */
++  .ahc .ask .src { display: inline-block; padding: 0 6px; border: 1px solid currentColor; border-radius: 999px; font-size: 0.8em; line-height: 1.5; white-space: nowrap; opacity: 0.85; }
++  .ahc .ask .srclist { margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid currentColor; list-style: none; font-size: 0.9em; display: grid; gap: 4px; white-space: normal; }
++  .ahc .ask .srclist { border-top-color: color-mix(in srgb, currentColor 25%, transparent); }
+   .ahc .ask .ground { margin: 0; }
+   .ahc .ask .ground ol { margin: 6px 0; padding-left: 20px; list-style: decimal; }
+   .ahc .ask .stack { gap: 12px; }
+diff --git a/frontend/src/apps/personal/texts.ts b/frontend/src/apps/personal/texts.ts
+index 34a03b8..8ac3ae4 100644
+--- a/frontend/src/apps/personal/texts.ts
++++ b/frontend/src/apps/personal/texts.ts
+@@ -86,6 +86,12 @@ const T = {
+     tr: "Asistana ulaşılamadı. Uyarılar ve check-in çalışmaya devam eder.",
+     en: "Could not reach the assistant. Alerts and the check-in keep working.",
+   },
++  sourcesTitle: { tr: "Kaynaklar", en: "Sources" },
++  sourceData: { tr: "Veri", en: "Data" },
++  sourceKnowledge: { tr: "Bilgi", en: "Knowledge" },
++  sourceStatusGREEN: { tr: "normal", en: "normal" },
++  sourceStatusYELLOW: { tr: "izlenmeli", en: "watch" },
++  sourceStatusRED: { tr: "dikkat", en: "attention" },
+   askStopped: { tr: "Durduruldu.", en: "Stopped." },
+   ungrounded: {
+     tr: "Bu cevaptaki şu sayılar verilerinizle doğrulanamadı: {list}",
+-- 
+2.43.0
